@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="AppCard" extends="Group">
+    <interface>
+        <field id="width" type="float" value="400" onChange="updateCard" />
+        <field id="height" type="float" value="240" onChange="updateCard" />
+        <field id="mediaType" type="string" value="" onChange="updateCard" />
+        <field id="contentType" type="string" value="" onChange="updateCard" />
+        <field id="shape" type="string" onChange="updateCard" />
+        <field id="backgroundColor" type="integer" value="-1" onChange="updateCard" />
+        <field id="cornerRadius" type="float" value="-1" onChange="updateCard" />
+        <field id="borderWidth" type="float" value="-1" onChange="updateCard" />
+        <field id="borderColor" type="integer" value="-1" onChange="updateCard" />
+        <field id="variant" type="string" value="plain" onChange="updateCard" />
+        <field id="gradientPreset" type="string" value="" onChange="updateCard" />
+        <field id="gradientColors" type="array" onChange="updateCard" />
+        <field id="gradientStops" type="array" onChange="updateCard" />
+        <field id="gradientStyle" type="string" value="none" onChange="updateCard" />
+        <field id="gradientAngle" type="float" value="0" onChange="updateCard" />
+        <field id="padding" type="float" value="-1" onChange="updateCard" />
+        <field id="content" type="node" onChange="onContentChanged" />
+    </interface>
+    <children>
+        <Rectangle id="background" width="0" height="0" color="0x00000000" />
+        <Rectangle id="borderTop" width="0" height="0" color="0x00000000" />
+        <Rectangle id="borderBottom" width="0" height="0" color="0x00000000" />
+        <Rectangle id="borderLeft" width="0" height="0" color="0x00000000" />
+        <Rectangle id="borderRight" width="0" height="0" color="0x00000000" />
+    </children>
+    <script type="text/brightscript" uri="pkg:/source/rokuCore/theme/ThemeProvider.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/GeneratedTheme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Theme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Colors.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Effects.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/components/CardTheme.bs" />
+    <script type="text/brightscript" uri="AppCard.bs" />
+</component>

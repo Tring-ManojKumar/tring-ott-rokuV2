@@ -1,0 +1,28 @@
+function onKeyEvent(key as string, press as boolean) as boolean
+    if not press or key <> "down" then return false
+
+    content = m.top.content
+    if content = invalid then return false
+    itemCount = content.getChildCount()
+    if itemCount = 0 then return false
+
+    columns = m.top.numColumns
+    focusedIndex = m.top.itemFocused
+    if columns = invalid or focusedIndex = invalid or columns < 1 or focusedIndex < 0 then return false
+
+    lastRowStart = int((itemCount - 1) / columns) * columns
+    if focusedIndex < lastRowStart then return false
+
+    homeScreen = m.top.getParent()
+    if homeScreen = invalid then return false
+    contentActionButton = homeScreen.findNode("contentActionButton")
+    if contentActionButton = invalid
+        contentActionButton = homeScreen.findNode("marketButton")
+    end if
+    if contentActionButton = invalid then return false
+
+    contentActionButton.focusable = true
+    contentActionButton.setFocus(true)
+    if contentActionButton.hasFocus() then return true
+    return false
+end function

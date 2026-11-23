@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<component name="HomeScreen" extends="Group">
+
+    <interface>
+        <field id="navigationParams" type="assocarray" />
+        <field id="isReady" type="boolean" value="false" />
+        <field id="frameworkSupportsInitialFocus" type="boolean" value="true" />
+        <field id="frameworkLifecycleEvent" type="string" value="" />
+        <field id="frameworkScreenIdentity" type="string" value="" />
+        <field id="frameworkCreated" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkInitialized" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkPresented" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkSuspended" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkResumed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkExited" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkDestroyed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkCleanupRequested" type="boolean" value="false" alwaysNotify="true" onChange="onFrameworkCleanupRequested" />
+        <field id="primaryButtonText" type="string" value="Market Action" onChange="updatePrimaryButton" />
+        <field id="primaryButtonWidth" type="float" value="320" onChange="updatePrimaryButton" />
+        <field id="primaryButtonHeight" type="float" value="72" onChange="updatePrimaryButton" />
+        <function name="setInitialFocus" />
+    </interface>
+
+    <script type="text/brightscript" uri="../../../../../utils/theme/GeneratedTheme.bs" />
+    <script type="text/brightscript" uri="../../../../../utils/theme/Theme.bs" />
+    <script type="text/brightscript" uri="../../../../../utils/theme/Colors.bs" />
+    <script type="text/brightscript" uri="../../../../../utils/logging/Logger.bs" />
+    <script type="text/brightscript" uri="HomeScreen.bs" />
+
+    <children>
+
+        <AppLabel id="heading" translation="[90, 0]" width="1000" height="52" text="Browse" variant="heading" />
+        <HomeGrid
+            id="homeGrid"
+            translation="[90, 70]"
+            itemComponentName="HomeCard"
+            itemSize="[300, 220]"
+            itemSpacing="[12, 12]"
+            numColumns="5"
+            numRows="2"
+            vertFocusAnimationStyle="floatingFocus"
+            focusable="true"
+            drawFocusFeedback="true"
+        />
+        <AppButton id="contentActionButton" width="280" height="48" variant="primary" visible="true" />
+        <HomeActionButton
+            id="marketButton"
+            translation="[90, 600]"
+            width="340"
+            height="72"
+            text="Explore"
+            visible="true"
+        />
+
+        <ImageGallery id="imageGallery" visible="false" />
+        <RequestStateController id="requestController" translation="[540, 280]" />
+
+        <RowListViewModel id="viewModel" />
+
+    </children>
+
+</component>

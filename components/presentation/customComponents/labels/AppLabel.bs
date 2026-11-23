@@ -1,0 +1,32 @@
+sub init()
+    m.top.observeField("variant", "applyTheme")
+    m.top.observeField("fontFamily", "applyTheme")
+    m.top.observeField("fontSize", "applyTheme")
+    m.top.observeField("textColor", "applyTheme")
+    applyTheme()
+end sub
+
+sub applyTheme(event = invalid as dynamic)
+    theme = GetTheme()
+    variant = m.top.variant
+    if type(variant) <> "String" or variant = "" then variant = "body"
+    style = GetLabelTheme(theme, variant)
+
+    fontUri = style.font
+    requestedFamily = m.top.fontFamily
+    if type(requestedFamily) = "String" and requestedFamily <> ""
+        if theme.typography.fonts[requestedFamily] <> invalid
+            fontUri = theme.typography.fonts[requestedFamily]
+        else if left(requestedFamily, 5) = "pkg:/"
+            fontUri = requestedFamily
+        end if
+    end if
+
+    fontSize = m.top.fontSize
+    if fontSize <= 0 then fontSize = style.size
+    m.top.font = CreateThemeFont(fontUri, fontSize)
+
+    textColor = m.top.textColor
+    if textColor = invalid or textColor = -1 then textColor = style.color
+    m.top.color = textColor
+end sub

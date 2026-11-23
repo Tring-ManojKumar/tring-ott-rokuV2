@@ -1,0 +1,131 @@
+sub init()
+    m.background = m.top.findNode("background")
+    m.borderTop = m.top.findNode("borderTop")
+    m.borderBottom = m.top.findNode("borderBottom")
+    m.borderLeft = m.top.findNode("borderLeft")
+    m.borderRight = m.top.findNode("borderRight")
+    updateCard()
+end sub
+
+sub onContentChanged(event as object)
+    if m.cardContent <> invalid then m.top.removeChild(m.cardContent)
+    m.cardContent = event.getData()
+    if m.cardContent <> invalid
+        m.top.appendChild(m.cardContent)
+        layoutContent()
+    end if
+end sub
+
+sub updateCard()
+    if m.background = invalid then return
+    shape = getAppCardShape(m.top.mediaType, m.top.contentType)
+    currentShape = m.top.shape
+    if type(currentShape) <> "String" then currentShape = ""
+    if currentShape <> shape then m.top.shape = shape
+    theme = GetTheme()
+    variant = m.top.variant
+    plain = variant = "plain"
+    style = GetCardTheme(theme, variant)
+    fill = style.background
+    if not plain
+        if m.top.backgroundColor <> -1 then fill = m.top.backgroundColor
+    end if
+    border = style.border
+    if m.top.borderColor <> -1 then border = m.top.borderColor
+    borderWidth = m.top.borderWidth
+    if borderWidth < 0 then borderWidth = style.borderWidth
+    radius = m.top.cornerRadius
+    if radius < 0 then radius = theme.radii.md
+    cardWidth = m.top.width
+    cardHeight = m.top.height
+    offsetX = 0
+    offsetY = 0
+    if LCase(shape.Trim()) = "square"
+        side = cardWidth
+        if cardHeight < side then side = cardHeight
+        offsetX = (cardWidth - side) / 2
+        offsetY = (cardHeight - side) / 2
+        cardWidth = side
+        cardHeight = side
+    end if
+    m.cardWidth = cardWidth
+    m.cardHeight = cardHeight
+    m.cardOffsetX = offsetX
+    m.cardOffsetY = offsetY
+    m.background.translation = [offsetX, offsetY]
+    m.background.width = cardWidth
+    m.background.height = cardHeight
+    m.background.color = fill
+    m.borderTop.width = cardWidth
+    m.borderTop.translation = [offsetX, offsetY]
+    m.borderBottom.width = cardWidth
+    m.borderLeft.height = cardHeight
+    m.borderLeft.translation = [offsetX, offsetY]
+    m.borderRight.height = cardHeight
+    edge = borderWidth
+    if edge < 1 then edge = 1
+    if edge > cardHeight / 2 then edge = cardHeight / 2
+    m.borderTop.height = edge
+    m.borderBottom.height = edge
+    m.borderBottom.translation = [offsetX, offsetY + cardHeight - edge]
+    m.borderLeft.width = edge
+    m.borderRight.width = edge
+    m.borderRight.translation = [offsetX + cardWidth - edge, offsetY]
+    m.borderTop.color = border
+    m.borderBottom.color = border
+    m.borderLeft.color = border
+    m.borderRight.color = border
+    visible = borderWidth > 0
+    m.borderTop.visible = visible
+    m.borderBottom.visible = visible
+    m.borderLeft.visible = visible
+    m.borderRight.visible = visible
+    colors = m.top.gradientColors
+    gradientStops = m.top.gradientStops
+    gradientStyle = m.top.gradientStyle
+    gradientAngle = m.top.gradientAngle
+    if plain then colors = invalid
+    needsPreset = colors = invalid
+    if not needsPreset then needsPreset = colors.count() < 2
+    if not plain and needsPreset and m.top.gradientPreset <> "" and theme.gradients <> invalid
+        preset = theme.gradients[m.top.gradientPreset]
+        if preset <> invalid
+            colors = preset.colors
+            gradientStops = preset.stops
+            gradientStyle = preset.style
+            gradientAngle = preset.angle
+        end if
+    end if
+    if ApplyNodeEffect(m.background, radius, borderWidth, border, colors, gradientStops, gradientStyle, gradientAngle)
+        m.borderTop.visible = false
+        m.borderBottom.visible = false
+        m.borderLeft.visible = false
+        m.borderRight.visible = false
+    end if
+    layoutContent()
+end sub
+
+function getAppCardShape(mediaType as dynamic, contentType as dynamic) as string
+    normalizedMedia = normalizeAppCardType(mediaType)
+    normalizedContent = normalizeAppCardType(contentType)
+    if normalizedMedia = "audio" then return "square"
+    if normalizedContent = "podcast" or normalizedContent = "podcast_episode" or normalizedContent = "podcast_series" then return "square"
+    return "rectangle"
+end function
+
+function normalizeAppCardType(value as dynamic) as string
+    if value = invalid then return ""
+    valueType = LCase(type(value))
+    if valueType <> "string" and valueType <> "rostring" then return ""
+    return LCase(value.Trim())
+end function
+
+sub layoutContent()
+    if m.cardContent = invalid then return
+    theme = GetTheme()
+    inset = m.top.padding
+    if inset < 0 then inset = theme.spacing.md
+    if m.cardContent.hasField("translation") then m.cardContent.translation = [m.cardOffsetX + inset, m.cardOffsetY + inset]
+    if m.cardContent.hasField("width") then m.cardContent.width = m.cardWidth - inset * 2
+    if m.cardContent.hasField("height") then m.cardContent.height = m.cardHeight - inset * 2
+end sub

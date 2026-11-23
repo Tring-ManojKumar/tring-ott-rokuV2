@@ -1,0 +1,62 @@
+import "pkg:/source/rokuCore/Framework.bs"
+
+' Backward-compatible facade. Navigation implementation lives in Roku Core.
+namespace RokuMvvmClean
+class Framework
+    public sub new()
+        m.core = new RokuCore.Framework()
+    end sub
+
+    public function initialize(config as object) as boolean
+        return m.core.initialize(config)
+    end function
+
+    public function navigate(route as dynamic, params = invalid as dynamic) as boolean
+        return m.core.navigate(route, params)
+    end function
+
+    public function back() as boolean
+        return m.core.back()
+    end function
+
+    public function handleEvent(event as dynamic) as boolean
+        return m.core.handleEvent(event)
+    end function
+
+    public function replace(route as dynamic, params = invalid as dynamic) as boolean
+        return m.core.replace(route, params)
+    end function
+
+    public function reset(route as dynamic, params = invalid as dynamic) as boolean
+        return m.core.reset(route, params)
+    end function
+
+    public function getCurrentRoute() as dynamic
+        return m.core.getCurrentRoute()
+    end function
+
+    public function canGoBack() as boolean
+        return m.core.canGoBack()
+    end function
+
+    public function registerRoute(route as dynamic, componentName as dynamic) as boolean
+        return m.core.registerRoute(route, componentName)
+    end function
+
+    public function resolveRoute(route as dynamic, params = invalid as dynamic) as dynamic
+        return m.core.resolveRoute(route, params)
+    end function
+
+    public function getLastError() as string
+        return m.core.getLastError()
+    end function
+
+    public function getCurrentScreen() as dynamic
+        return m.core.getCurrentScreen()
+    end function
+
+    public sub onActiveScreenReady(screen = invalid as dynamic)
+        m.core.onActiveScreenReady(screen)
+    end sub
+end class
+end namespace

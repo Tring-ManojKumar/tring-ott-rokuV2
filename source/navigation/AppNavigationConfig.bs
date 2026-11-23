@@ -1,0 +1,17 @@
+import "pkg:/source/navigation/AppRoutes.bs"
+
+' Application-owned mapping from stable route identifiers to SceneGraph component types.
+' Core remains responsible for validating and resolving this map.
+namespace AppNavigationConfig
+    function GetConfig() as object
+        routes = {}
+        routes[AppRoutes.HOME] = "HomeScreen"
+        routes[AppRoutes.SETTINGS] = "SettingsScreen"
+        routes[AppRoutes.NETWORK_CHECK] = "NetworkCheckScreen"
+
+        return {
+            initialRoute: AppRoutes.HOME
+            routes: routes
+        }
+    end function
+end namespace

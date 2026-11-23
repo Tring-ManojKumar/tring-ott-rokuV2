@@ -1,0 +1,11 @@
+namespace rodash
+  ' This method is like rodash.zipObject except that it supports property paths.
+  ' @ignore
+  ' @category Array
+  ' @param {Array} array - The property identifiers
+  ' @param {Array} values - The property values
+  ' @returns {Object} Returns the new object
+  function zipObjectDeep(props = CreateObject("roArray", 0, true) as Object, values = CreateObject("roArray", 0, true) as Object) as Object
+    ' COME BACK
+  end function
+end namespace

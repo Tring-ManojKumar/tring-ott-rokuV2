@@ -1,0 +1,12 @@
+namespace rodash
+  ' Checks if the supplied value is a valid number type
+  ' @since 0.0.21
+  ' @category Lang
+  ' @param {Dynamic} value The variable to be checked
+  ' @returns {Boolean} Results of the check
+  function isNumber(value as Dynamic) as Boolean
+    valueType = type(value)
+    return valueType = "Integer" OR valueType = "roInt" OR valueType = "roInteger" OR valueType = "LongInteger" OR valueType = "Float" OR valueType = "roFloat" OR valueType = "Double" OR valueType = "roDouble" OR valueType = "roIntrinsicDouble"
+  end function
+end namespace
+

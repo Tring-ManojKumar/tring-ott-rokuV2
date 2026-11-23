@@ -1,0 +1,29 @@
+' Shared application logger. Debug builds emit all levels; production builds
+' retain warnings and errors so routine diagnostics do not clutter device logs.
+function AppLog(level as string, tag as string, message as string)
+    normalizedLevel = LCase(level)
+#if isDebugBuild
+    shouldLog = normalizedLevel = "debug" or normalizedLevel = "info" or normalizedLevel = "warn" or normalizedLevel = "error"
+#else
+    shouldLog = normalizedLevel = "warn" or normalizedLevel = "error"
+#endif
+    if not shouldLog then return invalid
+
+    print "[" + UCase(normalizedLevel) + "][" + tag + "] " + message
+end function
+
+function AppLogDebug(tag as string, message as string)
+    AppLog("debug", tag, message)
+end function
+
+function AppLogInfo(tag as string, message as string)
+    AppLog("info", tag, message)
+end function
+
+function AppLogWarn(tag as string, message as string)
+    AppLog("warn", tag, message)
+end function
+
+function AppLogError(tag as string, message as string)
+    AppLog("error", tag, message)
+end function

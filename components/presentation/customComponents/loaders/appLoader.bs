@@ -1,0 +1,27 @@
+sub init()
+    m.message = m.top.findNode("message")
+    applyTheme()
+    updateText()
+    updateSize()
+end sub
+
+sub applyTheme()
+    if m.message = invalid then return
+    theme = GetTheme()
+    if m.top.textColor = invalid or m.top.textColor = -1
+        m.message.color = ThemeColor(theme.colors.textSecondary)
+    end if
+    m.message.font = CreateThemeFont(theme.typography.fonts.regular, theme.typography.sizes.body)
+end sub
+
+sub updateText()
+    if m.message = invalid then return
+    m.message.text = m.top.text
+    if m.top.textColor <> invalid and m.top.textColor <> -1 then m.message.color = m.top.textColor
+end sub
+
+sub updateSize()
+    if m.message = invalid then return
+    m.message.width = m.top.width
+    m.message.height = m.top.height
+end sub

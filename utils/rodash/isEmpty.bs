@@ -1,0 +1,24 @@
+namespace rodash
+  ' Checks if a value is empty.
+  ' @since 0.0.21
+  ' @category Lang
+  ' @param {Dynamic} value The variable to be checked
+  ' @returns {Boolean} Results of the check
+  ' @example
+  ' rodash.isEmpty("") // => true
+  ' rodash.isEmpty([]) // => true
+  ' rodash.isEmpty({}) // => true
+  ' rodash.isEmpty(0) // => true
+  ' rodash.isEmpty(false) // => true
+  ' rodash.isEmpty(invalid) // => true
+  ' rodash.isEmpty("Hello") // => false
+  function isEmpty(value as Dynamic)
+    if rodash.isInvalid(value) OR rodash.isNumber(value) OR rodash.isBoolean(value) then
+      return true
+    else
+      return value.isEmpty()
+    end if
+
+    return true
+  end function
+end namespace

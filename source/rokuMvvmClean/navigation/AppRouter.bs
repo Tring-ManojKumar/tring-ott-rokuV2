@@ -1,0 +1,31 @@
+import "pkg:/source/rokuCore/navigation/AppRouter.bs"
+
+' Compatibility adapter for the former MVVM route registry.
+namespace RokuMvvmClean
+class RokuMvvmAppRouter
+    public sub new(routes = invalid as dynamic)
+        m.core = new RokuCore.RokuCoreAppRouter(routes)
+    end sub
+    public function getLastError() as string
+        return m.core.getLastError()
+    end function
+    public function register(route as dynamic, componentName as dynamic) as boolean
+        return m.core.register(route, componentName)
+    end function
+    public function replaceRegistration(route as dynamic, componentName as dynamic) as boolean
+        return m.core.replaceRegistration(route, componentName)
+    end function
+    public function registerRoutes(routes as dynamic) as boolean
+        return m.core.registerRoutes(routes)
+    end function
+    public function getComponentName(route as dynamic) as dynamic
+        return m.core.getComponentName(route)
+    end function
+    public function isValidRoute(route as dynamic) as boolean
+        return m.core.isValidRoute(route)
+    end function
+    public function resolve(route as dynamic, params = invalid as dynamic) as dynamic
+        return m.core.resolve(route, params)
+    end function
+end class
+end namespace

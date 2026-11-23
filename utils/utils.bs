@@ -1,0 +1,3237 @@
+import "pkg:/data/datasources/RegistryDataSource.bs"
+import "pkg:/utils/logging/Logger.bs"
+
+' Compatibility entry points for the existing utility callers. Preferences and
+' operational values remain global; authentication metadata is namespaced per
+' packaged market so builds cannot accidentally share sessions across brands.
+function getRegistrySectionForKey(key as string) as dynamic
+    if key = "user_token"
+        registry = new Data.RegistryDataSource()
+        marketId = registry.getActiveMarketId()
+        if not isValidString(marketId) then return invalid
+        return "Market_" + marketId + "_Auth"
+    end if
+    return "App_Global"
+end function
+
+function readFromRegistry(key as string, defaultValue = invalid as dynamic) as dynamic
+    sectionName = getRegistrySectionForKey(key)
+    if not isValidString(sectionName) then return defaultValue
+    registry = new Data.RegistryDataSource()
+    return registry.read(sectionName, key, defaultValue)
+end function
+
+function writeToRegistry(key as string, value as dynamic) as boolean
+    sectionName = getRegistrySectionForKey(key)
+    if not isValidString(sectionName) then return false
+    registry = new Data.RegistryDataSource()
+    return registry.write(sectionName, key, value)
+end function
+
+function deleteFromRegistry(key as string) as boolean
+    sectionName = getRegistrySectionForKey(key)
+    if not isValidString(sectionName) then return false
+    registry = new Data.RegistryDataSource()
+    return registry.remove(sectionName, key)
+end function
+
+function clearMarketAuthenticationRegistry() as boolean
+    registry = new Data.RegistryDataSource()
+    marketId = registry.getActiveMarketId()
+    if not isValidString(marketId) then return false
+    return registry.clearSection("Market_" + marketId + "_Auth")
+end function
+
+function isValidString(value as dynamic) as boolean
+    return value <> invalid and (LCase(type(value)) = "rostring" or LCase(type(value)) = "string") and value <> ""
+end function
+
+function isNonBlankString(value as dynamic) as boolean
+    return isValidString(value) and value.Trim() <> ""
+end function
+
+function isValidInteger(value as dynamic) as boolean
+    return value <> invalid and (LCase(type(value)) = "roint" or LCase(type(value)) = "integer")
+end function
+
+function isValidBool(value as dynamic) as boolean
+    return value <> invalid and (LCase(type(value)) = "roboolean" or LCase(type(value)) = "boolean" or LCase(type(value)) = "bool")
+end function
+
+function isValidUri(value as dynamic) as boolean
+    return isValidString(value) and Left(value, 4) = "http"
+end function
+
+function checkBool(value as dynamic) as boolean
+    if type(value) = "roString" and value = "true"
+        value = true
+    end if
+    return isValidBool(value) and value
+end function
+
+function arrayHasItems(value as dynamic) as boolean
+    return value <> invalid and (LCase(type(value)) = "roarray" or LCase(type(value)) = "array") and value.Count() > 0
+end function
+
+function arrayHasMoreThenOneItems(value as dynamic) as boolean
+    return arrayHasItems(value) and value.Count() > 1
+end function
+
+function isValidAA(value as dynamic) as boolean
+    return value <> invalid and (LCase(type(value)) = "roassociativearray" or LCase(type(value)) = "assocarray") and value.Count() > 0
+end function
+
+function isEqual(valueFirst as dynamic, valueSecond as dynamic) as boolean
+    return valueFirst <> invalid and valueSecond <> invalid and Type(valueFirst) = Type(valueSecond) and valueFirst = valueSecond
+end function
+
+function bsTernaryOperation(condition as dynamic, trueValue as dynamic, falseValue as dynamic) as dynamic
+    if condition
+        return trueValue
+    else
+        return falseValue
+    end if
+end function
+
+function getNodeFromObject(response = invalid as object) as object
+    responseNode = createObject("roSGNode", "ContentNode")
+    if isValidAA(response)
+        responseNode.id = response.id
+        responseNode.addFields(response)
+        ' ContentNode already defines title and description, so addFields skips them.
+        if isValidString(response.title) then responseNode.title = response.title
+        if isValidString(response.description) then responseNode.description = response.description
+    else if arrayHasItems(response)
+        responseNode.addFields({
+            content: response
+        })
+    end if
+    return responseNode
+end function
+
+function getLabelBound(text as string, font as object) as object
+    label = CreateObject("roSGNode", "Label")
+    label.font = font
+    label.text = text
+    return label.boundingRect()
+end function
+
+function contains(value as string, key as string) as boolean
+    if isValidString(value) and isValidString(key)
+        return Instr(0, value, key) > 0
+    end if
+    return false
+end function
+
+sub showSpinner()
+    m.top.getScene().showSpinner = true
+end sub
+
+sub hideSpinner()
+    m.top.getScene().showSpinner = false
+end sub
+
+sub showMenu()
+    m.top.getScene().showHeader = true
+end sub
+
+sub hideMenu()
+    m.top.getScene().showHeader = false
+end sub
+
+sub showToastMessage(data as object)
+    m.top.getScene().setToastData = data
+end sub
+
+function RoundOff(number as float) as integer
+    intValue = Int(number)
+    if number > (intValue + 0.5)
+        return intValue + 1
+    else
+        return intValue
+    end if
+end function
+
+function Ceil(number as float) as integer
+    intValue = Int(number)
+    if number > intValue
+        return intValue + 1
+    else
+        return intValue
+    end if
+end function
+
+sub hideMenuActiveStatus()
+    m.top.getScene().callFunc("resetActiveMenuStatus")
+end sub
+
+sub showMenuActiveStatus()
+    m.top.getScene().callFunc("setActiveMenuStatus")
+end sub
+
+sub setMenuFocus()
+    m.top.getScene().callFunc("setFocusToMenu")
+end sub
+
+function isTokenValid(expiryDate) as boolean
+    currentDate = CreateObject("roDateTime").AsSeconds()
+    if expiryDate <> invalid
+        return currentDate < expiryDate
+    else
+        return true
+    end if
+end function
+
+function isDateInFuture(date) as boolean
+    if isValidString(date)
+        currentDate = CreateObject("roDateTime").AsSeconds()
+
+        dateObj = CreateObject("roDateTime")
+        dateObj.FromISO8601String(date)
+        givenDate = dateObj.AsSeconds()
+
+        return currentDate < givenDate
+    end if
+    return false
+end function
+
+function isEndDateInPast(date) as boolean
+    if isValidString(date)
+        currentDate = CreateObject("roDateTime").AsSeconds()
+
+        dateObj = CreateObject("roDateTime")
+        dateObj.FromISO8601String(date)
+        givenDate = dateObj.AsSeconds()
+
+        return currentDate > givenDate
+    end if
+    return false
+end function
+
+sub addUserTokenToRegistry(userDetails)
+    idToken = ""
+    if userDetails.idToken <> invalid
+        idToken = userDetails.idToken
+    end if
+    userReg = {
+        access_token: userDetails.access_token
+        refresh_token: userDetails.refresh_token,
+        idToken: idToken
+    }
+    if(userDetails.user <> invalid and userDetails.user.username <> invalid)
+        userReg.ser_name = userDetails.user.username
+    end if
+    if(userDetails.expires <> invalid)
+        userReg.ser_name = userDetails.expires
+    end if
+    writeToRegistry("user_token", FormatJson(userReg))
+end sub
+
+sub addUserTokenToRegistry1(userDetails, idToken = "")
+    userReg = {
+        access_token: userDetails.token,
+        idToken: idToken
+    }
+    if(userDetails.user <> invalid and userDetails.user.username <> invalid)
+        userReg.ser_name = userDetails.user.username
+    end if
+    writeToRegistry("user_token", FormatJson(userReg))
+end sub
+
+function getTitleContentNode(text) as object
+    contentNode = CreateObject("roSGNode", "ContentNode")
+    contentNode.TITLE = text
+    return contentNode
+end function
+
+function createNoDataAvailableView(offset = invalid as object) as object
+    if offset = invalid then offset = [0, 0]
+    group = CreateObject("roSGNode", "LayoutGroup")
+    group.setFields({
+        layoutDirection: "vert"
+        horizAlignment: "center"
+        vertAlignment: "center"
+        itemSpacings: [42, 12]
+        translation: [960 - offset[0], 540 - offset[1]]
+    })
+
+    logo = CreateObject("roSGNode", "Poster")
+    logoFields = {
+        uri: "pkg:/images/app_icon.png"
+        loadDisplayMode: "scaleToFit"
+    }
+    if m.global.style <> invalid and m.global.style.headerLogo <> invalid
+        headerLogo = m.global.style.headerLogo
+        if headerLogo.width <> invalid then logoFields.width = headerLogo.width
+        if headerLogo.height <> invalid then logoFields.height = headerLogo.height
+        if headerLogo.loadWidth <> invalid then logoFields.loadWidth = headerLogo.loadWidth
+        if headerLogo.loadHeight <> invalid then logoFields.loadHeight = headerLogo.loadHeight
+    end if
+    logo.setFields(logoFields)
+    group.appendChild(logo)
+
+    message = m.strings.NO_DATA_AVAILABLE
+    if not isValidString(message) then message = ""
+    lines = message.Split(Chr(10))
+
+    title = CreateObject("roSGNode", "Label")
+    title.setFields({
+        text: lines[0]
+        font: m.fonts.getFont(m.fontType.S1)
+        color: m.color.neutral_white
+        horizAlign: "center"
+    })
+    group.appendChild(title)
+
+    if lines.Count() > 1 and isValidString(lines[1])
+        description = CreateObject("roSGNode", "Label")
+        description.setFields({
+            text: lines[1]
+            font: m.fonts.getFont(m.fontType.S3)
+            color: m.color.neutral_500
+            horizAlign: "center"
+            wrap: true
+            width: 1400
+            maxLines: 2
+        })
+        group.appendChild(description)
+    end if
+    return group
+end function
+
+function is12HourTimeFormat() as boolean
+    format = invalid
+    if m.global <> invalid and m.global.uiSettings <> invalid and isValidString(m.global.uiSettings.datetime_format)
+        format = m.global.uiSettings.datetime_format
+    else if m.global <> invalid and m.global.featureFlags <> invalid and isValidString(m.global.featureFlags.datetime_format)
+        format = m.global.featureFlags.datetime_format
+    end if
+    if not isValidString(format) then return true
+    return LCase(format) <> "24h"
+end function
+
+function formatTime12Hour(dateTimeObj as object) as string
+    hours = dateTimeObj.getHours()
+    minutes = dateTimeObj.getMinutes().ToStr()
+    if Len(minutes) = 1 then minutes = "0" + minutes
+
+    meridian = bsTernaryOperation(hours < 12, "AM", "PM")
+    if m.global <> invalid and m.global.localeLanguage = "french"
+        meridian = bsTernaryOperation(hours < 12, "du matin", "du soir")
+    end if
+
+    if hours = 0 then
+        hours = 12
+    else if hours > 12 then
+        hours = hours - 12
+    end if
+
+    hoursStr = hours.ToStr()
+    if Len(hoursStr) = 1 then hoursStr = "0" + hoursStr
+    return hoursStr + ":" + minutes + " " + meridian
+end function
+
+function formatTime24Hour(dateTimeObj as object) as string
+    hoursStr = dateTimeObj.getHours().ToStr()
+    minutes = dateTimeObj.getMinutes().ToStr()
+    if Len(minutes) = 1 then minutes = "0" + minutes
+    if m.global <> invalid and m.global.localeLanguage = "french" then return hoursStr + " h " + minutes
+    if Len(hoursStr) = 1 then hoursStr = "0" + hoursStr
+    return hoursStr + ":" + minutes
+end function
+
+function formatClockTime(dateTimeObj as object) as string
+    if is12HourTimeFormat() then return formatTime12Hour(dateTimeObj)
+    return formatTime24Hour(dateTimeObj)
+end function
+
+function getFormattedTime(timeInSec) as string
+    if isValidString(timeInSec)
+        dateTimeObj = CreateObject("roDateTime")
+        dateTimeObj.FromISO8601String(timeInSec)
+        dateTimeObj.ToLocalTime()
+        return formatClockTime(dateTimeObj)
+    else
+        return ""
+    end if
+end function
+
+function formatVideoDuration(duration as longinteger, hourSuffix as string, minSuffix as string, secSuffix as string) as string
+    if duration <= 0 then return ""
+    if duration < 60 then return duration.ToStr() + secSuffix
+
+    remainingSeconds = duration mod 60
+    timeObj = CreateObject("roDateTime")
+    timeObj.FromSeconds(duration)
+    hours = timeObj.getHours()
+    minutes = timeObj.getMinutes()
+    if remainingSeconds > 30 then minutes++
+
+    durationString = ""
+    if hours > 0 then durationString += hours.ToStr() + hourSuffix
+    if minutes > 0 then durationString += minutes.ToStr() + minSuffix
+    return durationString.Trim()
+end function
+
+function getDuration(timeInSec) as string
+    ' dateTimeObj = CreateObject("roDateTime")
+    ' dateTimeObj.FromISO8601String(timeInSec)
+    ' dateTimeObj.ToLocalTime()
+
+    oneMinute = 60
+    oneHour = oneMinute * 60
+    oneDay = oneHour * 24
+    oneMonth = oneDay * 30 ' Approximate month (30 days)
+    oneYear = oneDay * 365 ' Approximate year (365 days) USD 19.99/One Month Access
+    if timeInSec >= oneYear then
+        years = timeInSec / oneYear
+        return GetNumberWord(years) + " Year Access"
+    else if timeInSec >= oneMonth then
+        months = timeInSec / oneMonth
+        return GetNumberWord(months) + " Month Access"
+    else if timeInSec >= oneDay then
+        days = timeInSec / oneDay
+        return GetNumberWord(days) + " Days Access"
+    else if timeInSec >= oneHour then
+        hours = timeInSec / oneHour
+        return GetNumberWord(hours) + " Hour Access"
+    else if timeInSec >= oneMinute then
+        minutes = timeInSec / oneMinute
+        return GetNumberWord(minutes) + " Minute Access"
+    else
+        return GetNumberWord(timeInSec) + " Second Access"
+    end if
+end function
+
+function GetNumberWord(num as integer) as string
+    numberWords = [
+        "One", "Two", "Three", "Four", "Five", "Six",
+        "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen"
+    ]
+
+    if num >= 1 and num <= 15 then
+        return numberWords[num - 1] ' Adjust for 0-based index
+    else
+        return "Invalid Number"
+    end if
+end function
+
+function isPackageExpire(seconds) as boolean
+    if isValidInteger(seconds)
+        currentDate = CreateObject("roDateTime").AsSeconds()
+        return currentDate > seconds
+    end if
+    return false
+end function
+
+
+function getFormattedDateTime(isoDate) as string
+    if isValidString(isoDate)
+        dateTimeObj = CreateObject("roDateTime")
+        dateTimeObj.FromISO8601String(isoDate)
+        dateTimeObj.ToLocalTime()
+        date = getFrenchFullDate(dateTimeObj)
+        return date + " " + Chr(183) + " " + formatClockTime(dateTimeObj)
+    end if
+    return ""
+end function
+
+
+function getFormattedDateTimeForLiveEvent(isoDate, endDateTitme)
+    if isValidString(isoDate)
+        dateTimeObj = CreateObject("roDateTime")
+        dateTimeObj.FromISO8601String(isoDate)
+        dateTimeObj.ToLocalTime()
+
+        endDateTimeObj = CreateObject("roDateTime")
+        endDateTimeObj.FromISO8601String(endDateTitme)
+        endDateTimeObj.ToLocalTime()
+
+        day = checkIfCurrentDateIsToday(dateTimeObj)
+        return day + formatClockTime(dateTimeObj) + " – " + formatClockTime(endDateTimeObj)
+    end if
+    return ""
+end function
+
+function checkIfCurrentDateIsToday(dateTimeObj)
+    ' Get the current date and time
+    currentDateTime = dateTimeObj
+
+    ' Get today's date
+    todayDate = CreateObject("roDateTime")
+    todayDate.ToISOString()
+    todayDate.ToLocalTime()
+
+    ' Compare year, month, and day
+    if currentDateTime.GetYear() = todayDate.GetYear() and currentDateTime.GetMonth() = todayDate.GetMonth() and currentDateTime.GetDayOfMonth() = todayDate.GetDayOfMonth()
+        if m.global.localeLanguage = "french" then return "Aujourd'hui, "
+        return "Today, "
+    else
+        return getFrenchFullDate(dateTimeObj) + " " + Chr(183) + " "
+    end if
+end function
+
+function getFrenchFullDate(dateTimeObj as object) as string
+    monthNames = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
+    if m.global <> invalid and m.global.localeLanguage = "french"
+        monthNames = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+    end if
+    monthIndex = dateTimeObj.GetMonth()
+    if monthIndex < 1 or monthIndex > 12 then return dateTimeObj.AsDateString("no-weekday")
+    return dateTimeObj.GetDayOfMonth().ToStr() + " " + monthNames[monthIndex - 1] + " " + dateTimeObj.GetYear().ToStr()
+end function
+
+
+function getAlternateThumbnail(item as object) as string
+    if item <> invalid
+        imageUrl = m.global.urls.alternateImageUrl
+        if isValidString(imageUrl)
+            if item.railType = "top-rated"
+                label = "vertical"
+            else
+                label = item.railType
+            end if
+            return imageUrl.Replace("{{media-id}}", item.mediaId).Replace("{{label}}", label)
+        end if
+    end if
+    return ""
+end function
+
+function getAlternateLogo(mediaId, label, size) as string
+    if mediaId <> invalid and label <> invalid
+        imageUrl = m.global.urls.alternateImageWithSize
+        if isValidString(imageUrl)
+            return imageUrl.Replace("{{media-id}}", mediaId).Replace("{{label}}", label).Replace("{{size}}", size)
+        end if
+    end if
+    return ""
+end function
+
+function getHashValue(text as dynamic, mode = "sha1" as string) as string
+    if isValidInteger(text) then text = text.ToStr()
+    if isValidString(text)
+        ba = CreateObject("roByteArray")
+        ba.FromAsciiString(text)
+        digest = CreateObject("roEVPDigest")
+        digest.Setup(mode)
+        return digest.Process(ba)
+    end if
+    return ""
+end function
+
+function generateId(length as integer) as string
+    id = ""
+    if length > 0
+        for i = 0 to length - 1
+            id += Rnd(9).ToStr()
+        end for
+    end if
+    return id
+end function
+
+function getCurrentSnappedTime() as integer
+    now = CreateObject("roDateTime").asSeconds()
+    return now - (now mod 1800)
+end function
+
+sub exitApp()
+    m.top.getScene().appExit = true
+end sub
+
+sub fireBeacon(event as string, canSendBeacon = false as boolean)
+    m.top.pageAction = {
+        type: "fireBeacon"
+        canSendBeacon: canSendBeacon
+        event: event
+    }
+end sub
+
+function checkInternetStatus(forceCheck = false as boolean)
+    deviceInfo = CreateObject("roDeviceInfo")
+    if forceCheck then deviceInfo.ForceInternetStatusCheck()
+    return deviceInfo.GetInternetStatus()
+end function
+
+function guardNetworkAction(action as Function, params = invalid as dynamic) as boolean
+    if checkInternetStatus() then return true
+    hideSpinner()
+    m.pendingNetworkFn = action
+    m.pendingNetworkParams = params
+    if not m.global.hasField("pendingNetworkCaller")
+        m.global.addField("pendingNetworkCaller", "node", false)
+    end if
+    m.global.pendingNetworkCaller = m.top
+    m.top.pageAction = {
+        type: "navigateToScreen"
+        screenName: "ErrorScreen"
+        data: {}
+    }
+    return false
+end function
+
+sub setGlobalConfigVariables(config)
+    adScheduleUrl = ""
+    clientId = "28a08b99-b9f5-4f4f-ba7d-b6b52e6db9f8"
+    if config.integrations <> invalid and config.integrations.jwp <> invalid and isValidString(config.integrations.jwp.clientId)
+        clientId = config.integrations.jwp.clientId
+    end if
+    if config.adScheduleUrls <> invalid and isValidString(config.adScheduleUrls.xml)
+        adScheduleUrl = config.adScheduleUrls.xml
+    end if
+    cleeng = invalid
+    jwp = invalid
+    if config.integrations <> invalid and config.integrations.cleeng <> invalid
+        cleeng = config.integrations.cleeng
+    else if config.integrations <> invalid and config.integrations.jwp <> invalid
+        jwp = config.integrations.jwp
+    end if
+   
+    adMethod= getAdDeliveryMethod()
+    ?"adMethod", adMethod
+    ?"config adDeliveryMethod", config.adDeliveryMethod
+
+    m.global.addFields({
+        features: config.features
+        
+        adScheduleID: config.adSchedule
+        adScheduleUrls: adScheduleUrl
+        analyticsToken: config.analyticsToken
+        custom: config.custom
+        adConfig: config.adConfig
+        siteId: config.siteId,
+        clientId: clientId,
+        adDeliveryMethod: adMethod,
+        cleeng: cleeng,
+        jwp: jwp
+    })
+
+    ?"m.global.adDeliveryMethod", m.global.adDeliveryMethod
+    if m.global.adDeliveryMethod = invalid or m.global.adDeliveryMethod = ""
+        m.global.adDeliveryMethod = config.adDeliveryMethod
+    end if 
+    
+    if config.custom <> invalid
+        m.global.addFields({
+            advertising: {
+                adEnabled: config.custom.adEnabled
+            },
+            contentProtection: {
+                drm: { defaultPolicyId: config.custom.drmPolicyId },
+                drmConfigId: config.custom.drmConfigId
+                drmLiveMediaId: config.custom.drmLiveMediaId
+                ' nonDrmLiveMediaId: config.custom.nonDrmLiveMediaId
+            },
+            ssaiAdsDRMContent:{
+                siteId: config.custom.drmSiteId
+                mediaId: config.custom.drmLiveMediaId
+                drmPolicyId: config.custom.drmPolicyId
+                drmAdConfigId: config.custom.drmAdConfigId
+            }
+        })
+    end if
+end sub
+
+function ConvertBase64ToImage(base64QRImageUrl, code)
+    cleanBase64String = base64QRImageUrl.Replace("data:image/png;base64,", "")
+    ba = CreateObject("roByteArray")
+    ba.fromBase64String(cleanBase64String)
+    uri = "tmp:/qrImageUrl-" + code + ".png"
+    ba = CreateObject("roByteArray")
+    ba.fromBase64String(cleanBase64String)
+    ba.writeFile(uri)
+    return uri
+end function
+
+sub ConvertMillisecondsToSeconds(milliseconds as integer) as float
+    ' Convert milliseconds to seconds
+    seconds = milliseconds / 1000
+    return seconds
+end sub
+
+
+'*******************************************************************
+'**  Function to strip HTML tags from string
+'*******************************************************************
+function stripHTML(text as string) as object
+    if type(text) = "String" or LCase(type(text)) = "rostring"
+        r = createobject("roRegex", "&nbsp;", "m")
+        text = r.replaceall(text, " ")
+
+
+        'first get rid of initial paragraph marks
+        r = createobject("roRegex", "<p>", "i")
+        text = r.replaceall(text, ";eMTeR;;eMTeR;")
+
+        'Replace ending paragaph marks with "&#xA;&#xA;"
+        r = createobject("roRegex", "</p>", "i")
+        text = r.replaceall(text, ";eMTeR;")
+
+        r = createobject("roRegex", "&amp;", "i")
+        text = r.replaceall(text, " & ")
+
+        r = createobject("roRegex", "<br( )*/?>", "i")
+        text = r.replaceall(text, ";eMTeR;;eMTeR;")
+        r = createobject("roRegex", "&bull;", "i")
+        text = r.replaceall(text, "*")
+        r = createobject("roRegex", "&lsaquo;", "i")
+        text = r.replaceall(text, "<")
+        r = createobject("roRegex", "&rsaquo;", "i")
+        text = r.replaceall(text, ">")
+        r = createobject("roRegex", "&trade;", "i")
+        text = r.replaceall(text, "tm)")
+        r = createobject("roRegex", "&frasl;", "i")
+        text = r.replaceall(text, "/")
+        r = createobject("roRegex", "&lt;", "i")
+        text = r.replaceall(text, "<")
+        r = createobject("roRegex", "&gt;", "i")
+        text = r.replaceall(text, ">")
+        r = createobject("roRegex", "&copy;", "i")
+        text = r.replaceall(text, "(c)")
+        r = createobject("roRegex", "&reg;", "i")
+        text = r.replaceall(text, "(r)")
+        r = createobject("roRegex", "&rsquo;", "i")
+        text = r.replaceall(text, "'")
+        r = createobject("roRegex", "&rsquo;", "i")
+        text = r.replaceall(text, "'")
+        r = createobject("roRegex", "&mdash;", "i")
+        text = r.replaceall(text, "-")
+        'remove everything else
+        r = createObject("roRegex", "&(.{2,6});", "i")
+        text = r.replaceall(text, "")
+        r = createObject("roRegex", "<b>", "i")
+        text = r.replaceall(text, "")
+        r = createObject("roRegex", "<i>", "i")
+        text = r.replaceall(text, "")
+        r = createObject("roRegex", "<u>", "i")
+        text = r.replaceall(text, "")
+        r = createobject("roRegex", "<div( )*/?>", "i")
+        text = r.replaceall(text, "")
+        r = createobject("roRegex", "</div>", "i")
+        text = r.replaceall(text, "")
+
+        r = createobject("roRegex", "<!--(.|\s)*?-->", "")
+        text = r.replaceall(text, "")
+
+        r = createobject("roRegex", "\\u200b", "m")
+        text = r.replaceall(text, "")
+
+        r = createobject("roRegex", "/[\x{200B}-\x{200D}]/u", "m")
+        text = r.replaceall(text, "")
+
+
+        r = createObject("roRegex", "<[^<]+?>", "i")
+        text = r.replaceall(text, "")
+
+        r = createObject("roRegex", "\n\n", "i")
+        text = r.replaceall(text, ";eMTeR;")
+
+        return text.trim()
+    else
+        return ""
+    end if
+end function
+
+function lineBreak(strDesc)
+    data = ""
+    if strDesc <> invalid
+        arrStr = strDesc.Split(";eMTeR;")
+
+        for each strVal In arrStr
+            data = data + strVal + chr(10)
+        end for
+    end if
+
+    return data
+end function
+
+
+function scale(fromVal = 1 as integer) as dynamic
+    dInfo = CreateObject("roDeviceInfo")
+    mode = getDisplayMode()
+    if mode = "FHD" then
+        return (fromVal)
+    else if mode = "HD" then 'FHD->HD:720/1080'
+        return (fromVal)
+    else if mode = "SD" then 'FHD->SD:480/1080'
+        return (fromVal * 0.44444)
+    end if
+end function
+
+function getDisplayMode() as string
+    gaa = getGlobalAA()
+    if gaa.displayMode = invalid then
+        deviceinfo = CreateObject("roDeviceInfo")
+        displaySize = deviceinfo.getDisplaySize()
+        if displaySize.h = 1080
+            gaa.displayMode = "FHD"
+        else if displaySize.h = 720
+            gaa.displayMode = "HD"
+        else if displaySize.h = 480
+            gaa.displayMode = "SD"
+        end if
+        return gaa.displayMode
+    else
+        return gaa.displayMode
+    end if
+end function
+
+function GetWordCategory(paragraph as string) as integer
+    wordArray = paragraph.Split(" ")
+    wordCount = wordArray.Count()
+    total = RoundOff(wordCount / 11)
+    if total < 10
+        return total
+    else
+        return 10
+    end if
+end function
+
+function getLocaleText(data as object, key as string) as string
+    if data <> invalid
+        if m.global.localeLanguage = "english"
+            newKey = key + "-en"
+            if isValidString(data[newKey]) then return data[newKey]
+        end if
+        return data[key]
+    end if
+    return ""
+end function
+
+function getLocaleTextForRowlist(data as object, key as string, railContent = invalid) as string
+    if data <> invalid
+        if m.global.localeLanguage = "english"
+            newKey = key + "-en"
+            if isValidAA(data["custom"]) and isValidString(data["custom"][newKey]) then return data["custom"][newKey]
+        end if
+        if data[key] <> invalid
+            return data[key]
+        else
+            return getLocaleText(railContent, "title")
+        end if
+    end if
+    return ""
+end function
+
+sub updateConfig(userType)
+    if isValidString(userType) then user_type = LCase(userType) else user_type = ""
+    if m.global.urls <> invalid then
+        if user_type = "kids" then
+            m.global.urls.configID = m.global.urls.kidsConfigID
+            ' if m.global.urls.submitButtonChange="submit"
+            '      m.global.urls.configID = m.global.urls.kidsConfigID
+            ' else
+            '     m.global.urls.configID = m.global.urls.adultConfigID
+            ' end if
+        else
+            if m.global.libraryUser.parentlibrary.libraryType = "public"
+                m.global.urls.configID = m.global.urls.publicAdultConfigID
+            else
+                m.global.urls.configID = m.global.urls.adultConfigID
+            end if
+
+        end if
+        m.global.urls.configUrl = getContentBaseUrl() + m.global.urls.configUrl.Replace("{{config-id}}", getAppConfigId())
+        writeToRegistry("configUrl", m.global.urls.configUrl)
+    end if
+end sub
+
+function isSeriesType(contentType as string) as boolean
+    seriesTypes = {
+        "series": ""
+        "Series - Estante": ""
+        "TV Shows - Estante": ""
+        "Series - Bibliotele": ""
+        "TV Shows - Bibliotele": ""
+    }
+    return seriesTypes.DoesExist(contentType)
+end function
+
+function isMovieType(contentType as string) as boolean
+    movieTypes = {
+        "Movie": ""
+        "Movies": ""
+        "Movies - Estante": ""
+        "Movies - Bibliotele": ""
+        "External Movies - Bibliotele": ""
+        "Artes Escénicas - Bibliotele": ""
+    }
+    return movieTypes.DoesExist(contentType)
+end function
+
+function isEpisodeType(contentType as string) as boolean
+    episodeTypes = {
+        "episode": ""
+        "episodes": ""
+        "Episodes - Estante": ""
+    }
+    return episodeTypes.DoesExist(contentType)
+end function
+
+function isLibraryEnabled() as boolean
+    return isValidBool(m.global.flags.IS_LIBRARY_SUPPORTED) and m.global.flags.IS_LIBRARY_SUPPORTED
+end function
+
+function getFontType() as object
+    return m.global.font
+end function
+
+sub addUserTokenToRegistry2(userDetails, idToken = "")
+    currentDate = CreateObject("roDateTime").AsSeconds()
+    customerId = ""
+    if userDetails <> invalid and userDetails.customerId <> invalid
+        customerId = userDetails.customerId
+    end if
+    if isValidString(userDetails.RefreshToken)
+        userReg = {
+            access_token: userDetails.AccessToken
+            refresh_token: userDetails.RefreshToken
+            expires: userDetails.ExpiresIn + currentDate,
+            idToken: idToken,
+            customerId: customerId
+        }
+    else
+        userInfo = readFromRegistry("user_token")
+        userInfo = ParseJson(userInfo)
+        userReg = {
+            access_token: userDetails.AccessToken
+            refresh_token: userInfo.refresh_token
+            expires: userDetails.ExpiresIn + currentDate,
+            idToken: idToken,
+            customerId: customerId
+        }
+    end if
+    writeToRegistry("user_token", FormatJson(userReg))
+end sub
+
+sub storeRefreshToken(response)
+    currentDate = CreateObject("roDateTime").AsSeconds()
+    userInfo = readFromRegistry("user_token")
+    userInfo = ParseJson(userInfo)
+    access_token = userInfo.access_token
+    refresh_token = userInfo.refresh_token
+    expires = userInfo.expires
+    idToken = userInfo.idToken
+    customerId = userInfo.customerId
+    if response.idtoken <> invalid and isValidString(response.idtoken)
+        idtoken = response.idtoken
+    end if
+
+    if response.expires <> invalid
+        expires = expires + response.expires
+    else
+        expires = expires + 900
+    end if
+
+    if response.access_token <> invalid and isValidString(response.access_token)
+        access_token = response.access_token
+    end if
+
+    if response.refresh_token <> invalid and isValidString(response.refresh_token)
+        refresh_token = response.refresh_token
+    end if
+    if response.responseData <> invalid
+        data = response.responseData
+        if data.jwt <> invalid and isValidString(data.jwt)
+            access_token = data.jwt
+        end if
+
+        if data.refreshToken <> invalid and isValidString(data.refreshToken)
+            refresh_token = data.refreshToken
+        end if
+    end if
+
+    userReg = {
+        access_token: access_token
+        refresh_token: refresh_token
+        expires: expires,
+        idToken: idToken,
+        customerId: customerId
+    }
+    m.global.Update({
+        user_access_token: access_token
+        refresh_token: refresh_token
+        idtoken: idtoken,
+        expires: expires,
+        customerId: customerId,
+        isUserAuthenticated: true
+    }, true)
+    writeToRegistry("user_token", FormatJson(userReg))
+end sub
+
+sub sendAnalyticsEvent(data as object)
+    if isAnalyticsEventEnabled()
+        if m.top.pageAction = invalid
+            m.top.getScene().callFunc("sendAnalyticsEventData", data)
+        else
+            m.top.pageAction = {
+                type: "sendAnalyticsEvent"
+                data: data
+            }
+        end if    
+    end if
+end sub
+
+sub sendGAScreenViewEvent(event, params)
+    sendAnalyticsEvent({
+        name: event
+        parameters: params
+    })
+end sub
+
+function isSignInSupported() as boolean
+    return isValidBool(m.global.flags.IS_SIGN_IN_SUPPORTED) and m.global.flags.IS_SIGN_IN_SUPPORTED
+end function
+
+function isSignUpSupported() as boolean
+    return isValidBool(m.global.flags.IS_SIGN_UP_SUPPORTED) and m.global.flags.IS_SIGN_UP_SUPPORTED
+end function
+
+function isBGImageSupported() as boolean
+    return isValidBool(m.global.flags.IS_BG_IMAGE_ENABLED) and m.global.flags.IS_BG_IMAGE_ENABLED
+end function
+
+function isBGGradidentSupported() as boolean
+    return isValidBool(m.global.flags.IS_BG_GRADIDENT_ENABLED) and m.global.flags.IS_BG_GRADIDENT_ENABLED
+end function
+
+function updateUserPenalization(response)
+    history = []
+    favorites = []
+    if response <> invalid and response.responseData <> invalid
+        profile = response.responseData
+        if profile.externalData <> invalid and arrayHasItems(profile.externalData.history)
+            history = profile.externalData.history
+        end if
+        if profile.externalData <> invalid and arrayHasItems(profile.externalData.favorites)
+            favorites = profile.externalData.favorites
+        end if
+    end if
+    m.global.Update({
+        favorites: favorites,
+        history: history,
+        isUserAuthenticated: true
+    }, true)
+end function
+
+function getProfileData(response) as object
+    profileInfo = {}
+    name = ""
+    email = ""
+    id = ""
+    if response <> invalid and response.responseData <> invalid
+        profile = response.responseData
+        fullName = profile?.firstname + " " + profile?.lastname
+        name = fullName
+        email = profile?.email
+        id = profile?.id
+        updateUserPenalization(response)
+    else if isCustomAPI() and response <> invalid
+        if response?.profile <> invalid
+            profile = response?.profile?.profile
+            fullName = profile?.firstname + " " + profile?.lastname
+            name = fullName
+            if profile?.uuid <> invalid
+                id = profile?.uuid
+            end if
+        end if
+        user = response?.user
+        if user <> invalid and user.email <> invalid
+            email = user.email
+
+            if user.username <> invalid
+                id = user.username
+            end if
+        end if
+    else
+        if response?.full_name <> invalid
+            name = response?.full_name
+        end if
+        if response?.email <> invalid
+            email = response?.email
+        end if
+
+        if response?.uuid <> invalid
+            id = response?.uuid
+        end if
+    end if
+    profileInfo = {
+        "name": name,
+        "email": email,
+        "id": id
+    }
+    m.global.Update({
+        userInfo: profileInfo
+        isUserAuthenticated: true
+    }, true)
+    return profileInfo
+end function
+
+sub updateFavourites(favorites = [])
+    m.global.Update({
+        favorites: favorites,
+    }, true)
+end sub
+
+function getFavourites() as object
+    if arrayHasItems(m.global.favorites)
+        return m.global.favorites
+    end if
+    return []
+end function
+
+sub deleteFavourites(contentID as string)
+    if isValidString(contentID)
+        favorites = getFavourites()
+        deleteIndex = -1
+        for i = 0 to favorites.count() - 1
+            item = favorites[i]
+            if item.mediaid = contentId
+                deleteIndex = i
+            end if
+        end for
+        if deleteIndex > -1
+            favorites.Delete(deleteIndex)
+        end if
+        m.global.Update({
+            favorites: favorites
+        }, true)
+    end if
+end sub
+
+function getFavouritesById(contentId as string) as boolean
+    result = false
+    if arrayHasItems(m.global.favorites)
+        favorites = m.global.favorites
+        for each item in favorites
+            if item.mediaid = contentId
+                result = true
+                return result
+            end if
+        end for
+    end if
+    return result
+end function
+
+sub updateHistory(history = [])
+    m.global.Update({
+        history: history,
+        isUserAuthenticated: true
+    }, true)
+end sub
+
+sub deleteHistory(contentID as string)
+    if isValidString(contentID)
+        history = getHistory()
+        deleteIndex = -1
+        for i = 0 to history.count() - 1
+            item = history[i]
+            if item.mediaid = contentId
+                deleteIndex = i
+            end if
+        end for
+        if deleteIndex > -1
+            history.Delete(deleteIndex)
+        end if
+        m.global.Update({
+            history: history
+        }, true)
+    end if
+end sub
+
+function getHistory() as object
+    if arrayHasItems(m.global.history)
+        return m.global.history
+    end if
+    return []
+end function
+
+function getHistoryById(contentId as string) as object
+    result = invalid
+    if arrayHasItems(m.global.history)
+        history = m.global.history
+        for each item in history
+            if item.mediaid = contentId
+                result = item
+                return result
+            end if
+        end for
+    end if
+    return result
+end function
+
+sub loadGuestView()
+    m.global.Update({
+        user_access_token: "GUEST_TOKEN"
+        isUserAuthenticated: false
+        userInfo: { id: "GUEST" }
+    }, true)
+    fireBeacon("AppDialogComplete")
+    m.top.getScene().startNetworkCall = true
+end sub
+
+function isUserLoggedIn() as boolean
+    return isValidBool(m.global.isUserAuthenticated) and m.global.isUserAuthenticated
+end function
+
+function isUrlSigningEnabled() as boolean
+    if m.global.custom = invalid then return false
+    if isUrlSigningFlag(m.global.custom.url_signing) then return true
+    return isUrlSigningFlag(m.global.custom.urlSigning)
+end function
+
+function isUrlSigningFlag(value as dynamic) as boolean
+    if checkBool(value) then return true
+    return isValidString(value) and LCase(value) = "true"
+end function
+
+'Feature flag Fuctions
+
+function isOnboardingScreenEnabled() as boolean
+    if isVersionMatched()
+        return m.global.platforms.build_version.is_onboarding_screen_enabled
+    end if
+    globalConfigOnboarding = m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.is_onboarding_screen_enabled) and m.global.featureFlags.is_onboarding_screen_enabled
+    if m.global.platforms <> invalid and m.global.platforms.is_onboarding_screen_enabled <> invalid
+        rokuPlatformOnboarding = m.global.platforms <> invalid and isValidBool(m.global.platforms.is_onboarding_screen_enabled) and m.global.platforms.is_onboarding_screen_enabled
+        return rokuPlatformOnboarding
+    end if
+    return globalConfigOnboarding
+end function
+
+function isDeepLinkingEnabled() as boolean
+    if m.global.platforms <> invalid and m.global.platforms.is_deeplink_tracking_enabled <> invalid
+        return m.global.platforms <> invalid and isValidBool(m.global.platforms.is_deeplink_tracking_enabled) and m.global.platforms.is_deeplink_tracking_enabled
+    end if
+end function
+
+function isVersionMatched() as boolean
+    if m.global.buildVersion = invalid then return false
+    if m.global.platforms = invalid then return false
+    if m.global.platforms.build_version = invalid then return false
+    if m.global.platforms.build_version.version = invalid then return false
+    localVersion = Val(m.global.buildVersion)
+    remoteVersion = m.global.platforms.build_version.version
+    if (localVersion = remoteVersion)
+        return true
+    else
+        return false
+    end if
+end function
+
+function isAnalyticsEventEnabled() as boolean
+    return m.global.featureFlags <> invalid and checkBool(m.global.featureFlags.is_analytics_enabled)
+end function
+
+function isGa4ProviderEnabled() as boolean
+    if m.global.analyticsConfig = invalid or m.global.analyticsConfig.analytics = invalid then return true
+    providers = m.global.analyticsConfig.analytics.providers
+    if not arrayHasItems(providers) then return true
+    for each provider in providers
+        if isValidString(provider) and UCase(provider) = "GA4" then return true
+    end for
+    return false
+end function
+
+function isAnalyticsConfigEventEnabled(eventName as string) as boolean
+    if not isValidString(eventName) then return true
+    if m.global.analyticsConfig = invalid or m.global.analyticsConfig.analytics = invalid then return true
+    events = m.global.analyticsConfig.analytics.events
+    if events = invalid or events[eventName] = invalid then return true
+    return checkBool(events[eventName].enabled)
+end function
+
+function filterAnalyticsEventParameters(eventName as string, params as object) as object
+    if params = invalid then return {}
+    if not isValidString(eventName) then return params
+    if m.global.analyticsConfig = invalid or m.global.analyticsConfig.analytics = invalid then return params
+    events = m.global.analyticsConfig.analytics.events
+    if events = invalid or events[eventName] = invalid then return params
+    allowed = events[eventName].parameters
+    if not arrayHasItems(allowed) then return params
+    filtered = {}
+    for each key in allowed
+        if params.DoesExist(key) then filtered[key] = params[key]
+    end for
+    if eventName = "scroll_horizontal"
+        for each key in ["playlist_name"]
+            if params.DoesExist(key) then filtered[key] = params[key]
+        end for
+    else if eventName = "video_play"
+        for each key in ["video_title", "current_position", "video_progress"]
+            if params.DoesExist(key) then filtered[key] = params[key]
+        end for
+    else if eventName = "video_rewind" or eventName = "video_forward"
+        for each key in ["current_position", "video_progress"]
+            if params.DoesExist(key) then filtered[key] = params[key]
+        end for
+    else if eventName = "search_result_clicked" or eventName = "search_result_impression"
+        if params.DoesExist("video_id") then filtered.video_id = params.video_id
+    end if
+    if Left(eventName, 6) = "video_" and params.DoesExist("biznumber")
+        filtered.biznumber = params.biznumber
+    end if
+    return filtered
+end function
+
+function appendAnalyticsBiznumber(params as object, content as object) as object
+    if params <> invalid and content <> invalid and isValidString(content.biznumber)
+        params.biznumber = content.biznumber
+    end if
+    return params
+end function
+
+function getAnalyticsIsoTimestamp() as string
+    dateTime = CreateObject("roDateTime")
+    month = dateTime.GetMonth().ToStr()
+    day = dateTime.GetDayOfMonth().ToStr()
+    hour = dateTime.GetHours().ToStr()
+    minute = dateTime.GetMinutes().ToStr()
+    second = dateTime.GetSeconds().ToStr()
+
+    if month.Len() = 1 then month = "0" + month
+    if day.Len() = 1 then day = "0" + day
+    if hour.Len() = 1 then hour = "0" + hour
+    if minute.Len() = 1 then minute = "0" + minute
+    if second.Len() = 1 then second = "0" + second
+
+    return dateTime.GetYear().ToStr() + "-" + month + "-" + day + "T" + hour + ":" + minute + ":" + second + "Z"
+end function
+
+function isPlayerAnalyticsEventEnabled() as boolean
+    return m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.player_analytics_enabled) and m.global.featureFlags.player_analytics_enabled
+end function
+
+function isFirebaseAnalyticsEventEnabled() as boolean
+    return isAnalyticsEventEnabled() and isValidBool(m.global.featureFlags.analytics_provider.firebase) and m.global.featureFlags.analytics_provider.firebase
+end function
+
+function canOpenApp() as boolean
+    return m.global.platforms <> invalid and isValidBool(m.global.platforms.is_client_active) and m.global.platforms.is_client_active and isValidBool(m.global.common.is_client_active) and m.global.common.is_client_active
+end function
+
+function isSearchEnabled() as boolean
+    return m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.is_search_enabled) and m.global.featureFlags.is_search_enabled
+end function
+
+function isAlgoliaSearchEnabled() as boolean
+    return m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.is_algoliaSearch_enabled) and m.global.featureFlags.is_algoliaSearch_enabled
+end function
+
+function getAlgoliaSearchConfig() as object
+    if m.global.featureFlags <> invalid and m.global.featureFlags.algolia_settings <> invalid
+        return m.global.featureFlags.algolia_settings
+    end if
+    if m.global.platforms <> invalid and m.global.platforms.algolia_search <> invalid
+        return m.global.platforms.algolia_search
+    end if
+    return invalid
+end function
+
+function isAlgoliaAbsoluteUrl(url as dynamic) as boolean
+    if not isValidString(url) then return false
+    lowerUrl = LCase(url)
+    return Left(lowerUrl, 4) = "http"
+end function
+
+function getAlgoliaHitProductId(hit as object) as string
+    if hit = invalid then return ""
+    if hit.output <> invalid and hit.output.id <> invalid
+        return hit.output.id.ToStr()
+    end if
+    if hit.id <> invalid then return hit.id.ToStr()
+    return ""
+end function
+
+function getAlgoliaHitOutputDate(hit as object) as string
+    if hit = invalid then return ""
+    output = hit.output
+    if output = invalid then return ""
+    dateValue = output.date
+    if dateValue = invalid then return ""
+    return dateValue.ToStr().Trim()
+end function
+
+function getAlgoliaHitsFromResponseString(responseString as string) as object
+    if not isValidString(responseString) then return []
+    response = ParseJson(responseString)
+    if response = invalid or response.hits = invalid then return []
+    return response.hits
+end function
+
+function getAlgoliaPaginationFromResponseString(responseString as string) as object
+    page = 0
+    nbPages = 1
+    if isValidString(responseString)
+        response = ParseJson(responseString)
+        if response <> invalid
+            if response.page <> invalid then page = response.page
+            if response.nbPages <> invalid then nbPages = response.nbPages
+        end if
+    end if
+    return { page: page, nbPages: nbPages }
+end function
+
+function resolveAlgoliaHitImage(hit as object) as string
+    if hit = invalid then return ""
+
+    if hit.output <> invalid and isValidString(hit.output.image)
+        return hit.output.image
+    end if
+
+    if isValidString(hit.link_main_img) and isAlgoliaAbsoluteUrl(hit.link_main_img)
+        return hit.link_main_img
+    end if
+
+    if isValidString(hit.image_url)
+        if isAlgoliaAbsoluteUrl(hit.image_url) then return hit.image_url
+
+        config = getAlgoliaSearchConfig()
+        if config <> invalid and isValidString(config.imageBaseUrl)
+            baseUrl = config.imageBaseUrl
+            if Right(baseUrl, 1) = "/" and Left(hit.image_url, 1) = "/"
+                return Left(baseUrl, baseUrl.Len() - 1) + hit.image_url
+            else if Right(baseUrl, 1) <> "/" and Left(hit.image_url, 1) = "/"
+                return baseUrl + hit.image_url
+            else
+                return baseUrl + hit.image_url
+            end if
+        end if
+
+        return hit.image_url
+    end if
+
+    if isValidString(hit.link_main_img) then return hit.link_main_img
+
+    return ""
+end function
+
+function canShowSearchMenu() as boolean
+    if isSearchEnabled()
+    if isAlgoliaSearchEnabled() and getAlgoliaSearchConfig() <> invalid
+            return true
+    end if
+    return true
+    end if
+end function
+
+function getJwManagementApiSecret() as string
+    if m.global.jwp <> invalid
+        if isValidString(m.global.jwp.apiSecret) then return m.global.jwp.apiSecret
+        if isValidString(m.global.jwp.secret) then return m.global.jwp.secret
+    end if
+    config = getAlgoliaSearchConfig()
+    if config <> invalid and isValidString(config.adminSecretKey)
+        return config.adminSecretKey
+    end if
+    if m.global.platforms <> invalid and isValidString(m.global.platforms.jw_management_api_secret)
+        return m.global.platforms.jw_management_api_secret
+    end if
+    return ""
+end function
+
+function getSearchLanguageCode() as string
+    if m.global.common <> invalid and isValidString(m.global.common.default_language)
+        return LCase(m.global.common.default_language)
+    end if
+    if isValidString(m.global.localeLanguage) and LCase(m.global.localeLanguage) = "english"
+        return "en"
+    end if
+    return "fr"
+end function
+
+function getAdTargetingKeys() as object
+    if m.global.featureFlags <> invalid and m.global.featureFlags.ad_settings <> invalid and m.global.featureFlags.ad_settings.ad_targeting_keys <> invalid
+        return m.global.featureFlags.ad_settings.ad_targeting_keys
+    end if
+    return {}
+end function
+
+function isFavoriteEnabled() as boolean
+    globalFavorite = m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.is_favorite_enabled) and m.global.featureFlags.is_favorite_enabled
+    if m.global.platforms <> invalid and m.global.platforms.is_favorite_enabled <> invalid
+        rokuPlatformFavorite = m.global.platforms <> invalid and isValidBool(m.global.platforms.is_favorite_enabled) and m.global.platforms.is_favorite_enabled
+        return globalFavorite or rokuPlatformFavorite
+    end if
+    return globalFavorite
+end function
+
+function isCountinueWatchingEnabled() as boolean
+    globalCountinueWatching = m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.is_continue_watching_enabled) and m.global.featureFlags.is_continue_watching_enabled
+    if m.global.platforms <> invalid and m.global.platforms.is_continue_watching_enabled <> invalid
+        rokuPlatformCountinueWatching = m.global.platforms <> invalid and isValidBool(m.global.platforms.is_continue_watching_enabled) and m.global.platforms.is_continue_watching_enabled
+        return globalCountinueWatching or rokuPlatformCountinueWatching
+    end if
+    return globalCountinueWatching
+end function
+
+function isSubscriptionEnabled() as boolean
+    if m.global.platforms.is_subscription_enabled <> invalid
+        return isValidBool(m.global.featureFlags.is_subscription_enabled) and m.global.featureFlags.is_subscription_enabled and isValidBool(m.global.platforms.is_subscription_enabled) and m.global.platforms.is_subscription_enabled
+    end if
+    return isValidBool(m.global.featureFlags.is_subscription_enabled) and m.global.featureFlags.is_subscription_enabled
+end function
+
+function showSubscriptionPrompt() as boolean
+    if m.global.featureFlags.settings.subscription_settings <> invalid and m.global.featureFlags.settings.subscription_settings.show_subscription_prompt <> invalid
+        return isValidBool(m.global.featureFlags.settings.subscription_settings.show_subscription_prompt) and m.global.featureFlags.settings.subscription_settings.show_subscription_prompt
+    end if
+end function
+
+function getSubscriptionPromptInterval() as integer
+    if m.global.featureFlags.settings.subscription_settings <> invalid and m.global.featureFlags.settings.subscription_settings.subscription_prompt_interval <> invalid
+        if isValidInteger(m.global.featureFlags.settings.subscription_settings.subscription_prompt_interval)
+            return m.global.featureFlags.settings.subscription_settings.subscription_prompt_interval
+        end if 
+    end if
+end function
+
+function isFreeBadgeEnabled() as boolean
+    if m.global.uiSettings <> invalid and m.global.uiSettings.is_free_badge_enabled <> invalid and  isValidBool(m.global.uiSettings.is_free_badge_enabled)
+        return m.global.uiSettings.is_free_badge_enabled
+    end if
+    return false
+end function
+
+function SubscriptionPromptClosingInterval() as integer
+    if m.global.featureFlags.settings.subscription_settings <> invalid and m.global.featureFlags.settings.subscription_settings.subscription_prompt_closing_interval <> invalid
+        if isValidInteger(m.global.featureFlags.settings.subscription_settings.subscription_prompt_closing_interval)
+            return m.global.featureFlags.settings.subscription_settings.subscription_prompt_closing_interval
+        end if
+    end if
+end function
+
+function inAppPurcaseEnable() as boolean
+    return isValidBool(m.global.platforms.is_in_app_purchase_enabled) and m.global.platforms.is_in_app_purchase_enabled
+end function
+
+function canShowBuyButton() as boolean
+    return isValidBool(m.global.platforms.show_buy_button) and m.global.platforms.show_buy_button
+end function
+
+function isRecommendedContentEnabled() as boolean
+    return m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.is_recommended_content_enabled) and m.global.featureFlags.is_recommended_content_enabled
+
+end function
+
+function guestStreamingEnabled() as boolean
+    return m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.guest_streaming_enabled) and m.global.featureFlags.guest_streaming_enabled
+end function
+
+function isCustomAPI() as boolean
+    return m.global.flags <> invalid and isValidBool(m.global.flags.IS_CUSTOM_API) and m.global.flags.IS_CUSTOM_API
+end function
+
+function isAuthenticationEnabled() as boolean
+    if isVersionMatched()
+        return m.global.platforms.build_version.is_authentication_enabled
+    end if
+    globalAuthEnabled = m.global.authentication <> invalid and isValidBool(m.global.authentication.is_authentication_enabled) and m.global.authentication.is_authentication_enabled
+    if m.global.platforms <> invalid and m.global.platforms.is_authentication_enabled <> invalid
+        rokuAuthEnabled = m.global.platforms <> invalid and isValidBool(m.global.platforms.is_authentication_enabled) and m.global.platforms.is_authentication_enabled
+        return rokuAuthEnabled
+    end if
+    return globalAuthEnabled
+end function
+
+function isQrAutheticationEnabled() as boolean
+    if isVersionMatched()
+        return m.global.platforms.build_version.is_qr_authentication_enabled
+    end if
+    globalQrEnabled = m.global.authentication <> invalid and isValidBool(m.global.authentication.is_qr_authentication_enabled) and m.global.authentication.is_qr_authentication_enabled
+    if m.global.platforms <> invalid and m.global.platforms.is_qr_authentication_enabled <> invalid
+        rokuQrEnabled = m.global.platforms <> invalid and isValidBool(m.global.platforms.is_qr_authentication_enabled) and m.global.platforms.is_qr_authentication_enabled
+        return rokuQrEnabled
+    end if
+    return globalQrEnabled
+end function
+
+function getQrCodeSettings() as object
+    return m.global.authentication.qr_settings
+end function
+
+function canShowQrCodeImage() as object
+    qrSettings = getQrCodeSettings()
+    if qrSettings <> invalid and isValidBool(qrSettings.show_qr_image)
+        return qrSettings.show_qr_image
+    end if
+    return false
+end function
+
+function isPrivacyPolicyEnabled()
+    return m.global.featureFlags.settings <> invalid and isValidBool(m.global.featureFlags.settings.is_privacy_policy_enabled) and m.global.featureFlags.settings.is_privacy_policy_enabled
+end function
+
+function isTermsOfUseEnabled()
+    return m.global.featureFlags.settings <> invalid and isValidBool(m.global.featureFlags.settings.is_terms_of_use_enabled) and m.global.featureFlags.settings.is_terms_of_use_enabled
+end function
+
+function isLegalEnabled()
+    return m.global.featureFlags.settings <> invalid and isValidBool(m.global.featureFlags.settings.is_legal_enabled) and m.global.featureFlags.settings.is_legal_enabled
+end function
+
+function isContactHelpSupportEnabled()
+    return m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.is_support_email) and m.global.featureFlags.is_support_email
+end function
+
+function getSupportEmail() as string
+    return m.global.common.app_data.support_email
+end function
+
+function isSwitchProfileEnabled()
+    return m.global.featureFlags.settings <> invalid and isValidBool(m.global.featureFlags.settings.is_switch_profile_enabled) and m.global.featureFlags.settings.is_switch_profile_enabled
+end function
+
+function isUserPlayBackEnabled() as boolean
+    return guestStreamingEnabled() or isUserLoggedIn()
+end function
+
+function isEpgEnabled() as boolean
+    return m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.is_epg_enabled) and m.global.featureFlags.is_epg_enabled
+end function
+
+function getEPGDisabledMessage() as string
+    return m.global.featureFlags.epg_disabled_message
+end function
+
+function getEPGSettings() as object
+    return m.global.featureFlags.epg_settings
+end function
+
+function isDrmEnabled() as boolean
+    return m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.is_drm_enabled) and m.global.featureFlags.is_drm_enabled
+end function
+
+function getDrmConfiguration() as object
+    return m.global.featureFlags.drm_settings
+end function
+
+function isAdEnabled() as boolean
+    return m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.ad_enabled) and m.global.featureFlags.ad_enabled
+end function
+
+function getAdConfiguration() as object
+    return m.global.featureFlags.ad_settings
+end function
+
+function canShowSignInButton()
+    if isVersionMatched()
+        return m.global.platforms.build_version.can_show_signin_button
+     end if
+    if m.global.platforms <> invalid and isValidBool(m.global.platforms.can_show_signin_button) 
+        return m.global.platforms.can_show_signin_button
+    end if
+    return m.global.authentication <> invalid and isValidBool(m.global.authentication.can_show_signin_button) and m.global.authentication.can_show_signin_button
+end function
+
+function canShowSignUpButton()
+    if isVersionMatched()
+        return m.global.platforms.build_version.can_show_signup_button
+     end if
+    if m.global.platforms <> invalid and isValidBool(m.global.platforms.can_show_signup_button) 
+        return m.global.platforms.can_show_signup_button
+    end if
+    return m.global.authentication <> invalid and isValidBool(m.global.authentication.can_show_signup_button) and m.global.authentication.can_show_signup_button
+end function
+
+function canShowProfileSignInButton() as boolean
+    if m.global.flags <> invalid and isValidBool(m.global.flags.CAN_SHOW_PROFILE_SIGN_IN_BUTTON)
+        return m.global.flags.CAN_SHOW_PROFILE_SIGN_IN_BUTTON
+    end if
+    return isAuthenticationEnabled()
+end function
+
+function isGuestModeEnabled() as boolean
+    if m.global.platforms <> invalid and m.global.platforms.is_guest_mode_enabled <> invalid and isValidBool(m.global.platforms.is_guest_mode_enabled) 
+        return m.global.platforms.is_guest_mode_enabled
+    end if
+    return m.global.authentication <> invalid and isValidBool(m.global.authentication.is_guest_mode_enabled) and m.global.authentication.is_guest_mode_enabled
+end function
+
+function getActiviteWebLink() as string
+    activeWebUrl = ""
+    if isValidString(m.global.authentication.qr_settings.active_web_url)
+        activeWebUrl = m.global.authentication.qr_settings.active_web_url
+    else if isValidString(m.strings.QRCode_SCREEN) and isValidString(m.strings.QRCode_SCREEN.USE_LINK)
+        activeWebUrl = m.strings.QRCode_SCREEN.USE_LINK
+    end if
+    return activeWebUrl
+end function
+
+function EPGContentPastStartTime() as integer
+    pastStartTime = 18000
+    if m.global.flags.EPGContentPastStartTime <> invalid and isValidInteger(m.global.flags.EPGContentPastStartTime)
+        pastStartTime = m.global.flags.EPGContentPastStartTime
+    end if
+    return pastStartTime
+end function
+
+function EPGNumRows() as integer
+    noofRows = 7
+    if m.global.flags.EPGNumRows <> invalid and isValidInteger(m.global.flags.EPGNumRows)
+        noofRows = m.global.flags.EPGNumRows
+    end if
+    return noofRows
+end function
+
+function getInplayerClientId() as string
+    value = m.global.constants.API.INPLAYER_CLIENT_ID
+    if isValidString(m.global.clientId)
+        value = m.global.clientId
+    else if m.global.inplayer <> invalid and m.global.inplayer.client_id <> invalid and isValidString(m.global.inplayer.client_id)
+        value = m.global.inplayer.client_id
+    end if
+    return value
+end function
+
+function isInplayerAPI() as boolean
+    return m.global.common <> invalid and isValidString(m.global.common.cms_type) and m.global.common.cms_type = "jwplayer"
+end function
+
+function getDrmPoliceId() as string
+    value = ""
+    if m.global.inplayer <> invalid and m.global.inplayer.drm_policy_id <> invalid and isValidString(m.global.inplayer.drm_policy_id)
+        value = m.global.inplayer.drm_policy_id
+    end if
+    return value
+end function
+
+function getBannerType() as string
+    value = "pkg:/images/hero-gradient-option1.png"
+    if m.global.uiSettings <> invalid and m.global.uiSettings.hero_banner <> invalid and isValidString(m.global.uiSettings.hero_banner)
+        value = "pkg:/images/hero-gradient-" + m.global.uiSettings.hero_banner + ".png"
+    end if
+    ' High-contrast overlay when the Color Contrast accessibility setting is on.
+    if m.global <> invalid and m.global.colorContrastEnabled = true
+        return "pkg:/images/gradient-contrast.png"
+    end if
+    return value
+end function
+
+function getAutoScrollState() as boolean
+    settings = invalid
+    if m.global.uiSettings <> invalid then settings = m.global.uiSettings.hero_banner_settings
+    return settings <> invalid and checkBool(settings.is_autoscroll_enabled)
+end function
+
+function getAutoScrollInterval() as integer
+    settings = invalid
+    if m.global.uiSettings <> invalid then settings = m.global.uiSettings.hero_banner_settings
+    if settings = invalid or settings.autoscroll_interval_sec = invalid then return 8
+    value = settings.autoscroll_interval_sec
+    if isValidString(value) then value = Val(value)
+    interval = CInt(value)
+    if interval > 0 then return interval
+    return 8
+end function
+
+function getAdAutoScrollState() as boolean
+    if m.global.uiSettings <> invalid and m.global.uiSettings.ad_banner_settings <> invalid and m.global.uiSettings.ad_banner_settings.is_autoscroll_enabled <> invalid and isValidBool(m.global.uiSettings.ad_banner_settings.is_autoscroll_enabled)
+        return m.global.uiSettings.ad_banner_settings.is_autoscroll_enabled
+    end if
+    return false
+end function
+
+function getAdAutoScrollInterval() as integer
+    if m.global.uiSettings <> invalid and m.global.uiSettings.ad_banner_settings <> invalid and m.global.uiSettings.ad_banner_settings.autoscroll_interval_sec <> invalid and isValidInteger(m.global.uiSettings.ad_banner_settings.autoscroll_interval_sec)
+        return m.global.uiSettings.ad_banner_settings.autoscroll_interval_sec
+    end if
+    return 5
+end function
+
+function getFeatureType() as string
+    value = "large"
+    if m.global.uiSettings <> invalid and m.global.uiSettings.hero_carousel <> invalid and isValidString(m.global.uiSettings.hero_carousel)
+        value = m.global.uiSettings.hero_carousel
+    end if
+    return value
+end function
+
+function isChangePasswordEnabled() as boolean
+    return m.global.platforms <> invalid and isValidBool(m.global.platforms.change_password) and m.global.platforms.change_password
+end function
+
+function isExportAccountEnabled() as boolean
+    return m.global.platforms <> invalid and isValidBool(m.global.platforms.export_account) and m.global.platforms.export_account
+end function
+
+function isDeleteAccountEnabled() as boolean
+    return m.global.platforms <> invalid and isValidBool(m.global.platforms.delete_account) and m.global.platforms.delete_account
+end function
+
+
+function canCallSignOutAPI() as boolean
+    return isValidBool(m.global.flags.IS_SIGN_OUT_API_ENABLED) and m.global.flags.IS_SIGN_OUT_API_ENABLED
+end function
+
+function isFirebaseAnalticsEnabled() as boolean
+    return m.global.feature_flags <> invalid and m.global.feature_flags.is_analytics_enabled and m.global.feature_flags.analytics_provider <> invalid and m.global.feature_flags.analytics_provider.firebase
+end function
+
+function isGoogleAnalyticsEventEnabled() as boolean
+    return isAnalyticsEventEnabled() and m.global.featureFlags.analytics_provider <> invalid and checkBool(m.global.featureFlags.analytics_provider.google)
+end function
+
+function getFontScalePresets() as object
+    ' Small, Medium (Default), Large, Extra Large
+    return [0.85, 1.0, 1.25, 1.50]
+end function
+
+function getFontScaleDefaultIndex() as integer
+    return 1
+end function
+
+function getFontScaleOptionLabels() as object
+    fallback = ["Small", "Medium (Default)", "Large", "Extra Large"]
+    strings = m.global.strings
+    if strings = invalid or strings.SETTINGS_SCREEN = invalid then return fallback
+    settings = strings.SETTINGS_SCREEN
+    if not isValidString(settings.TEXT_SIZE_SMALL) then return fallback
+    if not isValidString(settings.TEXT_SIZE_MEDIUM_DEFAULT) then return fallback
+    if not isValidString(settings.TEXT_SIZE_LARGE) then return fallback
+    if not isValidString(settings.TEXT_SIZE_XLARGE) then return fallback
+    return [
+        settings.TEXT_SIZE_SMALL
+        settings.TEXT_SIZE_MEDIUM_DEFAULT
+        settings.TEXT_SIZE_LARGE
+        settings.TEXT_SIZE_XLARGE
+    ]
+end function
+
+function getFontScaleValueLabel(scale as float) as string
+    index = getFontScaleIndex(scale)
+    fallback = ["Small", "Medium", "Large", "Extra Large"]
+    strings = m.global.strings
+    if strings = invalid or strings.SETTINGS_SCREEN = invalid
+        if index >= 0 and index < fallback.Count() then return fallback[index]
+        return "Medium"
+    end if
+    settings = strings.SETTINGS_SCREEN
+    labels = [
+        settings.TEXT_SIZE_SMALL
+        settings.TEXT_SIZE_MEDIUM
+        settings.TEXT_SIZE_LARGE
+        settings.TEXT_SIZE_XLARGE
+    ]
+    if index >= 0 and index < labels.Count() and isValidString(labels[index]) then return labels[index]
+    if index >= 0 and index < fallback.Count() then return fallback[index]
+    return "Medium"
+end function
+
+function shouldApplyUserFontScale() as boolean
+    if m.global = invalid or not isValidString(m.global.currentScreen) then return false
+    screenId = m.global.currentScreen
+    if screenId <> "HomeScreen" and screenId <> "LandingGridScreen" and screenId <> "ContentDetailScreen" and screenId <> "MoreInfoScreen" and screenId <> "SearchScreen" and screenId <> "SignInScreen" and screenId <> "SignUpScreen" and screenId <> "ProfileScreen" and screenId <> "LoginDeciderScreen" and screenId <> "OnboardingScreen" then return false
+    if m.top <> invalid
+        nodeId = m.top.id
+        if nodeId = "Menu" or nodeId = "MenuItem" then return false
+    end if
+    return true
+end function
+
+function scaleTextFontSize(baseSize as integer) as integer
+    if not shouldApplyUserFontScale() then return baseSize
+    scale = m.global.fontScale
+    if scale = invalid or scale <= 0 then scale = 1.0
+    return Int(baseSize * scale + 0.5)
+end function
+
+function isValidFontScale(scale as float) as boolean
+    presets = getFontScalePresets()
+    for each preset in presets
+        if preset = scale then return true
+    end for
+    return false
+end function
+
+function getNearestFontScale(scale as float) as float
+    presets = getFontScalePresets()
+    nearest = presets[getFontScaleDefaultIndex()]
+    minDiff = Abs(scale - nearest)
+    for each preset in presets
+        diff = Abs(scale - preset)
+        if diff < minDiff
+            minDiff = diff
+            nearest = preset
+        end if
+    end for
+    return nearest
+end function
+
+function getDefaultFontScale() as float
+    stored = readFromRegistry("fontScale")
+    scale = 1.0
+    if isValidString(stored)
+        scale = stored.ToFloat()
+    end if
+    return getNearestFontScale(scale)
+end function
+
+function getFontScaleIndex(scale as float) as integer
+    nearest = getNearestFontScale(scale)
+    presets = getFontScalePresets()
+    for i = 0 to presets.Count() - 1
+        if presets[i] = nearest then return i
+    end for
+    return getFontScaleDefaultIndex()
+end function
+
+sub setGlobalFontScale(scale as float)
+    if not isValidFontScale(scale) then scale = 1.0
+    m.global.fontScale = scale
+    writeToRegistry("fontScale", scale.ToStr())
+end sub
+
+function getDefaultAutoPlayState() as string
+    configID = getAppConfigId()
+    autoplayFlagKay = getHashValue("autoplay" + configID)
+    autoplayFlag = readFromRegistry(autoplayFlagKay)
+    if not isValidString(autoplayFlag)
+        defaultValue = ""
+        if m.global.featureFlags.settings <> invalid and m.global.featureFlags.settings.autoplay_default_value <> invalid
+            defaultValue = m.global.featureFlags.settings.autoplay_default_value
+        end if
+        if LCase(defaultValue) = "on"
+            autoplayFlag = "true"
+        else
+            autoplayFlag = "false"
+        end if
+        writeToRegistry(autoplayFlagKay, autoplayFlag)
+    end if
+    return autoplayFlag
+end function
+
+' Platform wins when both layers define the key; otherwise use global; otherwise false.
+function resolveAutoPlayFlag() as boolean
+    platform = m.global.platforms
+    if platform <> invalid
+        if hasFlagValue(platform.isAutoPlayEnabled) then return checkBool(platform.isAutoPlayEnabled)
+        if hasFlagValue(platform.is_autoplay_enabled) then return checkBool(platform.is_autoplay_enabled)
+    end if
+    settings = invalid
+    if m.global.featureFlags <> invalid then settings = m.global.featureFlags.settings
+    if settings <> invalid and hasFlagValue(settings.is_autoplay_enabled)
+        return checkBool(settings.is_autoplay_enabled)
+    end if
+    return false
+end function
+
+function hasFlagValue(value as dynamic) as boolean
+    return isValidBool(value) or (isValidString(value) and (LCase(value) = "true" or LCase(value) = "false"))
+end function
+
+function isAutoPlayVisible() as boolean
+    return resolveAutoPlayFlag()
+end function
+
+function isAutoPlayEnabled() as boolean
+    return resolveAutoPlayFlag() and getDefaultAutoPlayState() = "true"
+end function
+
+function isShowProfileIcon() as boolean
+    return m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.is_profile_enabled) and m.global.featureFlags.is_profile_enabled
+end function
+
+function isSettingScreenEnabled() as boolean
+    return m.global.featureFlags.settings <> invalid and isValidBool(m.global.featureFlags.settings.is_settings_enable) and m.global.featureFlags.settings.is_settings_enable
+end function
+
+function isFontScalingEnabled() as boolean
+    return m.global.featureFlags.settings <> invalid and isValidBool(m.global.featureFlags.settings.is_font_scaling_enabled) and m.global.featureFlags.settings.is_font_scaling_enabled
+end function
+
+function getColorContrastRegistryKey() as string
+    configID = ""
+    if m.global <> invalid and m.global.urls <> invalid and m.global.urls.configID <> invalid
+        configID = m.global.urls.configID.ToStr()
+    end if
+    return getHashValue("colorContrast" + configID)
+end function
+
+function getDefaultColorContrastState() as string
+    contrastFlag = readFromRegistry(getColorContrastRegistryKey())
+    if not isValidString(contrastFlag)
+        contrastFlag = "false"
+        writeToRegistry(getColorContrastRegistryKey(), contrastFlag)
+    end if
+    return contrastFlag
+end function
+
+function isColorContrastFeatureAvailable() as boolean
+    flagEnabled = m.global.featureFlags <> invalid and m.global.featureFlags.settings <> invalid and isValidBool(m.global.featureFlags.settings.is_contrast_theme_enabled) and m.global.featureFlags.settings.is_contrast_theme_enabled
+    return flagEnabled and isValidThemePalette(m.global.contrastThemeColors)
+end function
+
+function isValidThemePalette(palette as dynamic) as boolean
+    if not isValidAA(palette) then return false
+    requiredKeys = ["primary", "background", "neutral_white", "neutral_black", "neutral_800", "neutral_900"]
+    for each key in requiredKeys
+        if not isValidString(palette[key]) then return false
+    end for
+    return true
+end function
+
+function cloneThemePalette(palette as object) as object
+    if not isValidAA(palette) then return {}
+    return ParseJson(FormatJson(palette))
+end function
+
+function isNearWhiteColor(color as dynamic) as boolean
+    if not isValidString(color) then return false
+    c = LCase(color)
+    return c = "#ffffff" or c = "#ffffffff" or c = "0xffffff" or c = "0xffffffff"
+end function
+
+function getFocusedOnPrimaryTextColor() as string
+    if m.global <> invalid and m.global.color <> invalid and isValidString(m.global.color.button_text)
+        return m.global.color.button_text
+    end if
+    if m.color <> invalid and isValidString(m.color.button_text)
+        return m.color.button_text
+    end if
+    if m.color <> invalid and isValidString(m.color.neutral_white)
+        return m.color.neutral_white
+    end if
+    return "#FFFFFF"
+end function
+
+function applyThemeColors(palette as object) as boolean
+    if not isValidThemePalette(palette)
+        AppLogError("Theme", "Invalid theme palette; falling back to defaults")
+        if isValidThemePalette(m.global.defaultThemeColors)
+            applyThemeColorsInternal(m.global.defaultThemeColors)
+        end if
+        return false
+    end if
+    applyThemeColorsInternal(palette)
+    return true
+end function
+
+sub applyThemeColorsInternal(palette as object)
+    colors = cloneThemePalette(palette)
+    if not isValidAA(colors)
+        AppLogError("Theme", "Failed to clone theme palette")
+        return
+    end if
+    ' Avoid white-on-white when contrast primary is white and button_text is also white.
+    if isNearWhiteColor(colors.primary)
+        if not isValidString(colors.button_text) or isNearWhiteColor(colors.button_text)
+            colors.button_text = "#000000"
+        end if
+    end if
+    ' SceneGraph global AA fields are copied on get/set — must replace the whole AA.
+    m.global.color = colors
+    rev = 0
+    if m.global.themeRevision <> invalid then rev = m.global.themeRevision
+    m.global.themeRevision = rev + 1
+    AppLogInfo("Theme", "Theme colors applied")
+end sub
+
+sub setColorContrastEnabled(enabled as boolean)
+    value = "false"
+    if enabled then value = "true"
+    writeToRegistry(getColorContrastRegistryKey(), value)
+    m.global.colorContrastEnabled = enabled
+    if enabled
+        contrast = m.global.contrastThemeColors
+        AppLogInfo("Theme", "Color contrast enabled")
+        if not applyThemeColors(contrast)
+            AppLogError("Theme", "Failed to apply contrast theme colors; reverted to defaults")
+            m.global.colorContrastEnabled = false
+            writeToRegistry(getColorContrastRegistryKey(), "false")
+        end if
+    else
+        AppLogInfo("Theme", "Color contrast disabled; restoring defaults")
+        applyThemeColors(m.global.defaultThemeColors)
+    end if
+end sub
+
+sub initColorThemeFromRemoteConfig(themeColors as object, contrastThemeColors as object)
+    defaults = cloneThemePalette(themeColors)
+    if not isValidThemePalette(defaults)
+        defaults = cloneThemePalette(m.global.color)
+    end if
+    m.global.defaultThemeColors = defaults
+    if isValidThemePalette(contrastThemeColors)
+        m.global.contrastThemeColors = cloneThemePalette(contrastThemeColors)
+    else
+        m.global.contrastThemeColors = {}
+    end if
+    m.global.color = cloneThemePalette(defaults)
+    if getDefaultColorContrastState() = "true" and isColorContrastFeatureAvailable()
+        m.global.colorContrastEnabled = true
+        if not applyThemeColors(m.global.contrastThemeColors)
+            m.global.colorContrastEnabled = false
+            writeToRegistry(getColorContrastRegistryKey(), "false")
+        end if
+    else
+        m.global.colorContrastEnabled = false
+        applyThemeColors(defaults)
+    end if
+end sub
+
+function isSettingIconVisible() as boolean
+    return m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.is_profile_enabled) and m.global.featureFlags.is_profile_enabled
+end function
+
+function isServerSideAdCountDown() as boolean
+    return m.global.platforms <> invalid and isValidBool(m.global.platforms.isServerSideAdCountDown) and m.global.platforms.isServerSideAdCountDown
+end function
+
+function getAdDeliveryMethod() as String
+    if m.global.platforms.feature_flags <> invalid and m.global.platforms.feature_flags.ad_settings <> invalid
+        if m.global.platforms.feature_flags.ad_settings.ad_delivery_method <> invalid and m.global.platforms.feature_flags.ad_settings.ad_delivery_method <> ""
+                m.ad_delivery_method = m.global.platforms.feature_flags.ad_settings.ad_delivery_method
+        end if
+    end if
+    if m.global.featureFlags.ad_settings <> invalid and m.global.featureFlags.ad_settings.ad_delivery_method <> invalid and  m.global.featureFlags.ad_settings.ad_delivery_method <>""
+        ' Getting ad delivery method from global feature flag
+        m.ad_delivery_method = m.global.featureFlags.ad_settings.ad_delivery_method
+    end if
+    if  m.ad_delivery_method <> invalid 
+        return  m.ad_delivery_method
+    else
+        return ""
+    end if
+end function
+
+function isMotionThumbnailsEnabled() as boolean
+    return m.global.featureFlags <> invalid and isValidBool(m.global.featureFlags.is_motion_thumbnail_enabled) and m.global.featureFlags.is_motion_thumbnail_enabled
+end function
+
+function getAdConfigId(pageData)
+    adConfigLevelValue = ""
+    if isValidString(adConfigLevel())
+        adConfigLevelValue = LCase(adConfigLevel())
+    end if
+    if pageData <> invalid and isValidString(pageData.adConfig) and (adConfigLevelValue = "media" or adConfigLevelValue = "globalandmedia")
+        return pageData.adConfig
+    else if adConfigLevelValue = "globalandmedia" or adConfigLevelValue = "global" and isValidString(m.global.adConfig)
+        return m.global.adConfig
+    end if
+    return ""
+end function
+
+function adConfigLevel()
+    if m.global.featureFlags <> invalid and m.global.featureFlags.ad_settings <> invalid and isValidString(m.global.featureFlags.ad_settings.ad_config_level) and LCase(m.global.featureFlags.ad_settings.ad_config_level) <> "none"
+        return LCase(m.global.featureFlags.ad_settings.ad_config_level)
+    else
+        return ""
+    end if
+end function
+
+
+function createAuthButton(title as string) as object
+    button = CreateObject("roSGNode", "CustomButton")
+    button.fixedWidth = 345
+    button.fixedHeight = 75
+    button.focusedFont = m.fonts.getFont(m.fontType.B3)
+    button.unfocusedFont = m.fonts.getFont(m.fontType.B3)
+    button.text = title
+    button.loadComponent = true
+    button.observeField("buttonSelected", "onButtonSelected")
+    return button
+end function
+
+sub clearChildren(node as object)
+    ' Defensive check
+    if node = invalid then return
+
+    numChildren = node.getChildCount()
+    for i = numChildren - 1 to 0 step -1
+        node.removeChild(node.getChild(i))
+    end for
+end sub
+
+function getContentType(pageData as object) as string
+if pageData = invalid or not isValidString(pageData.contentType)
+        if isAudioPodcastItem(pageData) then return "podcast"
+        return "movie"
+    end if
+    if pageData = invalid or not isValidString(pageData.contentType) then return "movie"
+        contentType = LCase(pageData.contentType)
+    if contentType = "series"
+        return "series"
+    else if contentType = "livechannel"
+        return "live"
+    else if contentType = "episode"
+        return "episode"
+    else if contentType = "liveevent"
+        return "liveEvent"
+    else if contentType = "hub"
+        return "hub"
+    else if contentType = "podcast" or contentType = "podcast_episode"
+        return "podcast"
+    else if contentType = "" and isAudioPodcastItem(pageData)
+        return "podcast"
+    else if contentType = "movie" or not isValidString(pageData.contentType)
+        return "movie"
+    else if contentType = "podcast_series"
+        return "podcast_series"
+    else if isValidString(pageData.tags) and Instr(0, pageData.tags, "movie") >= 0
+        return "movie"
+    end if
+    return ""
+end function
+
+function isAudioPodcastItem(pageData as object) as boolean
+    if pageData = invalid then return false
+    if not isValidString(pageData.feedId) and not isValidString(pageData.feedid) then return false
+    if isValidString(pageData.media_type) and LCase(pageData.media_type) = "audio" then return true
+    if isVideoSourceFile(pageData.file, pageData.type) then return false
+    if not arrayHasItems(pageData.sources) then return false
+
+    for each source in pageData.sources
+        if source <> invalid
+            if isVideoSourceFile(source.file, source.type) then return false
+            if isAudioSourceFile(source.file, source.type) then return true
+        end if
+    end for
+    return false
+end function
+
+function isAudioSourceContent(pageData as object) as boolean
+    if pageData = invalid then return false
+    if isVideoSourceFile(pageData.file, pageData.type) then return false
+    if isValidString(pageData.media_type) and LCase(pageData.media_type) = "audio" then return true
+    if isValidString(pageData.mediaType) and LCase(pageData.mediaType) = "audio" then return true
+    if isAudioSourceFile(pageData.file, pageData.type) then return true
+    if not arrayHasItems(pageData.sources) then return false
+
+    for each source in pageData.sources
+        if source <> invalid
+            if isVideoSourceFile(source.file, source.type) then return false
+            if isAudioSourceFile(source.file, source.type) then return true
+        end if
+    end for
+    return false
+end function
+
+function isAudioSourceFile(fileUrl as dynamic, mimeType as dynamic) as boolean
+    if isValidString(mimeType) and Left(LCase(mimeType), 6) = "audio/" then return true
+    return hasSourceExtension(fileUrl, ["mp3", "m4a", "m4b", "aac", "ogg", "oga", "opus", "wav", "flac", "weba", "wma"])
+end function
+
+function isVideoSourceFile(fileUrl as dynamic, mimeType as dynamic) as boolean
+    if isValidString(mimeType)
+        mimeType = LCase(mimeType)
+        if Left(mimeType, 6) = "video/" or contains(mimeType, "mpegurl") or contains(mimeType, "dash+xml") then return true
+    end if
+    return hasSourceExtension(fileUrl, ["mp4", "m4v", "mpd", "m3u8", "mov", "mkv", "webm", "avi", "ts", "f4v", "flv", "3gp"])
+end function
+
+function hasSourceExtension(fileUrl as dynamic, extensions as object) as boolean
+    if not isValidString(fileUrl) then return false
+    cleanUrl = LCase(fileUrl)
+    queryIndex = Instr(1, cleanUrl, "?")
+    if queryIndex > 0 then cleanUrl = Left(cleanUrl, queryIndex - 1)
+    dotIndex = 0
+    for i = 1 to Len(cleanUrl)
+        if Mid(cleanUrl, i, 1) = "." then dotIndex = i
+    end for
+    if dotIndex = 0 then return false
+    extension = Right(cleanUrl, Len(cleanUrl) - dotIndex)
+    for each supportedExtension in extensions
+        if extension = supportedExtension then return true
+    end for
+    return false
+end function
+
+function isContentTypeMissing(item as object) as boolean
+    if item = invalid then return true
+    if not isValidString(item.contentType) then return true
+    return LCase(item.contentType) = "null"
+end function
+
+' Hub-only: playable media with no content_type should skip Details and launch the player.
+function shouldDirectPlayHubMedia(item as object) as boolean
+    if item = invalid then return false
+    if not isContentTypeMissing(item) then return false
+    if isValidString(item.playlist) then return false
+    if not isValidString(item.mediaId) then return false
+    return isPlayableContent(item[getProductIdKey()], item.free)
+end function
+
+' Episodes (showCardDescription) or hub items with missing contentType — card description + More.
+function itemShowsDirectPlayCardMore(item as object) as boolean
+    if item = invalid then return false
+    if item.subtype() <> "AssetDataModel" then return false
+    if not isValidString(getLocaleText(item, "description")) then return false
+    if checkBool(item.showCardDescription) then return true
+    if checkBool(item.fromHub) and isContentTypeMissing(item) then return true
+    return false
+end function
+
+function isMoreLinkFocused(item as object) as boolean
+    if item = invalid then return false
+    if item.subtype() <> "AssetDataModel" then return false
+    return checkBool(item.moreLinkFocused)
+end function
+
+sub setMoreLinkFocused(item as object, focused as boolean)
+    if item = invalid then return
+    if item.subtype() <> "AssetDataModel" then return
+    ' Changing moreLinkFocused can re-enter hub itemSelected; callers that own
+    ' suppressItemSelected already cover tryFocus/clear. Guard here for Utils path.
+    item.moreLinkFocused = focused
+end sub
+
+function buildCardMoreInfoData(item as object) as object
+    if item = invalid then return invalid
+    fonts = getFonts()
+    fontType = m.global.font
+    color = m.global.color
+    labels = []
+    title = getLocaleText(item, "title")
+    if isValidString(title)
+        labels.Push({
+            id: "Title"
+            width: 900
+            maxLines: 3
+            color: color.neutral_white
+            font: fonts.getFont(fontType.S1)
+            wrap: true
+            lineSpacing: 1
+            text: title
+            opacity: 1.0
+        })
+    end if
+    description = getLocaleText(item, "description")
+    if isValidString(description)
+        labels.Push({
+            id: "Description"
+            width: 800
+            maxLines: 1
+            color: color.neutral_400
+            font: fonts.getFont(fontType.B4)
+            wrap: true
+            lineSpacing: 1
+            text: stripHTML(description)
+            opacity: 1.0
+        })
+    end if
+    return {
+        labels: labels
+        itemSpacings: [24, 24]
+        data: item
+    }
+end function
+
+function FormatTime(seconds as integer) as string
+    minutes = Int(seconds / 60)
+    secs = seconds mod 60
+
+    if minutes < 10 then
+        minStr = "0" + stri(minutes)
+    else
+        minStr = stri(minutes)
+    end if
+
+    if secs < 10 then
+        secStr = "0" + stri(secs)
+    else
+        secStr = stri(secs)
+    end if
+
+    return (minStr + ":" + secStr).Replace(" ", "")
+end function
+
+function GetImageHeight(width as integer, aspectRatio as string) as integer
+    ratioParts = aspectRatio.split(":")
+    if ratioParts.Count() = 2 then
+        w = StrToI(ratioParts[0])
+        h = StrToI(ratioParts[1])
+        if w > 0 and h > 0 then
+            return (width * h) / w
+        end if
+    end if
+    return 630 ' Return 630 if aspect ratio is invalid
+end function
+
+function isCleeng() as boolean
+    return isValidAA(m.global.cleeng)
+end function
+
+function isJwp() as boolean
+    return isValidAA(m.global.jwp)
+end function
+
+sub getExpiresIn(data as object) as integer
+    id = 900
+    if(data <> invalid and data.expiresIn <> invalid)
+        id = data.expiresIn
+    end if
+    return id
+end sub
+
+sub getCustomerId(data as object) as integer
+    id = 0
+    if(data <> invalid and data.customerId <> invalid)
+        id = data.customerId
+    end if
+    return id
+end sub
+
+sub getAccessToken(data as object) as string
+    token = ""
+    if(data <> invalid and isValidString(data.accessToken))
+        token = data.accessToken
+    else if(data <> invalid and isValidString(data.access_token))
+        token = data.access_token
+    else if(data <> invalid and isValidString(data.AccessToken))
+        token = data.AccessToken
+    else if(data <> invalid and isValidString(data.jwt))
+        token = data.jwt
+    end if
+    return token
+end sub
+
+sub getRefreshToken(data as object) as string
+    token = ""
+    if(data <> invalid and isValidString(data.refreshToken))
+        token = data.refreshToken
+    else if(data <> invalid and isValidString(data.RefreshToken))
+        token = data.RefreshToken
+    else if(data <> invalid and isValidString(data.refresh_token))
+        token = data.refresh_token
+    end if
+    return token
+end sub
+
+function getUserSubscription() as object
+    if m.global.subscription <> invalid
+        return m.global.subscription
+    end if
+    return {}
+end function
+
+function getCleengPublisherToken() as string
+    if m.global.firebaseCleeng.publisher_token <> invalid
+        return m.global.firebaseCleeng.publisher_token
+    end if
+    return "ZaqMQZBqxHSJPQdlp0rxRYgcsaX5b23DSwOLm1D7ZcxlwKZD"
+end function
+
+function getCleengMaxNoOfContinueWatching() as integer
+    if m.global.firebaseCleeng.max_no_of_continue_watching <> invalid
+        if isValidString(m.global.firebaseCleeng.max_no_of_continue_watching)
+            return m.global.firebaseCleeng.max_no_of_continue_watching.toInt()
+        else
+            return m.global.firebaseCleeng.max_no_of_continue_watching
+        end if
+    end if
+    return 50
+end function
+
+function getCleengMaxNoOfFav() as integer
+    if m.global.firebaseCleeng.max_no_of_fav <> invalid
+        if isValidString(m.global.firebaseCleeng.max_no_of_fav)
+            return m.global.firebaseCleeng.max_no_of_fav.toInt()
+        else
+            return m.global.firebaseCleeng.max_no_of_fav
+        end if
+    end if
+    return 50
+end function
+
+function getExpireDay(seconds as longinteger) as string
+    expireDate = CreateObject("roDateTime")
+    expireDate.FromSecondsLong(seconds)
+    expireDate.ToLocalTime()
+    return getMonthName(expireDate.GetMonth()) + " " + expireDate.GetDayOfMonth().tostr() + ", " + expireDate.GetYear().tostr()
+end function
+
+function getMonthName(monthIndex as integer) as string
+    monthNames = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"]
+    if monthIndex >= 1 and monthIndex <= 12
+        return monthNames[monthIndex - 1]
+    else
+        return "Unknown"
+    end if
+end function
+
+function initCap(input as string) as string
+    if isValidString(input)
+        endIndex = Len(input)
+        firstLetter = Left(input, 1)
+        ' Normalize indices
+        startIndex = 1
+
+        ' Convert to BrightScript's 1-based Mid() function
+        length = endIndex - startIndex
+        if length <= 0 then return ""
+        return UCase(firstLetter) + Mid(input, startIndex + 1, length)
+    end if
+    return input
+end function
+
+function getWebUrl() as string
+    if m.global.common <> invalid and isValidString(m.global.common.web_base_url)
+        return m.global.common.web_base_url
+    end if
+    if m.global.authentication <> invalid and m.global.authentication.qr_settings <> invalid and isValidString(m.global.authentication.qr_settings.active_web_url)
+        return m.global.authentication.qr_settings.active_web_url
+    end if
+    return "www.tringplay.media.com"
+end function
+
+function getCurrentTimeInSeconds() as longinteger
+    nowSeconds = createObject("roDateTime")
+    nowSeconds.ToLocalTime()
+    return nowSeconds.asSeconds()
+end function
+
+function isPlayableContent(productId = "", isFree = false) as boolean
+    if isFree or productId = invalid or productId = "" then return true
+    if not isAuthenticationEnabled() or not isSubscriptionEnabled() then return true
+    if m.global.subscription = invalid or m.global.subscription.count() = 0 then return false
+    nowSeconds = getCurrentTimeInSeconds()
+    for each assetID in productId.split(",")
+        if not isValidString(assetID) then continue for
+        accessId = assetID.Trim()
+        parts = accessId.Split(":")
+        if parts.count() > 1 then accessId = parts[parts.count() - 1].Trim()
+        subscription = m.global.subscription[accessId]
+        if subscription = invalid then subscription = m.global.subscription[assetID.Trim()]
+        if subscription <> invalid
+            status = ""
+            if isValidString(subscription.status) then status = LCase(subscription.status)
+            if status = "" or status = "active" or ((status = "cancelled" or status = "canceled") and subscription.expiresAt <> invalid and nowSeconds < subscription.expiresAt)
+                return true
+            end if
+        end if
+    end for
+    return false
+end function
+
+function getProductIdKey() as string
+    result = "productIds"
+    if m.global.productId <> invalid
+        keyName = "staging"
+        if isProduction()
+            keyName = "production"
+        end if
+        value = m.global.productId[keyName]
+        if value <> invalid and isValidString(value)
+            result = value
+        end if
+    end if
+    return result
+end function
+
+function isProduction() as boolean
+    if m.global.cleeng <> invalid and isValidBool(m.global.cleeng.useSandbox)
+        return not m.global.cleeng.useSandbox
+    else if m.global.jwp <> invalid and isValidBool(m.global.jwp.useSandbox)
+        return not m.global.jwp.useSandbox
+    end if
+    return false
+end function
+
+sub showMenuWithBG()
+    m.top.getScene().callFunc("showMenuBG")
+    m.top.getScene().showHeader = true
+end sub
+
+function GetScrollMilestone(totalRows as integer, railPosition as integer) as string
+    if totalRows <= 0 then return "0%"
+    percent = ((railPosition + 1) * 100) / totalRows
+
+    ' round to nearest integer for accuracy
+    percent = int(percent)
+    if percent >= 90
+        return "90%"
+    else if percent >= 75
+        return "75%"
+    else if percent >= 50
+        return "50%"
+    else if percent >= 25
+        return "25%"
+    end if
+
+    return ""
+end function
+
+
+function isCharlesDebugBuild() as boolean
+    if m.global = invalid or not isValidString(m.global.buildType) then return false
+    bt = LCase(m.global.buildType)
+    return bt = "stage-debug" or bt = "prod-debug"
+end function
+
+function urlProxy(url as string) as string
+    if not isCharlesDebugBuild() then return url
+    if not isValidString(url) then return url
+    if Left(url, 4) <> "http" then return url
+
+    proxyIp = readFromRegistry("charlesProxyIp")
+    if not isValidString(proxyIp) then return url
+
+    proxyPort = readFromRegistry("charlesProxyPort")
+    if not isValidString(proxyPort)
+        proxyPort = "8888"
+    end if
+
+    proxyAddress = proxyIp.Trim() + ":" + proxyPort.Trim()
+
+    ' Make sure we have not already formatted this url
+    ' This can lead to a recursive address
+    if url.inStr(proxyAddress) > -1 then return url
+
+    proxyPrefix = "http://" + proxyAddress + "/;"
+    if url.inStr(proxyPrefix) = 0 then return url
+
+    ' <HOST_RUNNING_CHARLES>:<CHARLES_PORT>;<ORIGINAL_ADDRESS>
+    return proxyPrefix + url
+end function
+
+function GetImageWidth(height as Integer, aspectRatio as String) as Integer
+    parts = aspectRatio.Split(":")
+    if parts.Count() = 2
+        widthRatio = val(parts[0])
+        heightRatio = val(parts[1])
+        if heightRatio > 0
+            return int(height * widthRatio / heightRatio)
+        end if
+    end if
+    ' Default to 2:3 aspect ratio if parsing fails
+    return int(height * 2 / 3)
+end function
+
+function getAudioGuide() as object
+    gaa = GetGlobalAA()
+    if gaa.audioGuide = invalid
+        gaa.audioGuide = CreateObject("roAudioGuide")
+    end if
+    return gaa.audioGuide
+end function
+
+sub speak(text as string, flushSpeech = true as boolean)
+    if m.global <> invalid and m.global.suppressNextSpeech = true
+        m.global.suppressNextSpeech = false
+        return
+    end if
+    if not isValidString(text) then return
+    guide = getAudioGuide()
+    if guide <> invalid
+        guide.Say(text, flushSpeech, true)
+    end if
+end sub
+
+sub stopSpeech()
+    guide = getAudioGuide()
+    if guide <> invalid then guide.Flush()
+end sub
+
+function getContentAudioGuideText(item as object) as string
+    if item = invalid then return ""
+    text = ""
+    if isValidString(item.title) then text = item.title
+    badge = ""
+    contentType = LCase(item.contentType)
+    if contentType = "series"
+        badge = m.global.strings.SERIES
+    else if contentType = "podcast_series"
+        badge = m.global.strings.SERIES
+    else if item.duration > 0
+        badge = formatSpokenDuration(item.duration)
+    else if contentType = "livechannel" or item.isLive = true
+        badge = m.global.strings.LIVE
+    else if contentType = "liveevent"
+        eventState = item["VCH.EventState"]
+        if eventState = m.global.constants.LIVE_EVENT_STATES.PRE_LIVE or eventState = m.global.constants.LIVE_EVENT_STATES.LIVE_UNPUBLISHED or isDateInFuture(item["VCH.ScheduledStart"])
+            badge = m.global.strings.SCHEDULED
+        else
+            badge = m.global.strings.LIVE
+        end if
+    end if
+    if isValidString(text) and isValidString(badge) then return text + ", " + badge
+    if isValidString(badge) then return badge
+    return text
+end function
+
+function formatSpokenDuration(duration as longinteger) as string
+    if duration <= 0 then return ""
+    if duration < 60 then return duration.ToStr() + bsTernaryOperation(duration = 1, " second", " seconds")
+    hours = Int(duration / 3600)
+    minutes = Int((duration mod 3600) / 60)
+    if (duration mod 60) > 30 then minutes++
+    if minutes = 60
+        hours++
+        minutes = 0
+    end if
+    text = ""
+    if hours > 0 then text = hours.ToStr() + bsTernaryOperation(hours = 1, " hour", " hours")
+    if minutes > 0
+        if text <> "" then text += " "
+        text += minutes.ToStr() + bsTernaryOperation(minutes = 1, " minute", " minutes")
+    end if
+    return text
+end function
+
+function getContentMediaId(content as object) as string
+    if content = invalid then return ""
+    if isValidString(content.mediaId) then return content.mediaId
+    if isValidString(content.mediaid) then return content.mediaid
+    if isValidString(content.feedId) then return content.feedId
+    return ""
+end function
+
+function isHeroPlaceholderUri(uri as string) as boolean
+    if not isValidString(uri) then return true
+    return uri.Instr("placeholder") > -1
+end function
+
+' Use high-contrast placeholder art when the Color Contrast accessibility setting is on.
+function getThemedPlaceholderUri(defaultUri as string) as string
+    if m.global = invalid or m.global.colorContrastEnabled <> true then return defaultUri
+    if defaultUri = "pkg:/images/placeholder.png" then return "pkg:/images/placeholder-contrast.png"
+    if defaultUri = "pkg:/images/placeholder-vertical.png" then return "pkg:/images/placeholder-vertical-contrast.png"
+    if defaultUri = "pkg:/images/details_placeholder.png" then return "pkg:/images/details_placeholder_contrast.png"
+    return defaultUri
+end function
+
+function getBackgroundImageUrlForMediaId(mediaId as string) as string
+    if not isValidString(mediaId) or m.global = invalid or m.global.urls = invalid then return ""
+    imageUrl = invalid
+    if m.global.urls.doesExist("backgroundImageUrl") and isValidString(m.global.urls.backgroundImageUrl)
+        imageUrl = m.global.urls.backgroundImageUrl
+    else if m.global.urls.doesExist("backGroundImageUrl") and isValidString(m.global.urls.backGroundImageUrl)
+        imageUrl = m.global.urls.backGroundImageUrl
+    end if
+    if imageUrl = invalid then return ""
+    return imageUrl.Replace("{{media-id}}", mediaId)
+end function
+
+function getImageUrlFromAdditionalImageNode(imageNode as object) as string
+    if imageNode = invalid then return ""
+    if imageNode.image_url <> invalid and isValidString(imageNode.image_url)
+        return imageNode.image_url
+    else if imageNode.Image_Url <> invalid and isValidString(imageNode.Image_Url)
+        return imageNode.Image_Url
+    end if
+    return ""
+end function
+
+function getDetailPagePosterImageUrl(response as object) as string
+    if response = invalid then return ""
+    imageKeys = ["poster", "Poster", "poster_thumbnail", "Poster_Thumbnail"]
+    for each key in imageKeys
+        imageUrl = getImageUrlFromAdditionalImageNode(response[key])
+        if isValidString(imageUrl) then return imageUrl
+    end for
+    return ""
+end function
+
+function getDetailPageHeroImageFromImages(pageData as object) as string
+    if pageData = invalid or not arrayHasItems(pageData.images) then return ""
+    for each image in pageData.images
+        if image.width = 1920 and isValidString(image.src) then return image.src
+    end for
+    return ""
+end function
+
+function getHighResolutionImageUrl(itemContent as object, targetWidth as integer) as string
+    default = ""
+    if itemContent <> invalid and isValidString(itemContent.image)
+        default = itemContent.image
+    end if
+    if itemContent = invalid or type(itemContent.images) <> "roArray"
+        return default
+    end if
+    for each item in itemContent.images
+        if item.type = "image/jpeg" and item.width = targetWidth and isValidString(item.src)
+            return item.src
+        end if
+    end for
+    return default
+end function
+
+function getAlternateContentImageUrl(mediaId as string) as string
+    if not isValidString(mediaId) then return ""
+    if m.global = invalid or m.global.urls = invalid then return ""
+    if not isValidString(m.global.urls.secondAlternateImageUrl) then return ""
+    return m.global.urls.secondAlternateImageUrl.Replace("{{media-id}}", mediaId)
+end function
+
+
+function getSingleFeatureHeroImageUrl(itemContent as object, verticalImageCache = invalid as object) as object
+    defaultPlaceHolder = getThemedPlaceholderUri("pkg:/images/placeholder.png")
+    if itemContent = invalid
+        return {
+            uri: ""
+            placeHolder: defaultPlaceHolder
+            fetchedFromApi: false
+        }
+    end if
+
+    imageSet = getThumbnailImageSetForContent(itemContent, verticalImageCache)
+    placeHolder = imageSet.placeHolder
+
+    if isValidString(imageSet.uri)
+        return {
+            uri: imageSet.uri
+            placeHolder: placeHolder
+            fetchedFromApi: false
+        }
+    end if
+
+    constants = m.constants
+    if constants = invalid and m.global <> invalid
+        constants = m.global.constants
+    end if
+    isVerticalRail = isValidString(itemContent.railType) and constants <> invalid and (itemContent.railType = constants.RAIL_TYPES.TOPRATED or itemContent.railType = constants.RAIL_TYPES.VERTICAL or itemContent.railType = constants.RAIL_TYPES.SQUARE) and itemContent.railType <> "circular"
+    if isVerticalRail
+        return {
+            uri: placeHolder
+            placeHolder: placeHolder
+            fetchedFromApi: true
+        }
+    end if
+
+    heroUrl = getDetailPageHeroImageFromImages(itemContent)
+    if not isValidString(heroUrl)
+        heroUrl = getHighResolutionImageUrl(itemContent, 1920)
+    end if
+    if isValidString(heroUrl)
+        return {
+            uri: heroUrl
+            placeHolder: placeHolder
+            fetchedFromApi: false
+        }
+    end if
+
+    bgUrl = getBackgroundImageUrlForMediaId(getContentMediaId(itemContent))
+    if isValidString(bgUrl)
+        return {
+            uri: bgUrl
+            placeHolder: placeHolder
+            fetchedFromApi: false
+        }
+    end if
+
+    mediaId = getContentMediaId(itemContent)
+    if isValidString(mediaId)
+        getAdditionalImageResponse(mediaId)
+        return {
+            uri: ""
+            placeHolder: placeHolder
+            fetchedFromApi: true
+        }
+    end if
+
+    return {
+        uri: ""
+        placeHolder: placeHolder
+        fetchedFromApi: false
+    }
+end function
+
+function getPosterUrlFromAdditionalImageResponse(response as object) as string
+    return getDetailPagePosterImageUrl(response)
+end function
+
+
+function getThumbnailImageSetForContent(itemContent as object, verticalImageCache = invalid as object) as object
+    if itemContent = invalid
+        return {
+            uri: ""
+            placeHolder: getThemedPlaceholderUri("pkg:/images/placeholder.png")
+        }
+    end if
+
+    constants = m.constants
+    if constants = invalid and m.global <> invalid
+        constants = m.global.constants
+    end if
+
+    if isValidString(itemContent.railType) and constants <> invalid and (itemContent.railType = constants.RAIL_TYPES.TOPRATED or itemContent.railType = constants.RAIL_TYPES.VERTICAL or itemContent.railType = constants.RAIL_TYPES.SQUARE) and itemContent.railType <> "circular"
+        placeHolder = getThemedPlaceholderUri("pkg:/images/placeholder-vertical.png")
+
+        if verticalImageCache <> invalid and isValidString(itemContent.mediaId) and verticalImageCache.DoesExist(itemContent.mediaId)
+            return {
+                uri: verticalImageCache[itemContent.mediaId]
+                placeHolder: placeHolder
+            }
+        end if
+
+        if isValidString(itemContent.mediaId)
+            getAdditionalImageResponse(itemContent.mediaId)
+        end if
+
+        return {
+            uri: placeHolder
+            placeHolder: placeHolder
+        }
+    end if
+
+    return {
+        uri: itemContent.image
+        placeHolder: getThemedPlaceholderUri("pkg:/images/placeholder.png")
+    }
+end function
+
+function getReleaseYearFromPubdate(pubdate as dynamic) as string
+    if pubdate = invalid or pubdate <= 0 then return ""
+    dateObj = CreateObject("roDateTime")
+    dateObj.FromSeconds(pubdate)
+    return dateObj.GetYear().ToStr()
+end function
+
+function formatPubdate(pubdate as dynamic) as string
+    if pubdate = invalid or pubdate <= 0 then return ""
+    dateObj = CreateObject("roDateTime")
+    dateObj.FromSeconds(pubdate)
+    dateObj.ToLocalTime()
+    return dateObj.AsDateString("short-month-no-weekday")
+end function
+
+function getSeasonCountLabel(totalSeason as dynamic) as string
+    if totalSeason = invalid then return ""
+    seasonCount = Int(totalSeason)
+    if seasonCount = 0 or seasonCount = 1
+        return "1 Season"
+    else
+        return seasonCount.ToStr() + " Seasons"
+    end if
+end function
+
+function buildMovieMetaDetailsArray(pageData as object) as object
+    details = []
+    if pageData = invalid then return details
+    contentType = getContentType(pageData)
+    if contentType = "movie" or contentType = ""
+        if pageData.duration <> invalid and pageData.duration > 0
+            duration = formatVideoDuration(pageData.duration, "h", "m", "s")
+            if isValidString(duration) then details.push(duration)
+        end if
+    end if
+    if type(m.global.custom) <> "roArray" and m.global.custom.isDisplayCreatedDate <> invalid and checkBool(m.global.custom.isDisplayCreatedDate)
+        if pageData.pubdate <> invalid
+            releaseYear = getReleaseYearFromPubdate(pageData.pubdate)
+            if isValidString(releaseYear) then details.push(releaseYear)
+        end if
+    end if
+    if pageData.rating <> invalid and isValidString(pageData.rating)
+        details.push(pageData.rating)
+    end if
+    return details
+end function
+
+function buildSeriesMetaDetailsArray(pageData as object, seasonResponse as object, episodePubdate = invalid as dynamic) as object
+    details = []
+    if seasonResponse <> invalid and seasonResponse.season_count <> invalid
+        details.push(getSeasonCountLabel(seasonResponse.season_count))
+        if episodePubdate <> invalid
+            releaseYear = getReleaseYearFromPubdate(episodePubdate)
+            if isValidString(releaseYear) then details.push(releaseYear)
+        end if
+    end if
+    if type(m.global.custom) <> "roArray" and m.global.custom.isDisplayCreatedDate <> invalid and checkBool(m.global.custom.isDisplayCreatedDate)
+        if pageData <> invalid and pageData.pubdate <> invalid
+            releaseYear = getReleaseYearFromPubdate(pageData.pubdate)
+            if isValidString(releaseYear) then details.push(releaseYear)
+        end if
+    end if
+    if pageData <> invalid and pageData.rating <> invalid and isValidString(pageData.rating)
+        details.push(pageData.rating)
+    end if
+    return details
+end function
+
+function buildContentMetaDetailsArray(pageData as object) as object
+    return buildMovieMetaDetailsArray(pageData)
+end function
+
+function formatContentMetaDetailsText(details as object) as string
+    detailsArray = []
+    if details = invalid then return ""
+    for each detail in details
+        if isValidString(detail) then detailsArray.push(detail)
+    end for
+    if detailsArray.count() = 0 then return ""
+    return detailsArray.Join(" | ")
+end function
+
+function mergePodcastMenuItems(menuArray as object) as object
+    mergedMenu = []
+    if arrayHasItems(menuArray)
+        for each menu in menuArray
+            mergedMenu.Push(menu)
+        end for
+    end if
+    customMenu = getCustomMenuConfig()
+    if customMenu = invalid or not arrayHasItems(customMenu.menu) then return mergedMenu
+    for each item in customMenu.menu
+        if isValidAA(item) and LCase(item.type) = "podcast" and isValidString(item.url)
+            insertIndex = mergedMenu.Count()
+            if item.order <> invalid
+                insertIndex = item.order - 1
+                if insertIndex < 0 then insertIndex = 0
+                if insertIndex > mergedMenu.Count() then insertIndex = mergedMenu.Count()
+            end if
+            result = []
+            for i = 0 to mergedMenu.Count()
+                if i = insertIndex then result.Push(item)
+                if i < mergedMenu.Count() then result.Push(mergedMenu[i])
+            end for
+            mergedMenu = result
+        end if
+    end for
+    return mergedMenu
+end function
+
+function getCustomMenuConfig() as object
+    if m.global = invalid or m.global.custom = invalid then return invalid
+    customMenu = m.global.custom.customMenu
+    if customMenu = invalid then customMenu = m.global.custom.custom_menu
+    if isValidString(customMenu)
+        customMenu = ParseJson(customMenu)
+    end if
+    if isValidAA(customMenu) then return customMenu
+    return invalid
+end function
+
+function parsePodcastCsv(csvText as string) as object
+    rows = []
+    if not isValidString(csvText) then return rows
+    csvText = csvText.Replace(Chr(13) + Chr(10), Chr(10))
+    csvText = csvText.Replace(Chr(13), Chr(10))
+    lines = csvText.Split(Chr(10))
+    isHeader = true
+    for each line in lines
+        line = line.Trim()
+        if isValidString(line)
+            if isHeader
+                isHeader = false
+            else
+                parts = line.Split(",")
+                if parts.Count() >= 2
+                    rssUrl = parts[parts.Count() - 1].Trim()
+                    title = ""
+                    for i = 0 to parts.Count() - 2
+                        if i > 0 then title = title + ","
+                        title = title + parts[i]
+                    end for
+                    title = title.Trim()
+                    if isValidString(title) and isValidUri(rssUrl)
+                        rows.Push({
+                            title: title
+                            url: rssUrl
+                        })
+                    end if
+                end if
+            end if
+        end if
+    end for
+    return rows
+end function
+
+function createPodcastContentNodes(rows as object) as object
+    contentNode = CreateObject("roSGNode", "ContentNode")
+    if not arrayHasItems(rows) then return contentNode
+    for each row in rows
+        childNode = contentNode.createChild("AssetDataModel")
+        childNode.title = row.title
+        if isValidString(row.url)
+            childNode.link = row.url
+        else if isValidString(row.link)
+            childNode.link = row.link
+        end if
+        childNode.contentType = "podcast"
+        childNode.media_type = "audio"
+        childNode.showTitle = "true"
+        childNode.setFields({
+            shelfImageAspectRatio: "1:1"
+            railType: "playlist"
+        })
+        if isValidString(row.image)
+            childNode.image = row.image
+        else
+            childNode.image = "pkg:/images/placeholder.png"
+        end if
+        httpCode = 0
+        if row.httpCode <> invalid then httpCode = row.httpCode
+        childNode.addFields({ httpCode: httpCode })
+    end for
+    return contentNode
+end function
+
+function buildValidatedPodcastRow(item as object, xml as object, httpCode as integer) as object
+    channel = getXmlChild(xml, "channel")
+    title = item.title
+    imageUrl = ""
+    if channel <> invalid
+        channelTitle = getXmlChildText(channel, "title")
+        if isValidString(channelTitle) then title = channelTitle
+        imageUrl = getPodcastImage(channel)
+    end if
+    if not isValidString(imageUrl) then imageUrl = "pkg:/images/placeholder.png"
+    return {
+        title: title
+        url: item.url
+        link: item.url
+        image: imageUrl
+        httpCode: httpCode
+        contentType: "podcast"
+        media_type: "audio"
+        showTitle: "true"
+    }
+end function
+
+function parsePodcastRss(xmlText as string) as object
+    result = {
+        title: ""
+        image: ""
+        episodes: []
+    }
+    if not isValidString(xmlText) then return result
+    xml = CreateObject("roXMLElement")
+    if not xml.Parse(xmlText) then return result
+    channel = getXmlChild(xml, "channel")
+    if channel = invalid then return result
+    result.title = getXmlChildText(channel, "title")
+    result.image = getPodcastImage(channel)
+    result.description = getPodcastText(channel)
+    result.author = getXmlChildText(channel, "author")
+    result.genre = getPodcastCategories(channel)
+    items = getXmlChildren(channel, "item")
+    for each item in items
+        title = getXmlChildText(item, "title")
+        audioUrl = getXmlChildAttr(item, "enclosure", "url")
+        imageUrl = getPodcastImage(item)
+        if not isValidString(imageUrl) then imageUrl = result.image
+        if not isValidString(imageUrl) then imageUrl = "pkg:/images/placeholder.png"
+        duration = 0
+        durText = getXmlChildText(item, "duration")
+        if isValidString(durText) then duration = durText.ToInt()
+        description = getPodcastText(item)
+        if not isValidString(description) then description = result.description
+        author = getXmlChildText(item, "author")
+        if not isValidString(author) then author = result.author
+        genre = getPodcastCategories(item)
+        if not isValidString(genre) then genre = result.genre
+        pubDateText = formatPodcastPubDate(getXmlChildText(item, "pubDate"))
+        if isValidString(title) and isValidString(audioUrl)
+            result.episodes.Push({
+                title: title
+                link: audioUrl
+                image: imageUrl
+                duration: duration
+                description: description
+                seriesTitle: result.title
+                author: author
+                genre: genre
+                pubDateText: pubDateText
+                contentType: "podcast_episode"
+                media_type: "audio"
+                isLive: false
+                showTitle: "true"
+                sources: [{
+                    file: audioUrl
+                    type: "audio/mpeg"
+                }]
+                images: [{
+                    src: imageUrl
+                    width: 1280
+                    type: "image/jpeg"
+                }]
+            })
+        end if
+    end for
+    return result
+end function
+
+function getXmlLocalName(node as object) as string
+    name = LCase(node.GetName())
+    colon = Instr(1, name, ":")
+    if colon > 0 then return Mid(name, colon + 1)
+    return name
+end function
+
+function getXmlChildren(parent as object, localName as string) as object
+    matches = []
+    if parent = invalid then return matches
+    children = parent.GetChildElements()
+    if children = invalid then return matches
+    want = LCase(localName)
+    for each child in children
+        if getXmlLocalName(child) = want then matches.Push(child)
+    end for
+    return matches
+end function
+
+function getXmlChild(parent as object, localName as string) as object
+    kids = getXmlChildren(parent, localName)
+    if kids.Count() > 0 then return kids[0]
+    return invalid
+end function
+
+function getXmlChildText(parent as object, localName as string) as string
+    child = getXmlChild(parent, localName)
+    if child = invalid then return ""
+    return child.GetText()
+end function
+
+function getXmlChildAttr(parent as object, localName as string, attr as string) as string
+    child = getXmlChild(parent, localName)
+    if child = invalid then return ""
+    attrs = child.GetAttributes()
+    if attrs <> invalid and attrs.lookup(attr) <> invalid then return attrs[attr]
+    return ""
+end function
+
+function getPodcastImage(parent as object) as string
+    href = getXmlChildAttr(parent, "image", "href")
+    if isValidString(href) then return href
+    imageNode = getXmlChild(parent, "image")
+    if imageNode = invalid then return ""
+    return getXmlChildText(imageNode, "url")
+end function
+
+function getPodcastCategories(parent as object) as string
+    categories = []
+    collectPodcastCategories(parent, categories)
+    return categories.Join(",")
+end function
+
+sub collectPodcastCategories(parent as object, categories as object)
+    for each categoryNode in getXmlChildren(parent, "category")
+        attrs = categoryNode.GetAttributes()
+        if attrs <> invalid and attrs.lookup("text") <> invalid and isValidString(attrs["text"])
+            categories.Push(attrs["text"])
+        end if
+        collectPodcastCategories(categoryNode, categories)
+    end for
+end sub
+
+function formatPodcastPubDate(pubDateText as string) as string
+    if not isValidString(pubDateText) then return ""
+    parts = pubDateText.Trim().Split(" ")
+    if parts.Count() > 0 and Right(parts[0], 1) = "," then parts.Shift()
+    if parts.Count() < 3 then return ""
+    return parts[1] + " " + parts[0] + ", " + parts[2]
+end function
+
+function getPodcastText(parent as object) as string
+    text = getXmlDescendantText(getXmlChild(parent, "summary"))
+    if isValidString(text) then return text
+    text = getXmlDescendantText(getXmlChild(parent, "subtitle"))
+    if isValidString(text) then return text
+    text = getXmlDescendantText(getXmlChild(parent, "description"))
+    if isValidString(text) then return text
+    return getXmlDescendantText(getXmlChild(parent, "encoded"))
+end function
+
+function getXmlDescendantText(node as object) as string
+    if node = invalid then return ""
+    text = node.GetText()
+    if isValidString(text) then return text.Trim()
+    children = node.GetChildElements()
+    if children = invalid then return ""
+    combined = ""
+    for each child in children
+        combined = combined + getXmlDescendantText(child)
+    end for
+    return combined.Trim()
+end function

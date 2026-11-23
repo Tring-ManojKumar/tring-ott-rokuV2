@@ -1,0 +1,20 @@
+import "pkg:/utils/logging/Logger.bs"
+
+namespace Domain
+    class SettingsRepository
+        function get(key as string, defaultValue = invalid as dynamic) as dynamic
+            AppLogError("SettingsRepository", "get() not implemented")
+            return defaultValue
+        end function
+
+        function save(key as string, value as dynamic) as boolean
+            AppLogError("SettingsRepository", "save() not implemented")
+            return false
+        end function
+
+        function reset(key as string) as boolean
+            AppLogError("SettingsRepository", "reset() not implemented")
+            return false
+        end function
+    end class
+end namespace

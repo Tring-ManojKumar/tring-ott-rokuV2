@@ -1,0 +1,249 @@
+namespace tests.navigation
+
+    class NavigationCompatibilitySpy
+        public sub new()
+            m.calls = []
+        end sub
+        public sub mark(name as string)
+            m.calls.push(name)
+        end sub
+        public sub push(route as dynamic, params = invalid as dynamic)
+            m.mark("push")
+        end sub
+        public function pop() as dynamic
+            m.mark("pop")
+            return { route: "popped" }
+        end function
+        public function peek() as dynamic
+            m.mark("peek")
+            return { route: "peeked" }
+        end function
+        public function getCurrentRoute() as dynamic
+            m.mark("getCurrentRoute")
+            return { route: "current" }
+        end function
+        public function canGoBack() as boolean
+            m.mark("canGoBack")
+            return true
+        end function
+        public sub clear()
+            m.mark("clear")
+        end sub
+        public function getSize() as integer
+            m.mark("getSize")
+            return 17
+        end function
+        public function getEntry(index as integer) as dynamic
+            m.mark("getEntry")
+            return { index: index }
+        end function
+        public function navigateTo(route as dynamic, params = invalid as dynamic) as boolean
+            m.mark("navigateTo")
+            return true
+        end function
+        public function goBack() as boolean
+            m.mark("goBack")
+            return true
+        end function
+        public function getHistoryCount() as integer
+            m.mark("getHistoryCount")
+            return 17
+        end function
+        public function getHistoryEntry(index as integer) as dynamic
+            m.mark("getHistoryEntry")
+            return { index: index }
+        end function
+        public function getLastError() as string
+            m.mark("getLastError")
+            return "spy error"
+        end function
+        public function register(route as dynamic, componentName as dynamic) as boolean
+            m.mark("register")
+            return true
+        end function
+        public function replaceRegistration(route as dynamic, componentName as dynamic) as boolean
+            m.mark("replaceRegistration")
+            return true
+        end function
+        public function registerRoutes(routes as dynamic) as boolean
+            m.mark("registerRoutes")
+            return true
+        end function
+        public function getComponentName(route as dynamic) as dynamic
+            m.mark("getComponentName")
+            return "SpyScreen"
+        end function
+        public function isValidRoute(route as dynamic) as boolean
+            m.mark("isValidRoute")
+            return true
+        end function
+        public function resolve(route as dynamic, params = invalid as dynamic) as dynamic
+            m.mark("resolve")
+            return { route: route, componentName: "SpyScreen", params: params }
+        end function
+        public function initialize(root as dynamic, initialRoute as dynamic, routes as dynamic, initialScreen = invalid as dynamic, initialParams = invalid as dynamic) as boolean
+            m.mark("initialize")
+            return true
+        end function
+        public sub setLogger(logger as dynamic)
+            m.mark("setLogger")
+        end sub
+        public function handleEvent(event as dynamic) as boolean
+            m.mark("handleEvent")
+            return true
+        end function
+        public function replace(route as dynamic, params = invalid as dynamic) as boolean
+            m.mark("replace")
+            return true
+        end function
+        public function reset(route as dynamic, params = invalid as dynamic) as boolean
+            m.mark("reset")
+            return true
+        end function
+        public function getCurrentScreen() as dynamic
+            m.mark("getCurrentScreen")
+            return invalid
+        end function
+        public function getScreenHistoryCount() as integer
+            m.mark("getScreenHistoryCount")
+            return 17
+        end function
+        public function registerRoute(route as dynamic, componentName as dynamic) as boolean
+            m.mark("registerRoute")
+            return true
+        end function
+        public function resolveRoute(route as dynamic, params = invalid as dynamic) as dynamic
+            m.mark("resolveRoute")
+            return { route: route, params: params }
+        end function
+        public sub onActiveScreenReady(screen = invalid as dynamic)
+            m.mark("onActiveScreenReady")
+        end sub
+        public function navigate(route as dynamic, params = invalid as dynamic) as object
+            m.mark("navigate")
+            return { type: "navigate", route: route, params: params }
+        end function
+        public function back() as object
+            m.mark("back")
+            return { type: "back" }
+        end function
+    end class
+
+    @suite("MVVM navigation compatibility adapters")
+    class NavigationCompatibilityTests extends rooibos.BaseTestSuite
+
+        @describe("delegation and event compatibility")
+        @it("delegates every stack method to the Core stack")
+        function _()
+            adapter = new RokuMvvmClean.RokuMvvmNavigationStack()
+            spy = new NavigationCompatibilitySpy()
+            adapter.core = spy
+            adapter.push("home", { id: 1 })
+            adapter.replace("settings", invalid)
+            adapter.reset("home", invalid)
+            m.assertEqual(adapter.pop().route, "popped")
+            m.assertEqual(adapter.peek().route, "peeked")
+            m.assertEqual(adapter.getCurrentRoute().route, "current")
+            m.assertTrue(adapter.canGoBack())
+            adapter.clear()
+            m.assertEqual(adapter.getSize(), 17)
+            m.assertEqual(adapter.getEntry(3).index, 3)
+            m.assertCalls(spy, ["push", "replace", "reset", "pop", "peek", "getCurrentRoute", "canGoBack", "clear", "getSize", "getEntry"])
+        end function
+
+        @it("delegates every manager method to the Core manager")
+        function _()
+            adapter = new RokuMvvmClean.RokuMvvmNavigationManager()
+            spy = new NavigationCompatibilitySpy()
+            adapter.core = spy
+            m.assertTrue(adapter.navigateTo("home", invalid))
+            m.assertTrue(adapter.goBack())
+            m.assertTrue(adapter.canGoBack())
+            m.assertTrue(adapter.replace("settings", invalid))
+            m.assertTrue(adapter.reset("home", invalid))
+            m.assertEqual(adapter.getCurrentRoute().route, "current")
+            m.assertEqual(adapter.getHistoryCount(), 17)
+            m.assertEqual(adapter.getHistoryEntry(2).index, 2)
+            m.assertCalls(spy, ["navigateTo", "goBack", "canGoBack", "replace", "reset", "getCurrentRoute", "getHistoryCount", "getHistoryEntry"])
+        end function
+
+        @it("delegates every AppRouter method to the Core router")
+        function _()
+            adapter = new RokuMvvmClean.RokuMvvmAppRouter()
+            spy = new NavigationCompatibilitySpy()
+            adapter.core = spy
+            m.assertEqual(adapter.getLastError(), "spy error")
+            m.assertTrue(adapter.register("home", "HomeScreen"))
+            m.assertTrue(adapter.replaceRegistration("home", "OtherScreen"))
+            m.assertTrue(adapter.registerRoutes({ settings: "SettingsScreen" }))
+            m.assertEqual(adapter.getComponentName("home"), "SpyScreen")
+            m.assertTrue(adapter.isValidRoute("home"))
+            m.assertEqual(adapter.resolve("home", { id: 4 }).params.id, 4)
+            m.assertCalls(spy, ["getLastError", "register", "replaceRegistration", "registerRoutes", "getComponentName", "isValidRoute", "resolve"])
+        end function
+
+        @it("delegates every coordinator method to the Core coordinator")
+        function _()
+            adapter = new RokuMvvmClean.RokuMvvmNavigationCoordinator()
+            spy = new NavigationCompatibilitySpy()
+            adapter.core = spy
+            m.assertTrue(adapter.initialize(invalid, "home", { home: "Group" }))
+            m.assertEqual(adapter.getLastError(), "spy error")
+            adapter.setLogger(invalid)
+            m.assertTrue(adapter.handleEvent({ type: "back" }))
+            m.assertTrue(adapter.navigateTo("home", invalid))
+            m.assertTrue(adapter.goBack())
+            m.assertTrue(adapter.replace("settings", invalid))
+            m.assertTrue(adapter.reset("home", invalid))
+            m.assertEqual(adapter.getCurrentRoute().route, "current")
+            m.assertInvalid(adapter.getCurrentScreen())
+            m.assertTrue(adapter.canGoBack())
+            m.assertEqual(adapter.getScreenHistoryCount(), 17)
+            m.assertTrue(adapter.registerRoute("home", "Group"))
+            m.assertEqual(adapter.resolveRoute("home", invalid).route, "home")
+            adapter.onActiveScreenReady(invalid)
+            m.assertCalls(spy, ["initialize", "getLastError", "setLogger", "handleEvent", "navigateTo", "goBack", "replace", "reset", "getCurrentRoute", "getCurrentScreen", "canGoBack", "getScreenHistoryCount", "registerRoute", "resolveRoute", "onActiveScreenReady"])
+        end function
+
+        @it("keeps MVVM event payloads compatible with the app event helper")
+        function _()
+            adapter = new RokuMvvmClean.RokuMvvmNavigationEvents()
+            legacy = new NavigationEvents()
+            spy = new NavigationCompatibilitySpy()
+            adapter.core = spy
+            params = { contentId: "item-12" }
+            navigateEvent = adapter.navigate("home", params)
+            m.assertEqual(navigateEvent.type, "navigate")
+            m.assertEqual(navigateEvent.route, "home")
+            m.assertEqual(navigateEvent.params.contentId, "item-12")
+            legacyEvent = legacy.navigate("home", params)
+            m.assertEqual(navigateEvent.type, legacyEvent.type)
+            m.assertEqual(navigateEvent.route, legacyEvent.route)
+            m.assertEqual(navigateEvent.params.contentId, legacyEvent.params.contentId)
+            backEvent = adapter.back()
+            legacyBack = legacy.back()
+            m.assertEqual(backEvent.type, legacyBack.type)
+            m.assertFalse(backEvent.doesExist("route"))
+            replaceParams = { source: "settings" }
+            replaceEvent = adapter.replace("settings", replaceParams)
+            legacyReplace = legacy.replace("settings", replaceParams)
+            m.assertEqual(replaceEvent.type, legacyReplace.type)
+            m.assertEqual(replaceEvent.route, legacyReplace.route)
+            m.assertEqual(replaceEvent.params.source, legacyReplace.params.source)
+            resetParams = { source: "reset" }
+            resetEvent = adapter.reset("home", resetParams)
+            legacyReset = legacy.reset("home", resetParams)
+            m.assertEqual(resetEvent.type, legacyReset.type)
+            m.assertEqual(resetEvent.route, legacyReset.route)
+            m.assertEqual(resetEvent.params.source, legacyReset.params.source)
+            m.assertCalls(spy, ["navigate", "back", "replace", "reset"])
+        end function
+
+        private sub assertCalls(spy as dynamic, expected as object)
+            m.assertEqual(spy.calls.count(), expected.count())
+            for index = 0 to expected.count() - 1
+                m.assertEqual(spy.calls[index], expected[index])
+            end for
+        end sub
+    end class
+end namespace

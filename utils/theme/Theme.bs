@@ -1,0 +1,27 @@
+import "pkg:/utils/theme/GeneratedTheme.bs"
+
+function GetTheme() as object
+    ' Build configuration is deep-merged with Core defaults by the shared
+    ' resolver before GeneratedTheme.bs is written for this consumer.
+    theme = GetCompiledTheme()
+    if theme = invalid then return {}
+    if theme.theme <> invalid then theme = theme.theme
+    return theme
+end function
+
+function GetDefaultTheme() as object
+    return GetCompiledTheme()
+end function
+
+function MergeThemeSection(current as dynamic, defaults as object) as object
+    result = {}
+    for each key in defaults
+        result[key] = defaults[key]
+    end for
+    if current <> invalid
+        for each key in current
+            result[key] = current[key]
+        end for
+    end if
+    return result
+end function

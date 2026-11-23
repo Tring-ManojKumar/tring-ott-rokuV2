@@ -1,0 +1,21 @@
+namespace Domain
+    class MediaItem 'uses your app's naming
+        public id as string
+        public title as string
+        public description as string
+        public posterUrl as string
+        public images as object
+        public mediaType as string
+        public contentType as string
+
+        function new(id as string, title as string, description as string, posterUrl as string, images = [] as object, mediaType = "" as string, contentType = "" as string)
+            m.id = id
+            m.title = title
+            m.description = description
+            m.posterUrl = posterUrl
+            m.images = images
+            m.mediaType = mediaType
+            m.contentType = contentType
+        end function
+    end class
+end namespace

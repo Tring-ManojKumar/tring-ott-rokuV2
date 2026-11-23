@@ -1,0 +1,25 @@
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+
+function GetIconPath(logicalKey as string) as dynamic
+    return RokuCore.GetAssetPath("icons", logicalKey)
+end function
+
+function GetIcons(config as object) as object
+
+     theme = GetTheme()
+
+    if theme = invalid or theme.icons = invalid
+        return {}
+    end if
+
+    icons = theme.icons
+
+    return {
+        home: icons.home
+        search: icons.search
+        back: icons.back
+        play: icons.play
+        settings: icons.settings
+    }
+
+end function

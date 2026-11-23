@@ -1,0 +1,43 @@
+namespace rodash.internal
+  ' @ignore
+  ' The base implementation of `forEach`.
+  ' @since 0.0.21
+  ' @category Internal
+  ' @param {Array|Object} - collection The collection to iterate over
+  ' @param {Function} iteratee The function invoked per iteration
+  ' @param {String} direction - the direction to traverse the collection
+  ' @param {String} funcValueRule - Filters functions from collection. `allow`, `omit`, `only`.
+  ' @returns {Array|Object} Returns `collection`
+  function baseForEach(collection = Invalid as Dynamic, iteratee = Invalid as Dynamic, direction = "left", funcValueRule = "allow" as String)
+    if rodash.isInvalid(collection) OR collection.isEmpty() then return Invalid
+
+    isRight = direction = "right"
+    if rodash.isAA(collection) then
+      keys = collection.keys()
+      if isRight then keys.reverse()
+      for each key in keys
+        item = collection[key]
+        if rodash.isFunction(iteratee) then
+          valueIsFunction = rodash.isFunction(item)
+          allowValue = false
+
+          if valueIsFunction AND NOT rodash.isEqual(funcValueRule, "omit")
+            allowValue = true
+          else if NOT valueIsFunction AND NOT rodash.isEqual(funcValueRule, "only")
+            allowValue = true
+          end if
+
+          if allowValue then iteratee(item, key)
+        end if
+      end for
+    else
+      if isRight then collection.reverse()
+      for each item in collection
+        if rodash.isFunction(iteratee) then iteratee(item)
+      end for
+      if isRight then collection.reverse()
+    end if
+
+    return collection
+  end function
+end namespace

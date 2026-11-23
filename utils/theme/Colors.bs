@@ -1,0 +1,24 @@
+function GetThemeColors(theme as object) as object
+
+    if theme = invalid or theme.colors = invalid
+        return {}
+    end if
+
+    return theme.colors
+
+end function
+
+function ThemeColor(value as string) as integer
+
+    color = value
+    if left(color, 1) = "#"
+        color = mid(color, 2)
+    end if
+
+    if len(color) = 6
+        color = color + "FF"
+    end if
+    ' Parse the hex digits directly. Val("&H...") uses decimal parsing and
+    ' returns 0 for these theme strings on Roku.
+    return Val(color, 16)
+end function

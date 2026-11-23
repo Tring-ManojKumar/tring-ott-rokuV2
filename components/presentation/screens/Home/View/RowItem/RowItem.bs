@@ -1,0 +1,22 @@
+sub init()
+
+    m.poster = m.top.findNode("poster")
+    m.title = m.top.findNode("title")
+
+    m.top.observeField("itemContent", "onItemContentChanged")
+
+end sub
+
+
+function onItemContentChanged()
+
+    if m.top.itemContent = invalid
+        return invalid
+    end if
+    m.title.text = m.top.itemContent.title
+
+    if m.top.itemContent.HDPosterUrl <> invalid
+        m.poster.uri = m.top.itemContent.HDPosterUrl
+    end if
+
+end function

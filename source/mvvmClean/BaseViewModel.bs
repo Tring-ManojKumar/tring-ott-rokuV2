@@ -1,0 +1,15 @@
+namespace MVVMClean
+class BaseViewModel
+    public sub new()
+        m.state = { status: "IDLE", data: invalid, error: invalid }
+    end sub
+
+    public function getState() as object
+        return m.state
+    end function
+
+    public sub setState(status as string, payload = invalid as dynamic, error = invalid as dynamic)
+        m.state = { status: status, data: payload, error: error }
+    end sub
+end class
+end namespace

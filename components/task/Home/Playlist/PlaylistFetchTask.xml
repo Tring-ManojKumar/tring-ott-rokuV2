@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<component name="PlaylistFetchTask" extends="Task">
+
+    <interface>
+        <field id="playlistUrl" type="string" />
+        <field id="content" type="node" />
+        <field id="isLoading" type="boolean" />
+        <field id="errorMessage" type="string" />
+        <field id="errorResult" type="assocarray" />
+        <field id="requestState" type="string" value="IDLE" />
+        <field id="retryLimit" type="integer" value="1" />
+        <field id="timeoutMs" type="integer" value="30000" />
+    </interface>
+
+    <script type="text/brightscript" uri="PlaylistFetchTask.bs" />
+
+</component>

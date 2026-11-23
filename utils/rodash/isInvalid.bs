@@ -1,0 +1,15 @@
+namespace rodash
+  ' Checks if the supplied value is Invalid
+  ' @since 0.0.21
+  ' @category Lang
+  ' @param {Dynamic} value The variable to be checked
+  ' @returns {Boolean} Results of the check
+  ' @example
+  ' rodash.isInvalid(Invalid) // => true
+  ' rodash.isInvalid(undefined) // => true
+  ' rodash.isInvalid("") // => false
+  @inline
+  function isInvalid(value as Dynamic) as Boolean
+    return type(value) = "<uninitialized>" OR value = Invalid
+  end function
+end namespace

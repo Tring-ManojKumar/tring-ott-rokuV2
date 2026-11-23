@@ -1,0 +1,9 @@
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+
+namespace AppConfig
+    function GetPlaylistUrl() as string
+        endpoint = RokuCore.GetApiEndpoint("playlist")
+        if endpoint = invalid then return ""
+        return endpoint.ToStr()
+    end function
+end namespace

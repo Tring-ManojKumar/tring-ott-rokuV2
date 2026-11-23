@@ -1,0 +1,39 @@
+import "pkg:/data/repositories/SettingsRepositoryImpl.bs"
+
+sub init()
+    m.repository = new Data.SettingsRepositoryImpl()
+end sub
+
+sub onLanguagesChanged(event as object)
+    languages = event.getData()
+    storedCode = m.repository.get("language", "")
+    if isConfiguredLanguage(languages, storedCode)
+        m.top.selectedLanguageCode = LCase(storedCode)
+    else
+        m.top.selectedLanguageCode = ""
+    end if
+end sub
+
+function selectLanguage(code as string) as boolean
+    languages = m.top.languages
+    if not isConfiguredLanguage(languages, code) then return false
+    normalizedCode = LCase(code.Trim())
+    if m.repository.save("language", normalizedCode)
+        m.top.selectedLanguageCode = normalizedCode
+        return true
+    end if
+    return false
+end function
+
+function isConfiguredLanguage(languages as dynamic, code as dynamic) as boolean
+    if languages = invalid or code = invalid then return false
+    if type(code) <> "String" and type(code) <> "roString" then return false
+    if code.Trim() = "" then return false
+    childCount = languages.getChildCount()
+    if childCount = invalid or childCount <= 0 then return false
+    for index = 0 to childCount - 1
+        language = languages.getChild(index)
+        if language.code <> invalid and LCase(language.code) = LCase(code.Trim()) then return true
+    end for
+    return false
+end function

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="RequestStateController" extends="Group">
+    <interface>
+        <field id="requestTask" type="node" onChange="onRequestTaskChanged" />
+        <field id="requestState" type="string" value="IDLE" alwaysNotify="true" />
+        <field id="fallbackVisible" type="boolean" value="false" alwaysNotify="true" />
+        <field id="message" type="string" value="" alwaysNotify="true" />
+        <field id="retryVisible" type="boolean" value="false" alwaysNotify="true" />
+        <field id="retryRequested" type="boolean" value="false" alwaysNotify="true" />
+        <field id="secondaryVisible" type="boolean" value="false" onChange="updatePanelActions" />
+        <field id="secondaryText" type="string" value="Back" onChange="updatePanelActions" />
+        <field id="secondaryRequested" type="boolean" value="false" alwaysNotify="true" />
+        <function name="focusRetry" />
+        <function name="focusInitialAction" />
+    </interface>
+    <children>
+        <ErrorStatePanel id="fallbackPanel" visible="false" />
+    </children>
+    <script type="text/brightscript" uri="RequestStateController.bs" />
+</component>

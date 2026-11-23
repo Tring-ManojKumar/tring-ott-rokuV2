@@ -1,0 +1,29 @@
+namespace Domain
+    class Episode
+        public id as string
+        public title as string
+        public description as string
+        public posterUrl as string
+        public contentType as string
+        public mediaType as string
+        public seriesId as string
+        public seriesTitle as string
+        public seasonNumber as integer
+        public episodeNumber as integer
+        public duration as integer
+
+        function new(id as string, title as string, description as string, posterUrl as string, contentType as string, mediaType as string, seriesId as string, seriesTitle as string, seasonNumber as integer, episodeNumber as integer, duration as integer)
+            m.id = id
+            m.title = title
+            m.description = description
+            m.posterUrl = posterUrl
+            m.contentType = contentType
+            m.mediaType = mediaType
+            m.seriesId = seriesId
+            m.seriesTitle = seriesTitle
+            m.seasonNumber = seasonNumber
+            m.episodeNumber = episodeNumber
+            m.duration = duration
+        end function
+    end class
+end namespace

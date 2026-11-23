@@ -1,0 +1,40 @@
+import "pkg:/source/rokuCore/navigation/NavigationStack.bs"
+
+' Compatibility adapter. All history state belongs to Roku Core.
+namespace RokuMvvmClean
+class RokuMvvmNavigationStack
+    public sub new()
+        m.core = new RokuCore.RokuCoreNavigationStack()
+    end sub
+    public sub push(route as dynamic, params = invalid as dynamic)
+        m.core.push(route, params)
+    end sub
+    public sub replace(route as dynamic, params = invalid as dynamic)
+        m.core.replace(route, params)
+    end sub
+    public sub reset(route as dynamic, params = invalid as dynamic)
+        m.core.reset(route, params)
+    end sub
+    public function pop() as dynamic
+        return m.core.pop()
+    end function
+    public function peek() as dynamic
+        return m.core.peek()
+    end function
+    public function getCurrentRoute() as dynamic
+        return m.core.getCurrentRoute()
+    end function
+    public function canGoBack() as boolean
+        return m.core.canGoBack()
+    end function
+    public sub clear()
+        m.core.clear()
+    end sub
+    public function getSize() as integer
+        return m.core.getSize()
+    end function
+    public function getEntry(index as integer) as dynamic
+        return m.core.getEntry(index)
+    end function
+end class
+end namespace

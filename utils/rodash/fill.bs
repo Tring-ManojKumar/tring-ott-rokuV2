@@ -1,0 +1,24 @@
+namespace rodash
+  ' Fills elements of array with value from start up to, but not including, end.
+  ' @since 0.0.21
+  ' @category Array
+  ' @param {Array} array - The array to fill
+  ' @param {Dynamic} value - The value to fill array with
+  ' @param {Integer} startPos - The start position
+  ' @param {Integer} endPos - The end position
+  ' @returns {Array} Returns the mutated array
+  ' @example
+  ' rodash.fill([1, 2, 3], "a", 1, 2) // => [1, "a", 3]
+  ' rodash.fill([1, 2, 3], "a") // => ["a", "a", "a"]
+  ' rodash.fill([1, 2, 3], "a", 1) // => [1, "a", "a"]
+  function fill(array = CreateObject("roArray", 0, true) as Object, value = "" as Dynamic, startPos = Invalid, endPos = Invalid)
+    if rodash.isInvalid(startPos) then startPos = 0
+    if rodash.isInvalid(endPos) then endPos = array.count()
+    endPos = endPos - 1
+
+    for i = startPos to endPos
+      array[i] = value
+    end for
+    return array
+  end function
+end namespace

@@ -1,0 +1,38 @@
+{
+    "extends": "./bsconfig.json",
+    "test": true,
+    "debug": true,
+    "manifest": {
+        "bs_const": {
+            "isDebugBuild": true,
+            "isRegistryDiagnosticBuild": true,
+            "isTestBuild": true
+        }
+    },
+    "files": [
+        "manifest",
+        "source/**/*",
+        "components/**/*",
+        "adapters/**/*",
+        "config/**/*",
+        "data/**/*",
+        "domain/**/*",
+        "enums/**/*",
+        "managers/**/*",
+        "services/**/*",
+        "utils/**/*"
+    ],
+    "plugins": [
+        "./plugins/plugin.ts",
+        "rooibos-roku"
+    ],
+    "rooibos": {
+        "testsFilePattern": "**/*.spec.bs",
+        "showOnlyFailures": false,
+        "printTestTimes": true,
+        "catchCrashes": true,
+        "codeCoverage": false,
+        "keepAppOpen": true,
+        "sendHomeOnFinish": false
+    }
+}

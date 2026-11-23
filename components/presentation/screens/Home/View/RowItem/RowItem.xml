@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<component name="RowItem" extends="Group">
+
+    <interface>
+
+        <function name="onItemContentChanged" />
+
+        <field
+            id="itemContent"
+            type="node"
+        />
+
+        <field
+            id="focusPercent"
+            type="float"
+        />
+
+    </interface>
+
+    <children>
+
+        <Poster
+            id="poster"
+            width="280"
+            height="400"
+        />
+
+        <Label
+            id="title"
+            translation="[0, 410]"
+            width="280"
+            height="40"
+            horizAlign="center"
+            color="0xFFFFFFFF"
+        />
+
+    </children>
+
+    <script type="text/brightscript" uri="RowItem.bs" />
+
+</component>

@@ -1,0 +1,16 @@
+namespace rodash
+  ' Checks if the supplied value is a valid String type and is not empty
+  ' @since 0.0.21
+  ' @category Lang
+  ' @param {Dynamic} value The variable to be checked
+  ' @returns {Boolean} Results of the check
+  ' @example
+  ' rodash.isEmptyString("") // => true
+  ' rodash.isEmptyString(" ") // => false
+  ' rodash.isEmptyString("Hello") // => false
+  @inline
+  function isEmptyString(value as Dynamic) as Boolean
+    return rodash.isString(value) AND value.isEmpty()
+  end function
+end namespace
+

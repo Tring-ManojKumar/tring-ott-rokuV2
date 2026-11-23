@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="ErrorStatePanel" extends="Group">
+    <interface>
+        <field id="title" type="string" value="Unable to Load Content" onChange="updateTitle" />
+        <field id="message" type="string" value="Something went wrong. Please try again." onChange="updateMessage" />
+        <field id="iconUri" type="string" value="" onChange="updateIcon" />
+        <field id="retryVisible" type="boolean" value="true" onChange="updateButtons" />
+        <field id="retryText" type="string" value="Retry" onChange="updateButtons" />
+        <field id="retryRequested" type="boolean" value="false" />
+        <field id="secondaryVisible" type="boolean" value="false" onChange="updateButtons" />
+        <field id="secondaryText" type="string" value="Back" onChange="updateButtons" />
+        <field id="secondaryRequested" type="boolean" value="false" />
+        <function name="focusRetry" />
+        <function name="focusInitialAction" />
+        <function name="onKeyEvent" />
+    </interface>
+    <children>
+        <Rectangle id="backdrop" width="1920" height="1080" color="0x343444F8" />
+        <LayoutGroup id="errorPopupGroup" layoutDirection="vert" horizAlignment="center" vertAlignment="center" translation="[960, 540]" itemSpacings="[26, 18, 42]">
+            <Poster id="appLogo" width="144" height="144" loadDisplayMode="scaleToFit" />
+            <Label id="pageTitle" width="1200" height="64" horizAlign="center" vertAlign="center" color="0xFFFFFFFF" font="font:LargeSystemFont" />
+            <Label id="pageDescription" width="1320" height="100" horizAlign="center" vertAlign="center" wrap="true" color="0xB3B3B3FF" font="font:MediumSystemFont" />
+            <LayoutGroup id="buttonGroup" layoutDirection="horiz" itemSpacings="[33]" horizAlignment="center" vertAlignment="center">
+                <AppButton id="retryButton" width="345" height="75" text="Retry" variant="primary" gradientPreset="solid" />
+                <AppButton id="secondaryButton" width="345" height="75" text="Back" variant="outlined" visible="false" />
+            </LayoutGroup>
+        </LayoutGroup>
+        <Timer id="focusTimer" duration="0.2" repeat="false" />
+    </children>
+    <script type="text/brightscript" uri="pkg:/source/rokuCore/theme/ThemeProvider.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/GeneratedTheme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Theme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Colors.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Typography.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Assets.bs" />
+    <script type="text/brightscript" uri="ErrorStatePanel.bs" />
+</component>

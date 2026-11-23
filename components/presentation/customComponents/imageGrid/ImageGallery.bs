@@ -1,0 +1,40 @@
+sub init()
+    m.grid = m.top.findNode("grid")
+    m.background = m.top.findNode("background")
+    applyTheme()
+    m.top.observeField("visible", "onVisibleChanged")
+end sub
+
+sub applyTheme()
+    if m.background = invalid then return
+    theme = GetTheme()
+    m.background.color = ThemeColor(theme.colors.background)
+end sub
+
+sub onImagesChanged()
+    content = CreateObject("roSGNode", "ContentNode")
+
+    for each img in m.top.images
+        itemNode = content.CreateChild("ContentNode")
+        itemNode.HDPosterUrl = img.src
+        itemNode.title = img.width.toStr() + "px"
+    end for
+
+    m.grid.content = content
+end sub
+
+sub onVisibleChanged()
+    if m.top.visible
+        m.grid.setFocus(true)
+    end if
+end sub
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    if press and key = "back"
+        m.top.visible = false
+        homeGrid = m.top.getScene().findNode("homeGrid")
+        if homeGrid <> invalid then homeGrid.setFocus(true)
+        return true
+    end if
+    return false
+end function

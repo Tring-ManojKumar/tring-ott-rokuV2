@@ -1,0 +1,13 @@
+
+namespace rodash.internal
+  ' @ignore
+  function getDateObject(asLocal = false as Boolean) as Object
+    dateObj = CreateObject("roDateTime")
+
+    if asLocal then
+      dateObj.toLocalTime()
+    end if
+
+    return dateObj
+  end function
+end namespace

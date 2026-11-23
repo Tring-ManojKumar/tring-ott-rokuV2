@@ -1,0 +1,53 @@
+import "pkg:/domain/usecases/GetPlaylistUseCase.bs"
+import "pkg:/data/datasources/JWPlayerRemoteDataSource.bs"
+import "pkg:/data/mappers/MediaItemMapper.bs"
+import "pkg:/data/repositories/PlaylistRepositoryImpl.bs"
+import "pkg:/adapters/ContentUiAdapter.bs"
+
+sub init()
+    m.top.functionName = "execute"
+end sub
+
+sub execute()
+    m.top.isLoading = true
+    m.top.errorMessage = ""
+    m.top.errorResult = invalid
+    m.top.requestState = "LOADING"
+    m.top.content = invalid
+
+    dataSource = new Data.JWPlayerRemoteDataSource(m.top.playlistUrl, m.top.retryLimit, m.top.timeoutMs)
+    mapper = new Data.MediaItemMapper()
+    repository = new Data.PlaylistRepositoryImpl(dataSource, mapper)
+    useCase = new Domain.GetPlaylistUseCase(repository)
+
+    result = useCase.execute()
+    if result = invalid or not result.ok
+        m.top.isLoading = false
+        m.top.errorResult = result
+        m.top.errorMessage = "Unable to load playlist"
+        if result <> invalid
+            m.top.errorMessage = result.userMessage
+            if result.category = "OFFLINE"
+                m.top.requestState = "OFFLINE"
+            else
+                m.top.requestState = "ERROR"
+            end if
+        else
+            m.top.requestState = "ERROR"
+        end if
+        return
+    end if
+
+    mediaItems = result.data
+    if mediaItems.count() = 0
+        m.top.isLoading = false
+        m.top.errorMessage = "No content available"
+        m.top.requestState = "EMPTY"
+        return
+    end if
+
+    uiAdapter = new Presentation.ContentUiAdapter()
+    m.top.content = uiAdapter.playlistToContentNode(mediaItems)
+    m.top.isLoading = false
+    m.top.requestState = "SUCCESS"
+end sub

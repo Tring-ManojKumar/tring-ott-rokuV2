@@ -1,0 +1,117 @@
+import "pkg:/source/rokuMvvmClean/Framework.bs"
+import "pkg:/source/rokuCore/lifecycle/ScreenLifecycle.bs"
+import "pkg:/source/navigation/NavigationEvents.bs"
+import "pkg:/source/navigation/AppRoutes.bs"
+import "pkg:/source/navigation/AppNavigationConfig.bs"
+import "pkg:/data/diagnostics/RegistryDiagnostic.bs"
+
+sub init()
+    AppLogInfo("RootScene", "Initialization started")
+    m.sceneBackground = m.top.findNode("sceneBackground")
+    m.navigationHost = m.top.findNode("navigationHost")
+    m.homeScreen = m.top.findNode("homeScreen")
+    m.splashScreen = m.top.findNode("splashScreen")
+    m.registryDiagnosticBackground = m.top.findNode("registryDiagnosticBackground")
+    m.registryDiagnostic = m.top.findNode("registryDiagnostic")
+    m.readinessObservedScreen = invalid
+    m.theme = GetTheme()
+    applyTheme()
+    m.framework = new RokuMvvmClean.Framework()
+    m.navigationEvents = new NavigationEvents()
+    navigationConfig = AppNavigationConfig.GetConfig()
+    lifecycleDiagnostics = false
+#if isRegistryDiagnosticBuild
+    lifecycleDiagnostics = true
+#endif
+    initialized = m.framework.initialize({ root: m.navigationHost, initialRoute: navigationConfig.initialRoute, routes: navigationConfig.routes, initialScreen: m.homeScreen, theme: m.theme, lifecycleDiagnostics: lifecycleDiagnostics })
+    if not initialized then AppLogError("RootScene", "Framework navigation initialization failed: " + m.framework.getLastError())
+    m.splashScreen.splashConfig = m.theme.splash
+    m.splashScreen.visible = true
+    if initialized then observeActiveScreenReadiness()
+end sub
+
+sub observeActiveScreenReadiness()
+    screen = m.framework.getCurrentScreen()
+    if m.readinessObservedScreen <> invalid then m.readinessObservedScreen.unobserveField("isReady")
+    m.readinessObservedScreen = invalid
+    if screen = invalid then return
+    if not screen.hasField("isReady")
+        notifyScreenReady(screen)
+        return
+    end if
+    screen.observeField("isReady", "onRoutedScreenReadyChanged")
+    m.readinessObservedScreen = screen
+    if screen.isReady then notifyScreenReady(screen)
+end sub
+
+sub onRoutedScreenReadyChanged(event as object)
+    ' Use the node carried by the observer event. A mutable "current screen"
+    ' reference can otherwise misattribute a queued callback after navigation.
+    screen = event.getRoSGNode()
+    activeScreen = m.framework.getCurrentScreen()
+    if not RokuCore.IsCurrentScreenReady(screen, m.readinessObservedScreen, activeScreen, event.getData()) then return
+    notifyScreenReady(screen)
+end sub
+
+sub notifyScreenReady(screen as dynamic)
+    if screen = invalid then return
+    if screen.isSameNode(m.homeScreen)
+        m.splashScreen.visible = false
+    end if
+    m.framework.onActiveScreenReady(screen)
+end sub
+
+sub onNavigationEventChanged(event as object)
+    handled = m.framework.handleEvent(event.getData())
+    if not handled then AppLogError("RootScene", "Navigation event was rejected: " + m.framework.getLastError())
+    if handled then observeActiveScreenReadiness()
+end sub
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    if press and key = "back"
+#if isRegistryDiagnosticBuild
+        if m.registryDiagnostic <> invalid and m.registryDiagnostic.visible
+            if m.registryDiagnosticBackground <> invalid then m.registryDiagnosticBackground.visible = false
+            m.registryDiagnostic.visible = false
+            return true
+        end if
+#endif
+        handled = m.framework.handleEvent(m.navigationEvents.back())
+        if handled then observeActiveScreenReadiness()
+        return handled
+    end if
+
+#if isRegistryDiagnosticBuild
+    if press and key = "info"
+        if m.registryDiagnostic = invalid or m.registryDiagnosticBackground = invalid
+            AppLogWarn("RootScene", "Registry diagnostic UI is not present in this scene")
+            return false
+        end if
+        m.registryDiagnostic.text = RunRegistryDiagnostic()
+        m.registryDiagnosticBackground.visible = true
+        m.registryDiagnostic.visible = true
+        return true
+    end if
+#endif
+
+    if press and key = "options"
+        currentRoute = m.framework.getCurrentRoute()
+        if currentRoute <> invalid and currentRoute.route <> AppRoutes.SETTINGS
+            languageChoices = []
+            if m.theme <> invalid and m.theme.languages <> invalid then languageChoices = m.theme.languages
+            handled = m.framework.navigate(AppRoutes.SETTINGS, { languages: languageChoices })
+            if not handled then AppLogError("RootScene", "Could not open Settings from Options key: " + m.framework.getLastError())
+            if handled then observeActiveScreenReadiness()
+            return handled
+        end if
+        return currentRoute <> invalid and currentRoute.route = AppRoutes.SETTINGS
+    end if
+
+    return false
+end function
+
+sub applyTheme()
+    if m.theme = invalid or m.theme.colors = invalid or m.sceneBackground = invalid then return
+    colors = m.theme.colors
+    if colors.background <> invalid then m.sceneBackground.color = ThemeColor(colors.background)
+end sub

@@ -1,0 +1,61 @@
+import "pkg:/data/api/BaseApi.bs"
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+import "pkg:/data/api/ApiResult.bs"
+
+namespace Data
+    class ContentService
+        private api as object
+        private urls as object
+        private baseUrl as string
+        private headers as object
+        function new(api = invalid as dynamic, maxRetries = 1 as integer, timeoutMs = 30000 as integer)
+            if api = invalid then api = new Data.BaseApi(maxRetries, invalid, timeoutMs)
+            m.api = api
+            apiConfig = RokuCore.GetApiConfiguration()
+            m.urls = apiConfig
+            if apiConfig.headers <> invalid then m.headers = apiConfig.headers
+            m.baseUrl = RokuCore.GetApiBaseUrl("content")
+        end function
+
+        function getSeasonEpisodes(seriesId as string, seasonNumber as string, pageLimit as integer, pageOffset as integer) as object
+            url = m.buildEndpoint("seasonUrl", { "{{series-id}}": seriesId, "{{season-no}}": seasonNumber })
+            if url = "" then return m.configurationError("seasonUrl")
+            return m.api.get(url, { page_limit: pageLimit, page_offset: pageOffset }, m.headers)
+        end function
+        function getSeriesDetails(seriesId as string) as object
+            url = m.buildEndpoint("seriesUrl", { "{{series-id}}": seriesId })
+            if url = "" then return m.configurationError("seriesUrl")
+            return m.api.get(url, invalid, m.headers)
+        end function
+        function getAssetDetails(mediaId as string) as object
+            url = m.buildEndpoint("mediaUrl", { "{{media-id}}": mediaId })
+            if url = "" then return m.configurationError("mediaUrl")
+            return m.api.get(url, invalid, m.headers)
+        end function
+        function getSubscriptionDetails(url as string) as object
+            return m.api.get(url, invalid, m.headers)
+        end function
+        function getLibraryItems(url as string, query = invalid as dynamic) as object
+            return m.api.get(url, query, m.headers)
+        end function
+        function getPlaylist(url as string) as object
+            if url = "" then return m.configurationError("playlist")
+            return m.api.get(url, invalid, m.headers)
+        end function
+
+        private function buildEndpoint(endpointKey as string, replacements as object) as string
+            if m.urls = invalid or m.urls[endpointKey] = invalid or m.baseUrl = invalid then return ""
+            path = m.urls[endpointKey]
+            for each token in replacements
+                if replacements[token] = invalid then return ""
+                path = path.Replace(token, replacements[token].ToStr())
+            end for
+            return m.baseUrl + path
+        end function
+
+        private function configurationError(endpointKey as string) as object
+            errors = new Data.ApiResult()
+            return errors.failure("CONFIGURATION", "Missing URL configuration: " + endpointKey)
+        end function
+    end class
+end namespace

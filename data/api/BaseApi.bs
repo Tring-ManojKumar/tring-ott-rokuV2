@@ -1,0 +1,119 @@
+import "pkg:/data/api/NetworkStatus.bs"
+import "pkg:/data/api/ApiResult.bs"
+namespace Data
+    class BaseApi
+        private maxRetries as integer
+        private networkStatus as object
+        private timeoutMs as integer
+        function new(maxRetries = 1 as integer, networkStatus = invalid as dynamic, timeoutMs = 30000 as integer)
+            if maxRetries < 0 then maxRetries = 0
+            m.maxRetries = maxRetries
+            if timeoutMs < 1000 then timeoutMs = 1000
+            m.timeoutMs = timeoutMs
+            if networkStatus = invalid then networkStatus = new Data.NetworkStatus()
+            m.networkStatus = networkStatus
+        end function
+        function get(url as string, query = invalid as dynamic, headers = invalid as dynamic) as object
+            return m.execute(url, "GET", query, invalid, headers)
+        end function
+        function post(url as string, body = invalid as dynamic, query = invalid as dynamic, headers = invalid as dynamic) as object
+            return m.execute(url, "POST", query, body, headers)
+        end function
+        function put(url as string, body = invalid as dynamic, query = invalid as dynamic, headers = invalid as dynamic) as object
+            return m.execute(url, "PUT", query, body, headers)
+        end function
+        function delete(url as string, query = invalid as dynamic, headers = invalid as dynamic) as object
+            return m.execute(url, "DELETE", query, invalid, headers)
+        end function
+
+        private function execute(url as string, method as string, query as dynamic, body as dynamic, headers as dynamic) as object
+            errors = new Data.ApiResult()
+            if url = "" then return errors.failure("CONFIGURATION", "Request URL is required")
+            requestUrl = m.withQuery(url, query)
+            attempts = 0
+            while attempts <= m.maxRetries
+                attempts = attempts + 1
+                if not m.networkStatus.isOnline()
+                    return errors.failure("OFFLINE", "Network link is unavailable", 0, true, attempts)
+                end if
+                result = m.executeOnce(requestUrl, method, body, headers, attempts)
+                if result.ok or not result.retryable or attempts > m.maxRetries then return result
+            end while
+            return errors.failure("UNEXPECTED", "Request failed", 0, false, attempts)
+        end function
+
+        private function executeOnce(url as string, method as string, body as dynamic, headers as dynamic, attempts as integer) as object
+            errors = new Data.ApiResult()
+            request = CreateObject("roUrlTransfer")
+            request.SetUrl(url)
+            request.SetCertificatesFile("common:/certs/ca-bundle.crt")
+            request.InitClientCertificates()
+            request.SetRequest(method)
+            request.AddHeader("Accept", "application/json")
+            if headers <> invalid
+                for each key in headers
+                    request.AddHeader(key, headers[key].ToStr())
+                end for
+            end if
+            if body <> invalid then request.AddHeader("Content-Type", "application/json")
+            port = CreateObject("roMessagePort")
+            request.SetMessagePort(port)
+            started = false
+            if method = "GET"
+                started = request.AsyncGetToString()
+            else
+                started = request.AsyncPostFromString(m.serializeBody(body))
+            end if
+            if not started
+                return errors.failure("NETWORK", "Unable to start HTTP request", 0, true, attempts)
+            end if
+            event = wait(m.timeoutMs, port)
+            if event = invalid
+                request.AsyncCancel()
+                return errors.failure("TIMEOUT", "HTTP request timed out", 0, true, attempts)
+            end if
+            if type(event) <> "roUrlEvent"
+                return errors.failure("UNEXPECTED", "Unexpected HTTP response event", 0, false, attempts)
+            end if
+            responseText = event.GetString()
+            statusCode = event.GetResponseCode()
+            if statusCode <= 0
+                return errors.failure("NETWORK", "Connection was lost before an HTTP response arrived", statusCode, true, attempts)
+            end if
+            if responseText = invalid or responseText = ""
+                if statusCode >= 200 and statusCode < 300 then return errors.failure("PARSE", "Empty response body", statusCode, false, attempts)
+                return errors.failure("HTTP", "HTTP " + statusCode.ToStr(), statusCode, statusCode >= 500, attempts)
+            end if
+            parsed = ParseJson(responseText)
+            if statusCode >= 200 and statusCode < 300
+                if parsed = invalid then return errors.failure("PARSE", "Malformed JSON response", statusCode, false, attempts)
+                return errors.success(parsed, statusCode, attempts)
+            end if
+            detail = "HTTP " + statusCode.ToStr()
+            if parsed <> invalid and type(parsed) = "roAssociativeArray"
+                if parsed.message <> invalid then detail = parsed.message.ToStr()
+                if parsed.error <> invalid then detail = parsed.error.ToStr()
+            end if
+            return errors.failure("HTTP", detail, statusCode, statusCode = 408 or statusCode = 429 or statusCode >= 500, attempts, parsed)
+        end function
+
+        private function serializeBody(body as dynamic) as string
+            if body = invalid then return ""
+            return FormatJson(body)
+        end function
+
+        private function withQuery(url as string, query as dynamic) as string
+            if query = invalid then return url
+            separator = "?"
+            if Instr(1, url, "?") > 0 then separator = "&"
+            for each key in query
+                if query[key] <> invalid
+                    encoder = CreateObject("roUrlTransfer")
+                    url = url + separator + encoder.Escape(key) + "=" + encoder.Escape(query[key].ToStr())
+                    separator = "&"
+                end if
+            end for
+            return url
+        end function
+    end class
+end namespace

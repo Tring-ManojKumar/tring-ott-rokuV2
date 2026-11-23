@@ -1,0 +1,22 @@
+namespace Data
+    class ApiResult
+        function failure(category as string, technicalMessage as string, statusCode = 0 as integer, retryable = false as boolean, attempts = 1 as integer, responseData = invalid as dynamic) as object
+            userMessage = "Something went wrong. Please try again."
+            if category = "OFFLINE" then userMessage = "You are offline. Check your connection and try again."
+            if category = "TIMEOUT" or category = "NETWORK" then userMessage = "We couldn't connect. Please try again."
+            if category = "EMPTY" then userMessage = "No content available."
+            return {
+                ok: false, data: responseData, statusCode: statusCode, error: technicalMessage,
+                category: category, technicalMessage: technicalMessage, userMessage: userMessage,
+                retryable: retryable, attempts: attempts
+            }
+        end function
+
+        function success(payload as dynamic, statusCode = 200 as integer, attempts = 1 as integer) as object
+            return {
+                ok: true, data: payload, statusCode: statusCode, error: "", category: "",
+                technicalMessage: "", userMessage: "", retryable: false, attempts: attempts
+            }
+        end function
+    end class
+end namespace

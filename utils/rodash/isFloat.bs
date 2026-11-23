@@ -1,0 +1,15 @@
+namespace rodash
+  ' Checks if the supplied value is a valid Float type
+  ' @since 0.0.21
+  ' @category Lang
+  ' @param {Dynamic} value The variable to be checked
+  ' @returns {Boolean} Results of the check
+  ' @example
+  ' rodash.isFloat(1) // => false
+  ' rodash.isFloat(1.0!) // => true
+  ' rodash.isFloat(1.0#) // => false
+  function isFloat(value as Dynamic) as Boolean
+    valueType = type(value)
+    return valueType = "Float" OR valueType = "roFloat"
+  end function
+end namespace

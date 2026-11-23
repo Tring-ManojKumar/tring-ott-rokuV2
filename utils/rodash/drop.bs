@@ -1,0 +1,19 @@
+namespace rodash
+  ' Creates a slice of array with n elements dropped from the beginning.
+  ' @since 0.0.21
+  ' @category Array
+  ' @param {Array} array - The array to query
+  ' @param {Integer} n - The number of elements to drop
+  ' @returns {Array} Returns the slice of array
+  ' @example
+  ' rodash.drop([1, 2, 3], 1) // => [2, 3]
+  function drop(array = CreateObject("roAssociativeArray") as Object, n = 1 as Integer)
+    array = rodash.clone(array)
+    for i = 0 to n - 1
+      array.shift()
+      if array.count() = 0 then exit for
+    end for
+
+    return array
+  end function
+end namespace

@@ -1,0 +1,34 @@
+import "pkg:/source/rokuCore/navigation/NavigationManager.bs"
+
+' Compatibility adapter. All route history belongs to Roku Core.
+namespace RokuMvvmClean
+class RokuMvvmNavigationManager
+    public sub new()
+        m.core = new RokuCore.RokuCoreNavigationManager()
+    end sub
+    public function navigateTo(route as dynamic, params = invalid as dynamic) as boolean
+        return m.core.navigateTo(route, params)
+    end function
+    public function goBack() as boolean
+        return m.core.goBack()
+    end function
+    public function canGoBack() as boolean
+        return m.core.canGoBack()
+    end function
+    public function replace(route as dynamic, params = invalid as dynamic) as boolean
+        return m.core.replace(route, params)
+    end function
+    public function reset(route as dynamic, params = invalid as dynamic) as boolean
+        return m.core.reset(route, params)
+    end function
+    public function getCurrentRoute() as dynamic
+        return m.core.getCurrentRoute()
+    end function
+    public function getHistoryCount() as integer
+        return m.core.getHistoryCount()
+    end function
+    public function getHistoryEntry(index as integer) as dynamic
+        return m.core.getHistoryEntry(index)
+    end function
+end class
+end namespace

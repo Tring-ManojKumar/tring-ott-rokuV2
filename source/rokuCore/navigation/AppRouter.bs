@@ -1,0 +1,97 @@
+' Generic route registry. Consumers supply route/component mappings.
+namespace RokuCore
+class RokuCoreAppRouter
+
+    public sub new(routes = invalid as dynamic)
+        m.routes = {}
+        m.lastError = ""
+        if routes <> invalid then m.registerRoutes(routes)
+    end sub
+
+    public function getLastError() as string
+        return m.lastError
+    end function
+
+    public function register(route as dynamic, componentName as dynamic) as boolean
+        m.lastError = ""
+        if not m.isValidRouteName(route) then return m.fail("Route names must be non-empty strings")
+        if not m.isValidComponent(componentName) then return m.fail("Component names must be non-empty strings")
+        if m.routes.doesExist(route) then return m.fail("Route is already registered")
+        m.routes[route] = componentName
+        return true
+    end function
+
+    public function replaceRegistration(route as dynamic, componentName as dynamic) as boolean
+        m.lastError = ""
+        if not m.isValidRouteName(route) then return m.fail("Route names must be non-empty strings")
+        if not m.isValidComponent(componentName) then return m.fail("Component names must be non-empty strings")
+        if not m.routes.doesExist(route) then return m.fail("Cannot replace an unregistered route")
+        m.routes[route] = componentName
+        return true
+    end function
+
+    public function registerRoutes(routes as dynamic) as boolean
+        m.lastError = ""
+        if type(routes) <> "roAssociativeArray" then return m.fail("Route registry must be an associative array")
+        keys = routes.keys()
+        if keys.count() = 0 then return m.fail("Route registry must contain at least one route")
+
+        ' Validate the entire map before changing the live registry.
+        for each route in keys
+            if not m.isValidRouteName(route) then return m.fail("Route names must be non-empty strings")
+            if not m.isValidComponent(routes[route]) then return m.fail("Every route must map to a non-empty component name")
+            if m.routes.doesExist(route) then return m.fail("Route is already registered")
+        end for
+        for each route in keys
+            m.routes[route] = routes[route]
+        end for
+        return true
+    end function
+
+    public function getComponentName(route as dynamic) as dynamic
+        if not m.isValidRouteName(route) then return invalid
+        if not m.routes.doesExist(route) then return invalid
+        return m.routes[route]
+    end function
+
+    public function isValidRoute(route as dynamic) as boolean
+        if not m.isValidRouteName(route) then return false
+        return m.routes.doesExist(route)
+    end function
+
+    private function isValidRouteName(route as dynamic) as boolean
+        routeType = type(route)
+        if routeType <> "String" and routeType <> "roString" then return false
+        return m.hasNonWhitespace(route)
+    end function
+
+    private function isValidComponent(componentName as dynamic) as boolean
+        componentType = type(componentName)
+        if componentType <> "String" and componentType <> "roString" then return false
+        return m.hasNonWhitespace(componentName)
+    end function
+
+    private function hasNonWhitespace(value as string) as boolean
+        for index = 1 to Len(value)
+            code = Asc(Mid(value, index, 1))
+            if code <> 32 and code <> 9 and code <> 10 and code <> 13 then return true
+        end for
+        return false
+    end function
+
+    public function resolve(route as dynamic, params = invalid as dynamic) as dynamic
+        componentName = m.getComponentName(route)
+        if componentName = invalid then
+            m.lastError = "Unknown or invalid route"
+            return invalid
+        end if
+        return { route: route, componentName: componentName, params: params }
+    end function
+
+    private function fail(message as string) as boolean
+        m.lastError = message
+        return false
+    end function
+
+end class
+end namespace

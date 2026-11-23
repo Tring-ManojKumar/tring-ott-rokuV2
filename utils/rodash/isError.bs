@@ -1,0 +1,21 @@
+namespace rodash
+  ' Assesses the passed object to determine if it is an Error Object.
+  ' TODO: MORE SUPPORT - TRY/CATCH?
+  ' @since 0.0.21
+  ' @category Lang
+  ' @param {Dynamic} value - the object to assess
+  ' @returns {Boolean} True if the object represents and error.
+  function isError(value as Dynamic) as Boolean
+    if rodash.isAA(value) then
+      if rodash.isNonEmptyString(value.status) AND rodash.stringIncludes(value.status, "error") then return true
+
+      errorCodes = rodash.internal.getConstants().BrightScriptErrorCodes
+      if rodash.hasKeys(value, ["number", "message", "exception"]) then
+        for each errorCode in errorCodes
+          if value.number = errorCode then return true
+        end for
+      end if
+    end if
+    return false
+  end function
+end namespace

@@ -1,0 +1,28 @@
+namespace rodash
+  ' Converts a string to camel case. Removes special characters and spaces.
+  ' @since 0.0.21
+  ' @category String
+  ' @param {String} value - The string to convert.
+  ' @returns {String} The camel case string.
+  ' @example
+  ' rodash.camelCase("Foo Bar") // => "fooBar"
+  ' rodash.camelCase("foo/bar") // => "fooBar"
+  function camelCase(value = "" as String)
+    regex = CreateObject("roRegex", "[^a-zA-Z0-9\s]", "")
+    value = regex.ReplaceAll(value.trim(), "")
+    valueArray = value.split(" ")
+    responseValue = ""
+
+    for i = 0 to valueArray.count() - 1
+      valueString = valueArray[i]
+
+      if i = 0 then
+        responseValue += lcase(valueString)
+      else
+        responseValue += rodash.capitalize(valueString)
+      end if
+    end for
+
+    return responseValue
+  end function
+end namespace

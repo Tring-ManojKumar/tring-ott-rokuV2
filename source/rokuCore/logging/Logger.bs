@@ -1,0 +1,33 @@
+namespace RokuCore
+class Logger
+    public sub new(sink = invalid as dynamic, minimumLevel = "info" as string)
+        m.sink = sink
+        m.minimumLevel = LCase(minimumLevel)
+    end sub
+
+    public sub debug(tag as string, message as string)
+        m.write("debug", tag, message)
+    end sub
+    public sub info(tag as string, message as string)
+        m.write("info", tag, message)
+    end sub
+    public sub warn(tag as string, message as string)
+        m.write("warn", tag, message)
+    end sub
+    public sub error(tag as string, message as string)
+        m.write("error", tag, message)
+    end sub
+
+    private sub write(level as string, tag as string, message as string)
+        levels = { debug: 1, info: 2, warn: 3, error: 4 }
+        if levels[level] >= levels[m.minimumLevel]
+            formatted = "[" + UCase(level) + "][" + tag + "] " + message
+            if m.sink <> invalid
+                m.sink(level, tag, message)
+            else
+                print formatted
+            end if
+        end if
+    end sub
+end class
+end namespace

@@ -1,0 +1,9 @@
+namespace Domain
+    class PlaylistRepository
+        ' Abstract contract — implemented by Data layer.
+        ' Returns an array of Domain.MediaItem, or invalid on failure.
+        function getPlaylist() as object
+            throw "Domain.PlaylistRepository.getPlaylist() must be implemented by a concrete repository"
+        end function
+    end class
+end namespace

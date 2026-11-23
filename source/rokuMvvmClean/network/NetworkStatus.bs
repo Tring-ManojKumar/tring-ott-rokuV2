@@ -1,0 +1,9 @@
+namespace RokuMvvmClean
+class NetworkStatus
+    public function isOnline() as boolean
+        deviceInfo = CreateObject("roDeviceInfo")
+        if deviceInfo = invalid then return false
+        return deviceInfo.GetLinkStatus()
+    end function
+end class
+end namespace

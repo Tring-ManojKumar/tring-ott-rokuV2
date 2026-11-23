@@ -1,0 +1,461 @@
+import "pkg:/source/rokuCore/navigation/NavigationManager.bs"
+import "pkg:/source/rokuCore/navigation/AppRouter.bs"
+import "pkg:/source/rokuCore/focus/FocusManager.bs"
+
+namespace RokuCore
+class RokuCoreNavigationCoordinator
+
+    public sub new()
+        m.manager = new RokuCore.RokuCoreNavigationManager()
+        m.focusManager = new RokuCore.FocusManager()
+        m.router = new RokuCore.RokuCoreAppRouter()
+        m.root = invalid
+        m.currentScreen = invalid
+        m.screenHistory = []
+        m.focusSnapshots = []
+        m.transitioning = false
+        m.initialized = false
+        m.logger = invalid
+        m.lifecycleDiagnostics = false
+        m.screenIdentities = []
+        m.nextScreenIdentity = 1
+        m.lastError = ""
+    end sub
+
+    public function initialize(root as dynamic, initialRoute as dynamic, routes as dynamic, initialScreen = invalid as dynamic, initialParams = invalid as dynamic) as boolean
+        if m.initialized then return m.fail("Framework is already initialized")
+        m.lastError = ""
+        if root = invalid or type(root) <> "roSGNode" then return m.fail("Navigation host must be a SceneGraph node")
+        if type(routes) <> "roAssociativeArray" then return m.fail("Route registry must be an associative array")
+        if not m.isValidParams(initialParams) then return m.fail("Initial navigation parameters must be an associative array or invalid")
+
+        candidateRouter = new RokuCore.RokuCoreAppRouter()
+        if not candidateRouter.registerRoutes(routes) then return m.fail(candidateRouter.getLastError())
+        resolved = candidateRouter.resolve(initialRoute, initialParams)
+        if resolved = invalid then return m.fail("Initial route is invalid or not registered")
+
+        candidateManager = new RokuCore.RokuCoreNavigationManager()
+        if not candidateManager.reset(initialRoute, initialParams) then return m.fail("Could not prepare initial route history")
+
+        screen = initialScreen
+        if screen <> invalid
+            if type(screen) <> "roSGNode" then return m.fail("initialScreen must be a SceneGraph node")
+            if screen.subtype() <> resolved.componentName then return m.fail("initialScreen does not match the configured initial route component")
+            parent = screen.getParent()
+            if parent = invalid or not parent.isSameNode(root) then return m.fail("initialScreen must already be a child of the navigation host")
+            if screen.hasField("navigationParams") then screen.navigationParams = initialParams
+        else
+            screen = m.createScreen(root, resolved)
+            if screen = invalid then return m.fail("Could not create initial component for the configured route")
+        end if
+
+        ' Commit only after route validation and successful screen creation.
+        m.transitioning = true
+        m.router = candidateRouter
+        m.manager = candidateManager
+        m.root = root
+        m.currentScreen = screen
+        m.screenHistory = [screen]
+        m.focusSnapshots = [{ screen: screen, target: invalid, focusApplied: false, focusAttempted: false }]
+        m.rememberScreenIdentity(screen, initialRoute)
+        m.initialized = true
+        screen.visible = true
+        m.publishLifecycle(screen, "created", "initialize", initialRoute)
+        m.publishLifecycle(screen, "initialized", "initialize", initialRoute)
+        m.publishLifecycle(screen, "presented", "initialize", initialRoute)
+        m.transitioning = false
+        m.restoreOrInitializeFocus(screen)
+        return true
+    end function
+
+    public function getLastError() as string
+        return m.lastError
+    end function
+
+    public function setLogger(logger as dynamic)
+        m.logger = logger
+    end function
+
+    public function setLifecycleDiagnostics(enabled as boolean)
+        m.lifecycleDiagnostics = enabled
+    end function
+
+    public function handleEvent(event as dynamic) as boolean
+        if not m.isReadyForNavigation() then return false
+        if event = invalid then return m.fail("Navigation event is invalid")
+        eventTypeName = type(event)
+        if eventTypeName <> "roAssociativeArray" then return m.fail("Navigation event must be an associative array")
+        if not event.doesExist("type") then return m.fail("Navigation event is missing its type")
+        eventType = event.type
+        if type(eventType) <> "String" and type(eventType) <> "roString" then return m.fail("Navigation event type must be a string")
+        if eventType = "back" then return m.goBack()
+        if eventType <> "navigate" and eventType <> "replace" and eventType <> "reset" then return m.fail("Unknown navigation event type")
+        if not event.doesExist("route") then return m.fail("Navigation event is missing its route")
+        params = invalid
+        if event.doesExist("params") then params = event.params
+        if eventType = "navigate" then return m.navigateTo(event.route, params)
+        if eventType = "replace" then return m.replace(event.route, params)
+        return m.reset(event.route, params)
+    end function
+
+    public function navigateTo(route as dynamic, params = invalid as dynamic) as boolean
+        if not m.isReadyForNavigation() then return false
+        if not m.isValidParams(params) then return m.fail("Navigation parameters must be an associative array or invalid")
+        resolved = m.router.resolve(route, params)
+        if resolved = invalid then return m.fail("Cannot navigate: route is invalid or not registered")
+        if not m.historyIsConsistent() then return false
+        newScreen = m.createScreen(m.root, resolved)
+        if newScreen = invalid then return m.fail("Could not create component for route")
+        if not m.manager.navigateTo(route, params)
+            m.discardUncommittedScreen(m.root, newScreen)
+            return m.fail("Could not commit route to navigation history")
+        end if
+        m.rememberScreenIdentity(newScreen, route)
+        m.transitioning = true
+        m.saveCurrentFocus()
+        previousScreen = m.currentScreen
+        previousScreen.visible = false
+        m.screenHistory.push(newScreen)
+        m.focusSnapshots.push({ screen: newScreen, target: invalid, focusApplied: false, focusAttempted: false })
+        m.currentScreen = newScreen
+        newScreen.visible = true
+        previousRoute = m.manager.getHistoryEntry(m.manager.getHistoryCount() - 2)
+        previousRouteName = ""
+        if previousRoute <> invalid then previousRouteName = previousRoute.route
+        m.publishLifecycle(previousScreen, "suspended", "navigate", previousRouteName)
+        m.publishLifecycle(newScreen, "created", "navigate", route)
+        m.publishLifecycle(newScreen, "initialized", "navigate", route)
+        m.publishLifecycle(newScreen, "presented", "navigate", route)
+        m.transitioning = false
+        m.lastError = ""
+        m.restoreOrInitializeFocus(newScreen)
+        return true
+    end function
+
+    public function goBack() as boolean
+        if not m.isReadyForNavigation() then return false
+        if not m.historyIsConsistent() then return false
+        if not m.manager.canGoBack() or m.screenHistory.count() < 2 then return m.fail("Navigation root cannot be popped")
+        outgoing = m.screenHistory[m.screenHistory.count() - 1]
+        previous = m.screenHistory[m.screenHistory.count() - 2]
+        outgoingRoute = m.manager.getCurrentRoute()
+        if outgoing = invalid or previous = invalid then return m.fail("Cannot go back because a history screen is invalid")
+        if not m.manager.goBack() then return m.fail("Route history rejected back navigation")
+        m.transitioning = true
+        m.screenHistory.pop()
+        m.focusSnapshots.pop()
+        outgoing.visible = false
+        previous.visible = true
+        m.currentScreen = previous
+        m.removeScreen(outgoing, "back", outgoingRoute.route)
+        m.publishLifecycle(previous, "resumed", "back", m.manager.getCurrentRoute().route)
+        m.transitioning = false
+        m.lastError = ""
+        m.restoreOrInitializeFocus(previous)
+        return true
+    end function
+
+    public function replace(route as dynamic, params = invalid as dynamic) as boolean
+        if not m.isReadyForNavigation() then return false
+        if not m.isValidParams(params) then return m.fail("Navigation parameters must be an associative array or invalid")
+        resolved = m.router.resolve(route, params)
+        if resolved = invalid then return m.fail("Cannot replace: route is invalid or not registered")
+        if not m.historyIsConsistent() then return false
+        previousRoute = m.manager.getCurrentRoute()
+        newScreen = m.createScreen(m.root, resolved)
+        if newScreen = invalid then return m.fail("Could not create replacement component")
+        if not m.manager.replace(route, params)
+            m.discardUncommittedScreen(m.root, newScreen)
+            return m.fail("Route history rejected replacement")
+        end if
+        m.rememberScreenIdentity(newScreen, route)
+        m.transitioning = true
+        previous = m.screenHistory.pop()
+        m.focusSnapshots.pop()
+        if previous <> invalid then previous.visible = false
+        m.screenHistory.push(newScreen)
+        m.focusSnapshots.push({ screen: newScreen, target: invalid, focusApplied: false, focusAttempted: false })
+        m.currentScreen = newScreen
+        newScreen.visible = true
+        previousRouteName = ""
+        if previousRoute <> invalid then previousRouteName = previousRoute.route
+        if previous <> invalid then m.removeScreen(previous, "replace", previousRouteName)
+        m.publishLifecycle(newScreen, "created", "replace", route)
+        m.publishLifecycle(newScreen, "initialized", "replace", route)
+        m.publishLifecycle(newScreen, "presented", "replace", route)
+        m.transitioning = false
+        m.lastError = ""
+        m.restoreOrInitializeFocus(newScreen)
+        return true
+    end function
+
+    public function reset(route as dynamic, params = invalid as dynamic) as boolean
+        if not m.isReadyForNavigation() then return false
+        if not m.isValidParams(params) then return m.fail("Navigation parameters must be an associative array or invalid")
+        resolved = m.router.resolve(route, params)
+        if resolved = invalid then return m.fail("Cannot reset: route is invalid or not registered")
+        if not m.historyIsConsistent() then return false
+        previousRoutes = []
+        for routeIndex = 0 to m.manager.getHistoryCount() - 1
+            previousRoutes.push(m.manager.getHistoryEntry(routeIndex))
+        end for
+        newScreen = m.createScreen(m.root, resolved)
+        if newScreen = invalid then return m.fail("Could not create reset root component")
+        if not m.manager.reset(route, params)
+            m.discardUncommittedScreen(m.root, newScreen)
+            return m.fail("Route history rejected reset")
+        end if
+        m.rememberScreenIdentity(newScreen, route)
+        m.transitioning = true
+        previousScreens = m.screenHistory
+        m.screenHistory = [newScreen]
+        m.focusSnapshots = [{ screen: newScreen, target: invalid, focusApplied: false, focusAttempted: false }]
+        m.currentScreen = newScreen
+        newScreen.visible = true
+        for screenIndex = 0 to previousScreens.count() - 1
+            previous = previousScreens[screenIndex]
+            if previous <> invalid
+                previous.visible = false
+                previousRouteName = ""
+                if screenIndex < previousRoutes.count() and previousRoutes[screenIndex] <> invalid then previousRouteName = previousRoutes[screenIndex].route
+                m.removeScreen(previous, "reset", previousRouteName)
+            end if
+        end for
+        m.publishLifecycle(newScreen, "created", "reset", route)
+        m.publishLifecycle(newScreen, "initialized", "reset", route)
+        m.publishLifecycle(newScreen, "presented", "reset", route)
+        m.transitioning = false
+        m.lastError = ""
+        m.restoreOrInitializeFocus(newScreen)
+        return true
+    end function
+
+    public function getCurrentRoute() as dynamic
+        return m.manager.getCurrentRoute()
+    end function
+
+    public function getCurrentScreen() as dynamic
+        return m.currentScreen
+    end function
+
+    public function canGoBack() as boolean
+        if not m.initialized or m.transitioning then return false
+        if not m.historyIsConsistent() then return false
+        return m.manager.canGoBack()
+    end function
+
+    public function getScreenHistoryCount() as integer
+        return m.screenHistory.count()
+    end function
+
+    public function registerRoute(route as dynamic, componentName as dynamic) as boolean
+        if not m.initialized then return m.fail("Initialize the framework before registering additional routes")
+        if not m.router.register(route, componentName) then return m.fail(m.router.getLastError())
+        m.lastError = ""
+        return true
+    end function
+
+    public function resolveRoute(route as dynamic, params = invalid as dynamic) as dynamic
+        resolved = m.router.resolve(route, params)
+        if resolved = invalid then m.fail("Cannot resolve invalid or unknown route")
+        return resolved
+    end function
+
+    public sub onActiveScreenReady(screen = invalid as dynamic)
+        if not m.initialized or m.transitioning or m.currentScreen = invalid then return
+        if screen <> invalid and not m.sameNode(screen, m.currentScreen) then return
+        if not m.isScreenVisible(m.currentScreen) then return
+        m.restoreOrInitializeFocus(m.currentScreen)
+    end sub
+
+    private function createScreen(host as dynamic, resolved as object) as dynamic
+        screen = host.createChild(resolved.componentName)
+        if screen = invalid then return invalid
+        screen.visible = false
+        if screen.hasField("navigationParams") then screen.navigationParams = resolved.params
+        return screen
+    end function
+
+    private function isReadyForNavigation() as boolean
+        if m.transitioning then return m.fail("Navigation transition is already in progress")
+        if not m.initialized then return m.fail("Navigation framework is not initialized")
+        return m.historyIsConsistent()
+    end function
+
+    private function isValidParams(params as dynamic) as boolean
+        return params = invalid or type(params) = "roAssociativeArray"
+    end function
+
+    private function historyIsConsistent() as boolean
+        routeCount = m.manager.getHistoryCount()
+        screenCount = m.screenHistory.count()
+        focusCount = m.focusSnapshots.count()
+        if routeCount <> screenCount or screenCount <> focusCount
+            return m.fail("Navigation history is inconsistent (route, screen, and focus counts differ)")
+        end if
+        if screenCount = 0 or m.currentScreen = invalid then return m.fail("Navigation history has no active screen")
+        topRoute = m.manager.getCurrentRoute()
+        if topRoute = invalid then return m.fail("Navigation route history has no current route")
+        topScreen = m.screenHistory[screenCount - 1]
+        if not m.sameNode(topScreen, m.currentScreen) then return m.fail("Current screen does not match screen history")
+        for index = 0 to screenCount - 1
+            entry = m.manager.getHistoryEntry(index)
+            historyScreen = m.screenHistory[index]
+            snapshot = m.focusSnapshots[index]
+            if entry = invalid or historyScreen = invalid or snapshot = invalid
+                return m.fail("Navigation history contains an invalid route, screen, or focus entry")
+            end if
+            if not m.sameNode(snapshot.screen, historyScreen)
+                return m.fail("Focus history entry does not belong to its screen")
+            end if
+            resolvedEntry = m.router.resolve(entry.route, entry.params)
+            if resolvedEntry = invalid or historyScreen.subtype() <> resolvedEntry.componentName
+                return m.fail("A route history entry does not correspond to its screen component")
+            end if
+            if index < screenCount - 1 and m.isScreenVisible(historyScreen)
+                return m.fail("An inactive retained screen is visible")
+            end if
+            if index = screenCount - 1 and not m.isScreenVisible(historyScreen)
+                return m.fail("Active screen is not visible")
+            end if
+        end for
+        if not m.sameNode(topScreen, m.currentScreen) then return m.fail("Current screen does not match screen history")
+        return true
+    end function
+
+    private function sameNode(first as dynamic, second as dynamic) as boolean
+        if first = invalid or second = invalid then return false
+        return first.isSameNode(second)
+    end function
+
+    private function isScreenVisible(screen as dynamic) as boolean
+        if screen = invalid then return false
+        if screen.hasField("visible") then return screen.visible
+        return true
+    end function
+
+    private sub saveCurrentFocus()
+        if m.currentScreen = invalid or m.screenHistory.count() = 0 then return
+        target = m.focusManager.getFocusedNode(m.currentScreen)
+        index = m.screenHistory.count() - 1
+        snapshot = m.focusSnapshots[index]
+        if not m.sameNode(snapshot.screen, m.currentScreen) then return
+        snapshot.target = invalid
+        snapshot.focusApplied = false
+        snapshot.focusAttempted = false
+        if target <> invalid then snapshot.target = target
+    end sub
+
+    private sub restoreOrInitializeFocus(screen as dynamic)
+        if screen = invalid or not m.isScreenVisible(screen) then return
+        index = m.screenHistory.count() - 1
+        if index < 0 then return
+        snapshot = m.focusSnapshots[index]
+        if not m.sameNode(snapshot.screen, screen) then return
+        if snapshot.focusApplied or snapshot.focusAttempted then return
+        if screen.hasField("isReady") and not screen.isReady then return
+        target = snapshot.target
+        if target <> invalid and m.isVisibleDescendant(target, screen)
+            snapshot.focusAttempted = true
+            if m.focusManager.restore(target, screen)
+                snapshot.focusApplied = true
+                return
+            end if
+        end if
+        snapshot.focusAttempted = true
+        if screen.hasField("frameworkSupportsInitialFocus") and screen.frameworkSupportsInitialFocus
+            ' The consumer capability field promises the XML function contract.
+            if m.focusManager.setInitialFocus(screen) then snapshot.focusApplied = true
+        else
+            snapshot.focusApplied = true
+        end if
+    end sub
+
+    private function isVisibleDescendant(node as dynamic, screen as dynamic) as boolean
+        return m.focusManager.isValidTarget(node, screen)
+    end function
+
+    private sub removeScreen(screen as dynamic, reason as string, route as string)
+        if m.root = invalid or screen = invalid then return
+        if screen.hasField("frameworkDestroyed") and screen.frameworkDestroyed then return
+        m.publishLifecycle(screen, "exited", reason, route)
+        if screen.hasField("frameworkCleanupRequested")
+            screen.frameworkCleanupRequested = true
+            m.logLifecycle(screen, "exited", "cleanupRequested", reason, route, "cleanupRequested", "published")
+        end if
+        m.publishLifecycle(screen, "destroyed", reason, route)
+        m.root.removeChild(screen)
+        if m.lifecycleDiagnostics
+            screenIdentity = m.findScreenIdentity(screen)
+            identity = "unknown"
+            if screenIdentity <> invalid then identity = screenIdentity.identity
+            print "[LIFECYCLE][RokuCore] screenId=" + identity + " screenType=" + screen.subtype() + " route=" + route + " previous=destroyed next=removed reason=" + reason + " resourceOperation=removeChild result=called"
+        end if
+        m.forgetScreenIdentity(screen)
+    end sub
+
+    private sub publishLifecycle(screen as dynamic, lifecycleEvent as string, reason = "transition" as string, route = "" as string)
+        if screen = invalid then return
+        previousState = "unknown"
+        if screen.hasField("frameworkLifecycleEvent") and screen.frameworkLifecycleEvent <> "" then previousState = screen.frameworkLifecycleEvent
+        fieldName = "framework" + UCase(Left(lifecycleEvent, 1)) + Mid(lifecycleEvent, 2)
+        if screen.hasField(fieldName) then screen[fieldName] = true
+        ' Retained as a compatibility hint; consumers should observe distinct lifecycle fields.
+        if screen.hasField("frameworkLifecycleEvent") then screen.frameworkLifecycleEvent = lifecycleEvent
+        m.logLifecycle(screen, previousState, lifecycleEvent, reason, route, "lifecycleSignal", "published")
+    end sub
+
+    private sub logLifecycle(screen as dynamic, previousState as string, lifecycleEvent as string, reason as string, route as string, operation as string, result as string)
+        if not m.lifecycleDiagnostics or screen = invalid then return
+        screenIdentity = m.findScreenIdentity(screen)
+        screenName = screen.subtype()
+        if screenIdentity <> invalid and route = "" then route = screenIdentity.route
+        if route = "" then route = "unavailable"
+        identity = "unknown"
+        if screenIdentity <> invalid then identity = screenIdentity.identity
+        print "[LIFECYCLE][RokuCore] screenId=" + identity + " screenType=" + screenName + " route=" + route + " previous=" + previousState + " next=" + lifecycleEvent + " reason=" + reason + " resourceOperation=" + operation + " result=" + result
+    end sub
+
+    private sub rememberScreenIdentity(screen as dynamic, route as dynamic)
+        if screen = invalid then return
+        identity = "screen-" + m.nextScreenIdentity.ToStr()
+        m.nextScreenIdentity = m.nextScreenIdentity + 1
+        m.screenIdentities.push({ screen: screen, identity: identity, route: route })
+        if screen.hasField("frameworkScreenIdentity") then screen.frameworkScreenIdentity = identity
+    end sub
+
+    private function findScreenIdentity(screen as dynamic) as dynamic
+        if screen = invalid then return invalid
+        for each entry in m.screenIdentities
+            if entry.screen <> invalid and m.sameNode(entry.screen, screen) then return entry
+        end for
+        return invalid
+    end function
+
+    private sub forgetScreenIdentity(screen as dynamic)
+        if screen = invalid then return
+        remaining = []
+        for each entry in m.screenIdentities
+            if entry.screen = invalid or not m.sameNode(entry.screen, screen) then remaining.push(entry)
+        end for
+        m.screenIdentities = remaining
+    end sub
+
+    private sub discardUncommittedScreen(host as dynamic, screen as dynamic)
+        if host = invalid or screen = invalid then return
+        if screen.hasField("frameworkCleanupRequested") then screen.frameworkCleanupRequested = true
+        host.removeChild(screen)
+    end sub
+
+    private function fail(message as string) as boolean
+        m.lastError = message
+        if m.logger <> invalid
+            m.logger.error("Navigation", message)
+        else
+            print "[ERROR][RokuCore.Navigation] " + message
+        end if
+        return false
+    end function
+
+end class
+end namespace

@@ -1,0 +1,11 @@
+namespace rodash
+  ' Checks if value is a valid array-like length
+  ' @since 0.0.21
+  ' @category Lang
+  ' @param {Dynamic} value The variable to be checked
+  ' @returns {Boolean} Results of the check
+  function isLength(value as Dynamic) as Boolean
+    if rodash.isInteger(value) AND rodash.isFinite(value) AND rodash.gte(value, 0) then return true
+    return false
+  end function
+end namespace

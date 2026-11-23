@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="SeasonEpisodesTask" extends="Task">
+    <interface>
+        <field id="seriesId" type="string" />
+        <field id="seasonNumber" type="string" />
+        <field id="pageLimit" type="integer" value="20" />
+        <field id="pageOffset" type="integer" value="0" />
+        <field id="response" type="node" />
+        <field id="error" type="string" />
+        <field id="errorResult" type="assocarray" />
+        <field id="requestState" type="string" value="IDLE" />
+    </interface>
+    <script type="text/brightscript" uri="SeasonEpisodesTask.bs" />
+</component>

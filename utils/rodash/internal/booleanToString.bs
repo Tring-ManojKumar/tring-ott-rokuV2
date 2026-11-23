@@ -1,0 +1,12 @@
+namespace rodash.internal
+  ' @ignore
+  ' Attempts to convert the supplied value to a string.
+  ' @since 0.0.21
+  ' @category Internal
+  ' @param {Dynamic} value The value to convert.
+  ' @returns {String} Results of the conversion.
+  function booleanToString(bool as Boolean) as String
+    if bool then return "true"
+    return "false"
+  end function
+end namespace

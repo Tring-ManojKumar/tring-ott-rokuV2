@@ -1,0 +1,22 @@
+import "pkg:/source/rokuCore/navigation/NavigationEvents.bs"
+
+' Compatibility adapter. Event payload construction is implemented in Core.
+namespace RokuMvvmClean
+class RokuMvvmNavigationEvents
+    public sub new()
+        m.core = new RokuCore.RokuCoreNavigationEvents()
+    end sub
+    public function navigate(route as dynamic, params = invalid as dynamic) as object
+        return m.core.navigate(route, params)
+    end function
+    public function back() as object
+        return m.core.back()
+    end function
+    public function replace(route as dynamic, params = invalid as dynamic) as object
+        return m.core.replace(route, params)
+    end function
+    public function reset(route as dynamic, params = invalid as dynamic) as object
+        return m.core.reset(route, params)
+    end function
+end class
+end namespace

@@ -1,0 +1,13 @@
+namespace rodash
+  ' An alias to the head function.
+  ' @since 0.0.21
+  ' @category Array
+  ' @param {Array} array - The array to query
+  ' @returns {Dynamic} Returns the first element of array
+  ' @example
+  ' rodash.first([1, 2, 3]) // => 1
+  ' rodash.first([]) // => Invalid
+  function first(array = CreateObject("roArray", 0, true))
+    return rodash.head(array)
+  end function
+end namespace

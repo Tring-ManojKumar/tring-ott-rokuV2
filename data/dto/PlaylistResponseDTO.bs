@@ -1,0 +1,23 @@
+import "pkg:/data/dto/MediaItemDTO.bs"
+
+namespace Data
+    class PlaylistResponseDTO
+        public title as string
+        public items as object ' array of Data.MediaItemDTO
+
+        function new(rawJson as object)
+            m.title = rawJson.title
+
+            rawPlaylist = rawJson.playlist
+            if rawPlaylist = invalid
+                rawPlaylist = []
+            end if
+
+            items = []
+            for each rawItem in rawPlaylist
+                items.push(new Data.MediaItemDTO(rawItem))
+            end for
+            m.items = items
+        end function
+    end class
+end namespace

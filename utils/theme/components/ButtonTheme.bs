@@ -1,0 +1,50 @@
+import "pkg:/utils/theme/Colors.bs"
+function GetButtonTheme(theme as object, variant as string, state as string) as object
+    colors = GetThemeColors(theme)
+    configured = invalid
+    ' BrightScript does not reliably short-circuit Boolean expressions. Keep
+    ' each SceneGraph/theme validity check separate to avoid Boolean/Invalid
+    ' type mismatches on older Roku OS versions.
+    if theme <> invalid
+        if theme.components <> invalid
+            if theme.components.buttons <> invalid
+                configured = theme.components.buttons[variant]
+            end if
+        end if
+    end if
+
+    backgroundName = "accent"
+    textName = "textPrimary"
+    borderName = "accent"
+    if configured <> invalid
+        if configured.background <> invalid then backgroundName = configured.background
+        if configured.text <> invalid then textName = configured.text
+        if configured.border <> invalid then borderName = configured.border
+    end if
+
+    if variant = "secondary" then backgroundName = "surface"
+    if variant = "outlined" or variant = "text" then backgroundName = "background"
+    if variant = "outlined" then borderName = "focus"
+    if variant = "text" then borderName = "background"
+    result = {
+        background: colors[backgroundName],
+        text: colors[textName],
+        border: colors[borderName],
+        borderWidth: 0
+    }
+    if variant = "outlined" then result.borderWidth = theme.borders.thin
+    if variant = "text" then result.background = 0
+    if state = "focused"
+        result.background = colors.accent
+        result.border = colors.focus
+        if result.borderWidth = 0 then result.borderWidth = theme.borders.thick
+    else if state = "pressed"
+        result.background = colors.focus
+        result.border = colors.focus
+    else if state = "disabled"
+        result.background = colors.disabled
+        result.text = colors.textSecondary
+        result.border = colors.disabled
+    end if
+    return result
+end function

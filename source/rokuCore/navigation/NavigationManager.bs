@@ -1,0 +1,63 @@
+import "pkg:/source/rokuCore/navigation/NavigationStack.bs"
+
+' Public API for navigation history. Route rendering is handled elsewhere.
+namespace RokuCore
+class RokuCoreNavigationManager
+
+    public sub new()
+        m.stack = new RokuCore.RokuCoreNavigationStack()
+    end sub
+
+    ' Push a valid route; return true only when an entry was added.
+    public function navigateTo(route as dynamic, params = invalid as dynamic) as boolean
+        if not m.isValidRoute(route) then return false
+        m.stack.push(route, params)
+        return true
+    end function
+
+    ' Pop the current route only when a root entry remains; return success.
+    public function goBack() as boolean
+        if not m.stack.canGoBack() then return false
+        popped = m.stack.pop()
+        return popped <> invalid
+    end function
+
+    ' Report whether the current route has a previous route beneath it.
+    public function canGoBack() as boolean
+        return m.stack.canGoBack()
+    end function
+
+    ' Replace the top entry. If empty, the new entry becomes the root.
+    public function replace(route as dynamic, params = invalid as dynamic) as boolean
+        if not m.isValidRoute(route) then return false
+        m.stack.replace(route, params)
+        return true
+    end function
+
+    ' Clear history and establish one root entry.
+    public function reset(route as dynamic, params = invalid as dynamic) as boolean
+        if not m.isValidRoute(route) then return false
+        m.stack.reset(route, params)
+        return true
+    end function
+
+    ' Return the current route entry, or invalid when history is empty.
+    public function getCurrentRoute() as dynamic
+        return m.stack.peek()
+    end function
+
+    public function getHistoryCount() as integer
+        return m.stack.getSize()
+    end function
+
+    public function getHistoryEntry(index as integer) as dynamic
+        return m.stack.getEntry(index)
+    end function
+
+    private function isValidRoute(route as dynamic) as boolean
+        routeType = type(route)
+        return (routeType = "String" or routeType = "roString") and route <> ""
+    end function
+
+end class
+end namespace

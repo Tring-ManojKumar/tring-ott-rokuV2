@@ -1,0 +1,77 @@
+' A screen-independent history of route names and optional parameters.
+namespace RokuCore
+class RokuCoreNavigationStack
+
+    public sub new()
+        m.entries = []
+    end sub
+
+    ' Add a route entry to the top. Empty or non-string routes are ignored.
+    public sub push(route as dynamic, params = invalid as dynamic)
+        if not m.isRouteName(route) then return
+
+        entry = {
+            route: route
+            params: params
+        }
+        m.entries.push(entry)
+    end sub
+
+    ' Replace the current entry, or establish the first entry when empty.
+    public sub replace(route as dynamic, params = invalid as dynamic)
+        if not m.isRouteName(route) then return
+        if m.entries.count() > 0 then m.entries.pop()
+        m.push(route, params)
+    end sub
+
+    ' Clear history and establish a new root entry.
+    public sub reset(route as dynamic, params = invalid as dynamic)
+        if not m.isRouteName(route) then return
+        m.clear()
+        m.push(route, params)
+    end sub
+
+    ' Remove and return the top entry. The stack itself does not protect its root.
+    public function pop() as dynamic
+        if m.entries.count() = 0 then return invalid
+        return m.entries.pop()
+    end function
+
+    ' Return the top entry without changing the stack.
+    public function peek() as dynamic
+        if m.entries.count() = 0 then return invalid
+        return m.entries[m.entries.count() - 1]
+    end function
+
+    ' Return the current entry (same semantics as peek).
+    public function getCurrentRoute() as dynamic
+        return m.peek()
+    end function
+
+    ' True when at least one entry exists below the current entry.
+    public function canGoBack() as boolean
+        return m.entries.count() > 1
+    end function
+
+    ' Remove every entry, leaving an empty usable stack.
+    public sub clear()
+        m.entries = []
+    end sub
+
+    ' Return the number of entries currently stored.
+    public function getSize() as integer
+        return m.entries.count()
+    end function
+
+    public function getEntry(index as integer) as dynamic
+        if index < 0 or index >= m.entries.count() then return invalid
+        return m.entries[index]
+    end function
+
+    private function isRouteName(route as dynamic) as boolean
+        routeType = type(route)
+        return (routeType = "String" or routeType = "roString") and route <> ""
+    end function
+
+end class
+end namespace

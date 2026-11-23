@@ -1,0 +1,30 @@
+{
+  "name": "tring-ott-roku",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "bsc",
+    "test:build": "bsc --project bsconfig-test.json",
+    "test:run": "rooibos --project bsconfig-test.json",
+    "configure": "node node_modules/roku-framework/scripts/generate-config.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "roku-framework": "github:Tring-ManojKumar/BaseProject_MVVM_Clean#framework-alpha"
+  },
+  "devDependencies": {
+    "brighterscript": "^0.73.1",
+    "rooibos-roku": "^5.17.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "dotenv": "^17.4.2",
+    "lodash": "^4.18.1",
+    "fast-glob": "^3.3.3",
+    "@types/node": "^26.4.1"
+  }
+}

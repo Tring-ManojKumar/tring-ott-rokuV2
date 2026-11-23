@@ -1,0 +1,80 @@
+' Generic access to Roku Registry. Values are persisted as strings by Roku;
+' typed helpers use JSON for structured values and retain raw string behavior.
+namespace RokuCore
+class RegistryManager
+    public function read(sectionName as dynamic, key as dynamic, defaultValue = invalid as dynamic) as dynamic
+        section = m.getSection(sectionName)
+        if section = invalid or not m.isName(key) or not section.Exists(key) then return defaultValue
+        value = section.Read(key)
+        if value = invalid then return defaultValue
+        return value
+    end function
+
+    public function readString(sectionName as dynamic, key as dynamic, defaultValue = "" as string) as string
+        value = m.read(sectionName, key, defaultValue)
+        if value = invalid then return defaultValue
+        return value.ToStr()
+    end function
+
+    public function readValue(sectionName as dynamic, key as dynamic, defaultValue = invalid as dynamic) as dynamic
+        value = m.read(sectionName, key, invalid)
+        if value = invalid then return defaultValue
+        parsed = ParseJson(value)
+        if parsed = invalid then return defaultValue
+        return parsed
+    end function
+
+    public function write(sectionName as dynamic, key as dynamic, value as dynamic) as boolean
+        if value = invalid then return false
+        return m.writeString(sectionName, key, value.ToStr())
+    end function
+
+    public function writeString(sectionName as dynamic, key as dynamic, value as dynamic) as boolean
+        section = m.getSection(sectionName)
+        if section = invalid or not m.isName(key) or value = invalid then return false
+        if not section.Write(key, value.ToStr()) then return false
+        return section.Flush()
+    end function
+
+    public function writeValue(sectionName as dynamic, key as dynamic, value as dynamic) as boolean
+        if value = invalid then return false
+        return m.writeString(sectionName, key, FormatJson(value))
+    end function
+
+    public function delete(sectionName as dynamic, key as dynamic) as boolean
+        section = m.getSection(sectionName)
+        if section = invalid or not m.isName(key) then return false
+        if section.Exists(key) and not section.Delete(key) then return false
+        return section.Flush()
+    end function
+
+    public function clearSection(sectionName as dynamic) as boolean
+        section = m.getSection(sectionName)
+        if section = invalid then return false
+        section.Clear()
+        return section.Flush()
+    end function
+
+    public function flush(sectionName as dynamic) as boolean
+        section = m.getSection(sectionName)
+        return section <> invalid and section.Flush()
+    end function
+
+    private function getSection(sectionName as dynamic) as dynamic
+        if not m.isName(sectionName) then return invalid
+        section = CreateObject("roRegistrySection", sectionName)
+        if section = invalid then m.log("Could not open Registry section")
+        return section
+    end function
+
+    private function isName(value as dynamic) as boolean
+        if value = invalid then return false
+        valueType = LCase(type(value))
+        return (valueType = "string" or valueType = "rostring") and value.Trim() <> ""
+    end function
+
+    private sub log(message as string)
+        print "[WARN][RokuCore.Registry] " + message
+    end sub
+end class
+end namespace

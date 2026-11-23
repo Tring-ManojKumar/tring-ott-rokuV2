@@ -1,0 +1,16 @@
+namespace rodash
+  ' Checks if the supplied value is a valid Boolean type
+  ' @since 0.0.21
+  ' @category Lang
+  ' @param {Dynamic} value The variable to be checked
+  ' @returns {Boolean} Results of the check
+  ' @example
+  ' rodash.isBoolean(true) // => true
+  ' rodash.isBoolean(false) // => true
+  ' rodash.isBoolean(1) // => false
+  ' rodash.isBoolean("true") // => false
+  function isBoolean(value as Dynamic) as Boolean
+    valueType = type(value)
+    return valueType = "Boolean" OR valueType = "roBoolean"
+  end function
+end namespace

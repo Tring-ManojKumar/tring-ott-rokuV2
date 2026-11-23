@@ -1,0 +1,26 @@
+build/
+out/
+.DS_Store
+.idea/*
+.project
+.build
+.build-test/
+.out
+dist
+node_modules
+.env
+.env.*
+roku_modules
+analyze.zip
+.coverage
+.coverage.svg
+sca-results.json
+.build
+.generated
+.npmrc
+.history
+performanceResults.csv
+lcov.info
+
+## SonarQube
+.scannerwork

@@ -1,0 +1,147 @@
+sub init()
+    m.top.focusable = true
+    m.pageTitle = m.top.findNode("pageTitle")
+    m.pageDescription = m.top.findNode("pageDescription")
+    m.appLogo = m.top.findNode("appLogo")
+    m.retryButton = m.top.findNode("retryButton")
+    m.secondaryButton = m.top.findNode("secondaryButton")
+    m.focusTimer = m.top.findNode("focusTimer")
+    applyTheme()
+    m.retryButton.observeField("activated", "onRetryActivated")
+    m.secondaryButton.observeField("activated", "onSecondaryActivated")
+    m.focusTimer.observeField("fire", "onFocusTimerFired")
+    updateTitle()
+    updateMessage()
+    updateIcon()
+    updateButtons()
+end sub
+
+sub applyTheme()
+    theme = GetTheme()
+    if m.pageTitle <> invalid
+        m.pageTitle.color = ThemeColor(theme.colors.textPrimary)
+        m.pageTitle.font = CreateThemeFont(theme.typography.fonts.bold, theme.typography.sizes.heading)
+    end if
+    if m.pageDescription <> invalid
+        m.pageDescription.color = ThemeColor(theme.colors.textSecondary)
+        m.pageDescription.font = CreateThemeFont(theme.typography.fonts.regular, theme.typography.sizes.body)
+    end if
+    if m.backdrop <> invalid
+        m.backdrop.color = ThemeColor(theme.colors.background)
+        m.backdrop.opacity = 0.88
+    end if
+end sub
+
+sub updateTitle()
+    if m.pageTitle <> invalid then m.pageTitle.text = m.top.title
+end sub
+
+sub updateMessage()
+    if m.pageDescription <> invalid then m.pageDescription.text = m.top.message
+end sub
+
+sub updateIcon()
+    if m.appLogo = invalid then return
+    iconUri = m.top.iconUri
+    if iconUri = invalid or iconUri = "" then iconUri = GetImagePath("logo")
+    if iconUri <> invalid then m.appLogo.uri = iconUri
+end sub
+
+sub updateButtons()
+    if m.retryButton <> invalid
+        m.retryButton.text = m.top.retryText
+        m.retryButton.visible = m.top.retryVisible
+    end if
+    if m.secondaryButton <> invalid
+        m.secondaryButton.text = m.top.secondaryText
+        m.secondaryButton.visible = m.top.secondaryVisible
+    end if
+end sub
+
+sub onRetryActivated(event as object)
+    m.top.retryRequested = not m.top.retryRequested
+end sub
+
+sub onSecondaryActivated(event as object)
+    m.top.secondaryRequested = not m.top.secondaryRequested
+end sub
+
+function focusRetry() as boolean
+    if m.retryButton = invalid or not m.top.retryVisible then return false
+    focused = applyRetryFocus()
+    m.focusTimer.control = "stop"
+    m.focusTimer.control = "start"
+    return focused or m.retryButton <> invalid
+end function
+
+function applyRetryFocus() as boolean
+    if m.retryButton = invalid or not m.top.retryVisible then return false
+    m.top.setFocus(true)
+    m.retryButton.setFocus(true)
+    applyFocusColor(m.retryButton, true)
+    if m.top.secondaryVisible then applyFocusColor(m.secondaryButton, false)
+    m.retryButton.callFunc("updateFocus")
+    return m.retryButton.hasFocus()
+end function
+
+function focusInitialAction() as boolean
+    if m.top.retryVisible then return focusRetry()
+    if m.top.secondaryVisible
+        m.secondaryButton.setFocus(true)
+        applyFocusColor(m.secondaryButton, true)
+        if m.top.retryVisible then applyFocusColor(m.retryButton, false)
+        m.secondaryButton.callFunc("updateFocus")
+        return m.secondaryButton.hasFocus()
+    end if
+    return false
+end function
+
+sub onFocusTimerFired(event as object)
+    if m.top.visible and m.top.retryVisible and not m.retryButton.hasFocus() and not m.secondaryButton.hasFocus()
+        applyRetryFocus()
+    end if
+end sub
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    if not press or (key <> "left" and key <> "right") then return false
+    m.focusTimer.control = "stop"
+
+    hasRetry = m.top.retryVisible
+    hasSecondary = m.top.secondaryVisible
+    if not hasRetry or not hasSecondary then return true
+
+    if key = "left" and m.secondaryButton.hasFocus()
+        m.retryButton.setFocus(true)
+        applyFocusColor(m.retryButton, true)
+        applyFocusColor(m.secondaryButton, false)
+        m.retryButton.callFunc("updateFocus")
+        m.secondaryButton.callFunc("updateFocus")
+        return true
+    end if
+    if key = "right" and m.retryButton.hasFocus()
+        m.secondaryButton.setFocus(true)
+        applyFocusColor(m.secondaryButton, true)
+        applyFocusColor(m.retryButton, false)
+        m.secondaryButton.callFunc("updateFocus")
+        m.retryButton.callFunc("updateFocus")
+        return true
+    end if
+    return true
+end function
+
+sub applyFocusColor(button as dynamic, focused as boolean)
+    if button = invalid then return
+    if focused
+        theme = GetTheme()
+        if theme <> invalid and theme.colors <> invalid and theme.colors.accent <> invalid
+            accent = theme.colors.accent
+            if type(accent) = "String" or type(accent) = "roString"
+                button.backgroundColor = ThemeColor(accent)
+            else
+                button.backgroundColor = accent
+            end if
+        end if
+    else
+        button.backgroundColor = -1
+    end if
+end sub

@@ -1,0 +1,6 @@
+{
+    "environment":  "stage",
+    "buildFlags":  {
+                       "isRegistryDiagnosticBuild":  true
+                   }
+}

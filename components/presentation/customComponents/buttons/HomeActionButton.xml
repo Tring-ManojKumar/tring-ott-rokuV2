@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="HomeActionButton" extends="Group">
+    <interface>
+        <field id="text" type="string" value="Explore" onChange="updateButton" />
+        <field id="width" type="float" value="340" onChange="updateButton" />
+        <field id="height" type="float" value="72" onChange="updateButton" />
+        <field id="variant" type="string" value="primary" onChange="updateButton" />
+        <field id="enabled" type="boolean" value="true" onChange="updateButton" />
+        <field id="cornerRadius" type="float" value="-1" onChange="updateButton" />
+        <field id="gradientPreset" type="string" value="" onChange="updateButton" />
+        <field id="backgroundColor" type="integer" value="-1" onChange="updateButton" />
+        <field id="gradientColors" type="array" onChange="updateButton" />
+        <field id="gradientStops" type="array" onChange="updateButton" />
+        <field id="gradientStyle" type="string" value="none" onChange="updateButton" />
+        <field id="gradientAngle" type="float" value="0" onChange="updateButton" />
+        <field id="borderWidth" type="float" value="0" onChange="updateButton" />
+        <field id="borderColor" type="integer" value="-1" onChange="updateButton" />
+        <field id="textColor" type="integer" value="-1" onChange="updateButton" />
+        <field id="fontSize" type="integer" value="0" onChange="updateButton" />
+        <field id="activated" type="assocarray" alwaysNotify="true" />
+        <function name="updateFocus" />
+    </interface>
+    <children>
+        <Rectangle id="focusBorder" width="340" height="72" color="0x00AEEFFF" visible="false" />
+        <Rectangle id="background" translation="[3, 3]" width="334" height="66" color="0xFFFFFFFF" visible="true" />
+        <Label
+            id="buttonLabel"
+            translation="[3, 3]"
+            width="334"
+            height="66"
+            text="Explore"
+            horizAlign="center"
+            vertAlign="center"
+            visible="true"
+        />
+    </children>
+    <script type="text/brightscript" uri="pkg:/source/rokuCore/theme/ThemeProvider.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/GeneratedTheme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Theme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Typography.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Colors.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Effects.bs" />
+    <script type="text/brightscript" uri="HomeActionButton.bs" />
+</component>

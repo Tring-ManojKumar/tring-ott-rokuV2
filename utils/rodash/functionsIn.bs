@@ -1,0 +1,11 @@
+' TODO: Rewrite this due to scoping issue
+namespace rodash
+  ' @ignore
+  ' Creates an array of function property names from own and inherited enumerable properties of object.
+  ' @param {Dynamic} obj - The object to iterate over
+  ' @returns {Object} Returns object
+  function functionsIn(obj = CreateObject("roAssociativeArray") as Object)
+    ' return rodash.base.forEach.baseForEach(obj, invalid, "left", "only")
+    return []
+  end function
+end namespace

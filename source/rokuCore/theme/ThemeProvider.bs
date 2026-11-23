@@ -1,0 +1,41 @@
+import "pkg:/utils/theme/GeneratedTheme.bs"
+
+namespace RokuCore
+    function ResolveTheme(configuration = invalid as dynamic) as object
+        if configuration = invalid then configuration = GetDefaultThemeConfiguration()
+        if configuration.theme <> invalid then configuration = configuration.theme
+        return MergeThemeValues(GetDefaultThemeConfiguration(), configuration)
+    end function
+
+    function GetDefaultThemeConfiguration() as object
+        configuration = GetCompiledTheme()
+        if configuration = invalid then return {}
+        if configuration.theme <> invalid then configuration = configuration.theme
+        return configuration
+    end function
+
+    function MergeThemeValues(defaults as object, overrides as dynamic) as object
+        result = {}
+        for each key in defaults
+            result[key] = defaults[key]
+        end for
+        if overrides = invalid then return result
+
+        for each key in overrides
+            defaultValue = defaults[key]
+            overrideValue = overrides[key]
+            if IsThemeAssociativeArray(defaultValue) and IsThemeAssociativeArray(overrideValue)
+                result[key] = MergeThemeValues(defaultValue, overrideValue)
+            else
+                result[key] = overrideValue
+            end if
+        end for
+        return result
+    end function
+
+    function IsThemeAssociativeArray(value as dynamic) as boolean
+        if value = invalid then return false
+        valueType = LCase(type(value))
+        return valueType = "roassociativearray" or valueType = "associativearray"
+    end function
+end namespace

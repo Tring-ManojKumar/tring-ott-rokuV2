@@ -1,0 +1,36 @@
+import "pkg:/utils/theme/Colors.bs"
+function GetCardTheme(theme as object, variant as string) as object
+    colors = GetThemeColors(theme)
+    backgroundName = "surface"
+    borderName = "surface"
+    borderWidth = theme.borders.none
+    configured = invalid
+    if theme.components <> invalid
+        if theme.components.cards <> invalid
+            configured = theme.components.cards[variant]
+        end if
+    end if
+    if configured <> invalid
+        if configured.background <> invalid then backgroundName = configured.background
+        if configured.border <> invalid then borderName = configured.border
+        if configured.borderWidth <> invalid then borderWidth = configured.borderWidth
+    end if
+    if variant = "plain" then backgroundName = invalid
+    if variant = "outlined"
+        hasConfiguredBorder = false
+        hasConfiguredBorderWidth = false
+        if configured <> invalid
+            hasConfiguredBorder = configured.border <> invalid
+            hasConfiguredBorderWidth = configured.borderWidth <> invalid
+        end if
+        if not hasConfiguredBorder then borderName = "focus"
+        if not hasConfiguredBorderWidth then borderWidth = theme.borders.thin
+    end if
+    background = 0
+    if backgroundName <> invalid then background = ThemeColor(colors[backgroundName])
+    return {
+        background: background,
+        border: ThemeColor(colors[borderName]),
+        borderWidth: borderWidth
+    }
+end function

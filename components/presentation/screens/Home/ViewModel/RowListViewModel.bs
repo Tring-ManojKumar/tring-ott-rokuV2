@@ -1,0 +1,235 @@
+import "pkg:/utils/logging/LifecycleDiagnostics.bs"
+
+sub init()
+    m.playlistLoading = false
+    m.suspended = false
+    m.cleanedUp = false
+    m.resumePlaylistOnReturn = false
+    m.resumeSeasonOnReturn = false
+    m.pendingPlaylistRun = false
+    m.fetchTask = m.top.findNode("fetchTask")
+
+    m.fetchTask.observeField("content", "onTaskContentChanged")
+    m.fetchTask.observeField("isLoading", "onTaskLoadingChanged")
+    m.fetchTask.observeField("errorMessage", "onTaskErrorChanged")
+    m.fetchTask.observeField("requestState", "onPlaylistStateChanged")
+    m.fetchTask.observeField("state", "onPlaylistTaskStateChanged")
+    m.lastPlaylistTaskState = m.fetchTask.state
+    m.lastPlaylistRequestState = m.fetchTask.requestState
+    m.seasonTask = m.top.findNode("seasonTask")
+    m.seasonTask.observeField("response", "notifySeasonEpisodesResponse")
+    m.seasonTask.observeField("error", "notifyErrorResponse")
+    m.seasonTask.observeField("requestState", "onSeasonRequestStateChanged")
+    m.seasonTask.observeField("state", "onSeasonTaskStateChanged")
+    m.lastSeasonTaskState = m.seasonTask.state
+    m.lastSeasonRequestState = m.seasonTask.requestState
+    m.seasonTask.observeField("errorResult", "onSeasonTaskErrorResultChanged")
+end sub
+
+function cleanup() as boolean
+    if m.cleanedUp then return true
+    m.cleanedUp = true
+    m.suspended = true
+    m.pendingPlaylistRun = false
+    screen = m.top.getParent()
+    if m.fetchTask <> invalid
+        previousTaskState = m.fetchTask.state
+        m.fetchTask.control = "STOP"
+        LogLifecycleTaskControl(screen, "home", "fetchTask", m.fetchTask, "STOP", previousTaskState)
+        m.fetchTask.unobserveField("content")
+        m.fetchTask.unobserveField("isLoading")
+        m.fetchTask.unobserveField("errorMessage")
+        m.fetchTask.unobserveField("requestState")
+        m.fetchTask.unobserveField("state")
+        LogLifecycleObserverCleanup(screen, "home", "fetchTask", m.fetchTask.state)
+    end if
+    if m.seasonTask <> invalid
+        previousTaskState = m.seasonTask.state
+        m.seasonTask.control = "STOP"
+        LogLifecycleTaskControl(screen, "home", "seasonTask", m.seasonTask, "STOP", previousTaskState)
+        m.seasonTask.unobserveField("response")
+        m.seasonTask.unobserveField("error")
+        m.seasonTask.unobserveField("requestState")
+        m.seasonTask.unobserveField("errorResult")
+        m.seasonTask.unobserveField("state")
+        LogLifecycleObserverCleanup(screen, "home", "seasonTask", m.seasonTask.state)
+    end if
+    return true
+end function
+
+function loadPlaylist() as boolean
+    if m.suspended or m.cleanedUp then return false
+    if m.playlistLoading then return false
+    m.playlistLoading = true
+    m.top.requestState = "LOADING"
+    m.top.errorMessage = ""
+    m.top.errorResult = invalid
+    m.fetchTask.playlistUrl = m.top.playlistUrl
+    requestPlaylistTaskRun()
+    return true
+end function
+
+sub requestPlaylistTaskRun()
+    if m.fetchTask = invalid then return
+    previousTaskState = m.fetchTask.state
+    if previousTaskState = "run" or previousTaskState = "done"
+        m.pendingPlaylistRun = true
+        m.fetchTask.control = "STOP"
+        LogLifecycleTaskControl(m.top.getParent(), "home", "fetchTask", m.fetchTask, "STOP", previousTaskState)
+        return
+    end if
+    m.pendingPlaylistRun = false
+    m.fetchTask.control = "RUN"
+    LogLifecycleTaskControl(m.top.getParent(), "home", "fetchTask", m.fetchTask, "RUN", previousTaskState)
+end sub
+
+function loadSeasonEpisodes(seriesId as string, seasonNumber as string, pageLimit as integer, pageOffset as integer)
+    if m.suspended or m.cleanedUp then return false
+    m.top.seasonLoading = true
+    m.top.seasonError = ""
+    m.seasonTask.seriesId = seriesId
+    m.seasonTask.seasonNumber = seasonNumber
+    m.seasonTask.pageLimit = pageLimit
+    m.seasonTask.pageOffset = pageOffset
+    previousTaskState = m.seasonTask.state
+    m.seasonTask.control = "RUN"
+    LogLifecycleTaskControl(m.top.getParent(), "home", "seasonTask", m.seasonTask, "RUN", previousTaskState)
+end function
+
+function suspend() as boolean
+    if m.suspended or m.cleanedUp then return false
+    m.suspended = true
+    m.resumePlaylistOnReturn = m.playlistLoading
+    m.pendingPlaylistRun = false
+    if m.fetchTask <> invalid
+        previousTaskState = m.fetchTask.state
+        m.fetchTask.control = "STOP"
+        LogLifecycleTaskControl(m.top.getParent(), "home", "fetchTask", m.fetchTask, "STOP", previousTaskState)
+    end if
+    m.playlistLoading = false
+    m.resumeSeasonOnReturn = m.top.seasonLoading
+    if m.resumeSeasonOnReturn and m.seasonTask <> invalid
+        previousTaskState = m.seasonTask.state
+        m.seasonTask.control = "STOP"
+        LogLifecycleTaskControl(m.top.getParent(), "home", "seasonTask", m.seasonTask, "STOP", previousTaskState)
+    end if
+    return true
+end function
+
+function resume() as boolean
+    if not m.suspended or m.cleanedUp then return false
+    m.suspended = false
+    if m.resumePlaylistOnReturn
+#if isRegistryDiagnosticBuild
+        print "[LIFECYCLE][AppResource] screen=Home operation=resumePlaylistRequest result=restart_requested"
+#endif
+        loadPlaylist()
+    else
+#if isRegistryDiagnosticBuild
+        print "[LIFECYCLE][AppResource] screen=Home operation=resumePlaylistRequest result=no_inflight_request"
+#endif
+    end if
+    m.resumePlaylistOnReturn = false
+    if m.resumeSeasonOnReturn
+#if isRegistryDiagnosticBuild
+        print "[LIFECYCLE][AppResource] screen=Home operation=resumeSeasonRequest result=restart_requested"
+#endif
+        m.resumeSeasonOnReturn = false
+        loadSeasonEpisodes(m.seasonTask.seriesId, m.seasonTask.seasonNumber, m.seasonTask.pageLimit, m.seasonTask.pageOffset)
+    end if
+    return true
+end function
+
+sub onTaskContentChanged(event as object)
+    if m.suspended or m.cleanedUp then return
+    notifyContentResponse(event)
+end sub
+
+sub onTaskLoadingChanged(event as object)
+    if m.suspended or m.cleanedUp then return
+    m.top.isLoading = event.getData()
+end sub
+
+sub onTaskErrorChanged(event as object)
+    if m.suspended or m.cleanedUp then return
+    m.top.errorMessage = event.getData()
+end sub
+
+sub onPlaylistStateChanged(event as object)
+    state = event.getData()
+    LogLifecycleRequestState(m.top.getParent(), "home", "fetchTask", m.lastPlaylistRequestState, state)
+    m.lastPlaylistRequestState = state
+    if IsLifecycleRequestTerminal(state)
+        m.playlistLoading = false
+        m.pendingPlaylistRun = false
+        if m.suspended then m.resumePlaylistOnReturn = false
+    end if
+    if m.suspended or m.cleanedUp then return
+    m.top.errorResult = m.fetchTask.errorResult
+    m.top.requestState = state
+end sub
+
+sub notifyContentResponse(event as object)
+    content = event.getData()
+    if content = invalid then return
+    if content.getChildCount() = 0 then return
+    m.top.content = content
+end sub
+
+sub notifySeasonEpisodesResponse(event as object)
+    if m.suspended or m.cleanedUp then return
+    response = event.getData()
+    m.top.seasonLoading = false
+    if response = invalid or response.getChildCount() = 0
+        m.top.seasonResponse = CreateObject("roSGNode", "ContentNode")
+        return
+    end if
+    m.top.seasonResponse = response
+end sub
+
+sub notifyErrorResponse(event as object)
+    if m.suspended or m.cleanedUp then return
+    errorText = event.getData()
+    m.top.seasonLoading = false
+    if errorText <> invalid and errorText <> "" then m.top.seasonError = errorText
+end sub
+
+sub onSeasonRequestStateChanged(event as object)
+    state = event.getData()
+    LogLifecycleRequestState(m.top.getParent(), "home", "seasonTask", m.lastSeasonRequestState, state)
+    m.lastSeasonRequestState = state
+    if IsLifecycleRequestTerminal(state)
+        m.top.seasonLoading = false
+        if m.suspended then m.resumeSeasonOnReturn = false
+    end if
+    if m.suspended or m.cleanedUp then return
+    m.top.seasonState = state
+    if state = "SUCCESS" or state = "EMPTY" or state = "ERROR" or state = "OFFLINE" then m.top.seasonLoading = false
+end sub
+
+sub onPlaylistTaskStateChanged(event as object)
+    state = event.getData()
+    LogLifecycleTaskState(m.top.getParent(), "home", "fetchTask", m.lastPlaylistTaskState, state)
+    m.lastPlaylistTaskState = state
+    if state = "done" and m.pendingPlaylistRun and not m.suspended and not m.cleanedUp
+        previousTaskState = m.fetchTask.state
+        m.fetchTask.control = "STOP"
+        LogLifecycleTaskControl(m.top.getParent(), "home", "fetchTask", m.fetchTask, "STOP", previousTaskState)
+    else if state = "stop" and m.pendingPlaylistRun and not m.suspended and not m.cleanedUp
+        m.pendingPlaylistRun = false
+        previousTaskState = m.fetchTask.state
+        m.fetchTask.control = "RUN"
+        LogLifecycleTaskControl(m.top.getParent(), "home", "fetchTask", m.fetchTask, "RUN", previousTaskState)
+    end if
+end sub
+
+sub onSeasonTaskStateChanged(event as object)
+    state = event.getData()
+    LogLifecycleTaskState(m.top.getParent(), "home", "seasonTask", m.lastSeasonTaskState, state)
+    m.lastSeasonTaskState = state
+end sub
+
+sub onSeasonTaskErrorResultChanged(event as object)
+    if m.suspended or m.cleanedUp then return
+    m.top.seasonErrorResult = event.getData()
+end sub

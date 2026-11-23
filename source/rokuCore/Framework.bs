@@ -1,0 +1,102 @@
+import "pkg:/source/rokuCore/navigation/NavigationCoordinator.bs"
+import "pkg:/source/rokuCore/navigation/NavigationEvents.bs"
+
+' Public entry point. Configuration is an associative array supplied by the app.
+namespace RokuCore
+class Framework
+    public sub new()
+        m.coordinator = new RokuCore.RokuCoreNavigationCoordinator()
+        m.events = new RokuCore.RokuCoreNavigationEvents()
+        m.initialized = false
+        m.lastError = ""
+    end sub
+
+    public function initialize(config as object) as boolean
+        if m.initialized
+            return m.failInitialization("Framework is already initialized")
+        end if
+        if config = invalid or type(config) <> "roAssociativeArray"
+            return m.failInitialization("Framework configuration must be an associative array")
+        end if
+        if config.doesExist("logger") then m.logger = config.logger
+        lifecycleDiagnostics = false
+        if config.doesExist("lifecycleDiagnostics") then lifecycleDiagnostics = config.lifecycleDiagnostics = true
+        if not config.doesExist("root") or not config.doesExist("initialRoute") or not config.doesExist("routes")
+            return m.failInitialization("Framework configuration requires root, initialRoute, and routes")
+        end if
+        initialScreen = invalid
+        if config.doesExist("initialScreen") then initialScreen = config.initialScreen
+        initialParams = invalid
+        if config.doesExist("initialParams") then initialParams = config.initialParams
+        m.coordinator.setLogger(m.logger)
+        m.coordinator.setLifecycleDiagnostics(lifecycleDiagnostics)
+        if not m.coordinator.initialize(config.root, config.initialRoute, config.routes, initialScreen, initialParams)
+            m.lastError = m.coordinator.getLastError()
+            return false
+        end if
+        if config.doesExist("theme") then m.theme = config.theme
+        m.initialized = true
+        m.lastError = ""
+        return true
+    end function
+
+    public function navigate(route as dynamic, params = invalid as dynamic) as boolean
+        return m.coordinator.navigateTo(route, params)
+    end function
+
+    public function back() as boolean
+        return m.coordinator.goBack()
+    end function
+
+    public function handleEvent(event as dynamic) as boolean
+        return m.coordinator.handleEvent(event)
+    end function
+
+    public function replace(route as dynamic, params = invalid as dynamic) as boolean
+        return m.coordinator.replace(route, params)
+    end function
+
+    public function reset(route as dynamic, params = invalid as dynamic) as boolean
+        return m.coordinator.reset(route, params)
+    end function
+
+    public function getCurrentRoute() as dynamic
+        return m.coordinator.getCurrentRoute()
+    end function
+
+    public function canGoBack() as boolean
+        return m.coordinator.canGoBack()
+    end function
+
+    public function registerRoute(route as dynamic, componentName as dynamic) as boolean
+        return m.coordinator.registerRoute(route, componentName)
+    end function
+
+    public function resolveRoute(route as dynamic, params = invalid as dynamic) as dynamic
+        return m.coordinator.resolveRoute(route, params)
+    end function
+
+    public function getLastError() as string
+        if m.lastError <> "" then return m.lastError
+        return m.coordinator.getLastError()
+    end function
+
+    public function getCurrentScreen() as dynamic
+        return m.coordinator.getCurrentScreen()
+    end function
+
+    public sub onActiveScreenReady(screen = invalid as dynamic)
+        m.coordinator.onActiveScreenReady(screen)
+    end sub
+
+    private function failInitialization(message as string) as boolean
+        m.lastError = message
+        if m.logger <> invalid
+            m.logger.error("Navigation", message)
+        else
+            print "[ERROR][RokuCore.Framework] " + message
+        end if
+        return false
+    end function
+end class
+end namespace

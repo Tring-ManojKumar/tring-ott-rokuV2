@@ -1,0 +1,9 @@
+' Generic transformation contract for reusable Core mappings.
+namespace RokuCore
+class Adapter
+    public function adapt(input as dynamic) as dynamic
+        ' Concrete adapters override this transformation.
+        return input
+    end function
+end class
+end namespace

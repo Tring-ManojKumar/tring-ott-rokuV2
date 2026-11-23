@@ -1,0 +1,30 @@
+namespace rodash
+  ' Computes the maximum value of array. If array is empty or falsey, invalid is returned.
+  ' @since 0.0.21
+  ' @category Math
+  ' @param {Array} array - The array to iterate over
+  ' @returns {Dynamic} Returns the maximum value
+  function maxBy(array = CreateObject("roArray", 0, true) as Object, iteratee = Invalid) as Dynamic
+    if rodash.isEmpty(array) then return Invalid
+
+    maxValue = Invalid
+    if rodash.isInvalid(iteratee) then
+      maxValue = rodash.internal.getConstants().min_int
+      for each value in array
+        if rodash.gt(value, maxValue) then maxValue = value
+      end for
+    else if rodash.isFunction(iteratee) AND rodash.isAA(array[0]) then
+      maxValue = array[0]
+      for each value in array
+        if rodash.gt(iteratee(value), iteratee(maxValue)) then maxValue = value
+      end for
+    else if rodash.isString(iteratee) AND rodash.isAA(array[0]) then
+      maxValue = array[0]
+      for each value in array
+        if rodash.gt(value[iteratee], maxValue[iteratee]) then maxValue = value
+      end for
+    end if
+
+    return maxValue
+  end function
+end namespace

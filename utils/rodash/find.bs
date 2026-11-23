@@ -1,0 +1,28 @@
+namespace rodash
+  ' Iterates over elements of collection, returning the first element predicate returns truthy for. The predicate is invoked with three arguments: (value, index|key, collection).
+  ' @since 0.0.22
+  ' @category Collection
+  ' @param {Array} array - The array to inspect
+  ' @param {Dynamic} predicate - The function invoked per iteration
+  ' @param {Integer} fromIndex - The index to search from
+  ' @returns {Dymanic} Returns the matched element, else invalid.
+  ' @example
+  ' users = [
+  '   { "user": "barney", "active": false },
+  '   { "user": "fred", "active": false },
+  '   { "user": "pebbles", "active": true }
+  ' ]
+  '
+  ' rodash.find(users, function(o)
+  '   return o.user = "barney"
+  ' end function)
+  ' // => { "user": "barney", "active": false }
+  function find(array, predicate = Invalid as Dynamic, fromIndex = 0 as Integer) as Dynamic
+    if NOT rodash.isArray(array) then return Invalid
+
+    foundIndex = rodash.findIndex(array, predicate, fromIndex)
+    if foundIndex = -1 then return Invalid
+
+    return array[foundIndex]
+  end function
+end namespace

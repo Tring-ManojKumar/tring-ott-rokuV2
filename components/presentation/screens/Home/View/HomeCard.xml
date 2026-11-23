@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="HomeCard" extends="Group">
+    <interface>
+        <field id="itemContent" type="node" onChange="onItemContentChanged" />
+        <field id="focusPercent" type="float" onChange="onFocusPercentChanged" />
+        <field id="shape" type="string" onChange="updateCardLayout" />
+    </interface>
+    <children>
+        <AppCard id="card" translation="[10, 10]" width="280" height="158" variant="plain" />
+        <Poster id="poster" translation="[10, 10]" width="280" height="158" loadDisplayMode="scaleToZoom" />
+        <AppLabel id="title" translation="[10, 174]" width="280" height="36" variant="body" horizAlign="center" vertAlign="center" maxLines="1" wrap="true" color="#FFFFFFFF" />
+    </children>
+    <script type="text/brightscript" uri="HomeCard.bs" />
+</component>

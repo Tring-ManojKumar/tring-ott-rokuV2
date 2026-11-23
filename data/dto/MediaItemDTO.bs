@@ -1,0 +1,34 @@
+namespace Data
+    class MediaItemDTO 'mirrors JWplayer naming
+        public mediaid as string
+        public title as string
+        public description as string
+        public image as string
+        public images as object
+        public media_type as string
+        public content_type as string
+
+        function new(rawItem as object)
+            m.mediaid = rawItem.mediaid
+            m.title = rawItem.title
+            m.description = rawItem.description
+            m.image = rawItem.image
+            m.media_type = m.toStringValue(rawItem.media_type)
+            if m.media_type = "" then m.media_type = m.toStringValue(rawItem.mediaType)
+            m.content_type = m.toStringValue(rawItem.content_type)
+            if m.content_type = "" then m.content_type = m.toStringValue(rawItem.contentType)
+            images = rawItem.images
+            if images = invalid
+                images = []
+            end if
+            m.images = images
+        end function
+
+        private function toStringValue(value as dynamic) as string
+            if value = invalid then return ""
+            valueType = LCase(type(value))
+            if valueType <> "string" and valueType <> "rostring" then return ""
+            return value
+        end function
+    end class
+end namespace

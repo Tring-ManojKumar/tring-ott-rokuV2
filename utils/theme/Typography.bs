@@ -1,0 +1,18 @@
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+
+function CreateThemeFont(fontName as string, size as integer) as object
+
+    font = CreateObject("roSGNode", "Font")
+
+    if left(fontName, 5) = "pkg:/"
+        font.uri = fontName
+    else
+        assetPath = RokuCore.GetAssetPath("fonts", fontName)
+        if assetPath = invalid then assetPath = "pkg:/assets/fonts/" + fontName
+        font.uri = assetPath
+    end if
+    font.size = size
+
+    return font
+
+end function

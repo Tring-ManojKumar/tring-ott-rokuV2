@@ -1,0 +1,40 @@
+import "pkg:/domain/repositories/SettingsRepository.bs"
+import "pkg:/data/datasources/RegistryDataSource.bs"
+import "pkg:/utils/logging/Logger.bs"
+
+namespace Data
+    class SettingsRepositoryImpl extends Domain.SettingsRepository
+        private dataSource as object
+        private sectionName as string
+
+        function new(dataSource = invalid as dynamic)
+            super()
+            if dataSource = invalid then dataSource = new Data.RegistryDataSource()
+            m.dataSource = dataSource
+            marketId = m.dataSource.getActiveMarketId()
+            if m.isValidString(marketId) then m.sectionName = "Market_" + marketId + "_Settings"
+        end function
+
+        override function get(key as string, defaultValue = invalid as dynamic) as dynamic
+            if not m.isValidString(m.sectionName) then return defaultValue
+            AppLogDebug("SettingsRepository", "Reading key " + key)
+            return m.dataSource.read(m.sectionName, key, defaultValue)
+        end function
+
+        override function save(key as string, value as dynamic) as boolean
+            if not m.isValidString(m.sectionName) then return false
+            return m.dataSource.write(m.sectionName, key, value)
+        end function
+
+        override function reset(key as string) as boolean
+            if not m.isValidString(m.sectionName) then return false
+            return m.dataSource.remove(m.sectionName, key)
+        end function
+
+        private function isValidString(value as dynamic) as boolean
+            if value = invalid then return false
+            valueType = LCase(type(value))
+            return (valueType = "rostring" or valueType = "string") and value.Trim() <> ""
+        end function
+    end class
+end namespace

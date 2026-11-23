@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="AppLoader" extends="Group">
+    <interface>
+        <field id="text" type="string" value="Loading…" onChange="updateText" />
+        <field id="width" type="float" value="240" onChange="updateSize" />
+        <field id="height" type="float" value="48" onChange="updateSize" />
+        <field id="textColor" type="integer" value="-1" onChange="updateText" />
+    </interface>
+    <children>
+        <Label id="message" width="240" height="48" horizAlign="center" vertAlign="center" color="0xFFFFFFFF" />
+    </children>
+    <script type="text/brightscript" uri="pkg:/source/rokuCore/theme/ThemeProvider.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Theme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Colors.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Typography.bs" />
+    <script type="text/brightscript" uri="pkg:/source/rokuCore/theme/ThemeProvider.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/GeneratedTheme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Theme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Colors.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Typography.bs" />
+    <script type="text/brightscript" uri="appLoader.bs" />
+</component>

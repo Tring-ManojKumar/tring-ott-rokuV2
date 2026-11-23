@@ -1,0 +1,23 @@
+namespace rodash
+    ' Creates a new roSGNode object with the specified nodeType and fields. Passed fields are set after the node is created and init() method is called.
+    ' @since 0.0.32
+    ' @category Node
+    ' @param {String} nodeType - The type of node to create
+    ' @param {Object} fields - The fields to set on the node
+    ' @returns {Object} Returns the new roSGNode object
+    ' @example
+    ' rodash.createNode("Rectangle", { id: "myRectangle" }) // => <Rectangle: roSGNode>
+    ' rodash.createNode("Label", { id: "myLabel" }) // => <Label: roSGNode>
+    function createNode(nodeType = "Node" as String, fields = {} as Dynamic) as Object
+        node = createObject("roSGNode", nodeType)
+        if rodash.isNode(node, nodeType) then
+            fieldsType = type(fields)
+            if (fieldsType = "roAssociativeArray" AND fields.keys().count() > 0) OR (fieldsType = "roArray" AND NOT fields.isEmpty()) then
+                node.update(fields, true)
+            end if
+            return node
+        end if
+
+        return Invalid
+    end function
+end namespace

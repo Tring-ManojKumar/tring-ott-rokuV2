@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="RokuCoreBaseComponent" extends="Group">
+    <interface>
+        <field id="isReady" type="boolean" value="false" />
+        <field id="frameworkSupportsInitialFocus" type="boolean" value="false" />
+        <field id="frameworkLifecycleEvent" type="string" value="" />
+        <field id="frameworkScreenIdentity" type="string" value="" />
+        <field id="frameworkCreated" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkInitialized" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkPresented" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkSuspended" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkResumed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkExited" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkDestroyed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkCleanupRequested" type="boolean" value="false" alwaysNotify="true" />
+    </interface>
+    <children />
+</component>

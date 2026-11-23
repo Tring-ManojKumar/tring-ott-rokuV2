@@ -1,0 +1,35 @@
+import "pkg:/domain/repositories/ContentRepository.bs"
+import "pkg:/services/ContentService.bs"
+import "pkg:/data/mappers/EpisodeMapper.bs"
+import "pkg:/data/api/ApiResult.bs"
+
+namespace Data
+    class ContentRepositoryImpl extends Domain.ContentRepository
+        private service as object
+        private mapper as object
+        function new(service = invalid as dynamic, mapper = invalid as dynamic)
+            super()
+            if service = invalid then service = new Data.ContentService()
+            if mapper = invalid then mapper = new Data.EpisodeMapper()
+            m.service = service
+            m.mapper = mapper
+        end function
+        override function getSeasonEpisodes(seriesId as string, seasonNumber as string, pageLimit as integer, pageOffset as integer) as object
+            response = m.service.getSeasonEpisodes(seriesId, seasonNumber, pageLimit, pageOffset)
+            if response = invalid then
+                errors = new Data.ApiResult()
+                return errors.failure("UNEXPECTED", "Content service returned no response", 0, false)
+            end if
+            if not response.ok then return response
+            raw = response.data
+            ' Response envelope varies by API; support the documented episodes key or a direct array.
+            if type(raw) = "roAssociativeArray" and raw.episodes <> invalid then raw = raw.episodes
+            mapped = m.mapper.toDomainList(raw)
+            if mapped = invalid or mapped.count() = 0
+                return { ok: true, data: [], statusCode: response.statusCode, error: "", category: "EMPTY", userMessage: "No episodes available.", retryable: false, attempts: response.attempts }
+            end if
+            response.data = mapped
+            return response
+        end function
+    end class
+end namespace

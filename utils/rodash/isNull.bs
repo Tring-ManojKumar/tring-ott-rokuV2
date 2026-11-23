@@ -1,0 +1,12 @@
+namespace rodash
+  ' Alias to isInvalid function
+  ' @since 0.0.21
+  ' @category Lang
+  ' @param {Dynamic} value The variable to be checked
+  ' @returns {Boolean} Results of the check
+  @inline
+  function isNull(value as Dynamic) as Boolean
+    return NOT rodash.isNotInvalid(value)
+  end function
+end namespace
+

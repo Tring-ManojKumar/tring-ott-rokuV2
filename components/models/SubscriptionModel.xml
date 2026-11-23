@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="SubscriptionModel" extends="ContentNode">
+    <interface>
+    <field id="subscriptionId" type="string" />
+    <field id="status" type="string" />
+    <field id="expiresAt" type="string" />
+    </interface>
+</component>

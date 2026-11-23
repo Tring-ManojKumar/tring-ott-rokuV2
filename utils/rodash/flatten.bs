@@ -1,0 +1,20 @@
+namespace rodash
+  ' Flattens array a single level deep.
+  ' @since 0.0.21
+  ' @category Array
+  ' @param {Array} array - The array to flatten
+  ' @returns {Dynamic} Returns the new flattened array
+  ' @example
+  ' rodash.flatten([1, [2, [3, [4]], 5]]) // => [1, 2, [3, [4]], 5]
+  function flatten(array = CreateObject("roArray", 0, true) as Object) as Object
+    returnArray = CreateObject("roArray", 0, true)
+    for each item in array
+      if type(item) = "roArray" then
+        returnArray.append(item)
+      else
+        returnArray.push(item)
+      end if
+    end for
+    return returnArray
+  end function
+end namespace

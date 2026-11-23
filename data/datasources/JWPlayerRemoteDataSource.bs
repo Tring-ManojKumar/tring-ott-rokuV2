@@ -1,0 +1,27 @@
+import "pkg:/services/ContentService.bs"
+import "pkg:/data/api/ApiResult.bs"
+
+namespace Data
+    class JWPlayerRemoteDataSource
+        private playlistUrl as string
+        private maxRetries as integer
+        private timeoutMs as integer
+
+        function new(playlistUrl as string, maxRetries = 1 as integer, timeoutMs = 30000 as integer)
+            m.playlistUrl = playlistUrl
+            m.maxRetries = maxRetries
+            m.timeoutMs = timeoutMs
+        end function
+
+        ' Returns the complete API result so error details are not discarded.
+        function fetchPlaylist() as object
+            service = new Data.ContentService(invalid, m.maxRetries, m.timeoutMs)
+            response = service.getPlaylist(m.playlistUrl)
+            if response = invalid
+                errors = new Data.ApiResult()
+                return errors.failure("UNEXPECTED", "Content service returned no response", 0, false)
+            end if
+            return response
+        end function
+    end class
+end namespace

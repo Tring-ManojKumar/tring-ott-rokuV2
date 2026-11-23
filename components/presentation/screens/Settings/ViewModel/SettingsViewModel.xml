@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="SettingsViewModel" extends="Node">
+    <interface>
+        <field id="languages" type="node" onChange="onLanguagesChanged" />
+        <field id="selectedLanguageCode" type="string" value="" />
+        <function name="selectLanguage" />
+    </interface>
+    <script type="text/brightscript" uri="SettingsViewModel.bs" />
+</component>

@@ -1,0 +1,21 @@
+sub init()
+    m.poster = m.top.findNode("poster")
+    m.label = m.top.findNode("label")
+    applyTheme()
+    m.top.observeField("itemContent", "onItemContentChanged")
+end sub
+
+sub applyTheme()
+    if m.label = invalid then return
+    style = GetLabelTheme(GetTheme(), "caption")
+    m.label.color = style.color
+    m.label.font = CreateThemeFont(style.font, style.size)
+end sub
+
+sub onItemContentChanged()
+    if m.top.itemContent = invalid
+        return
+    end if
+    m.poster.uri = m.top.itemContent.HDPosterUrl
+    m.label.text = m.top.itemContent.title
+end sub

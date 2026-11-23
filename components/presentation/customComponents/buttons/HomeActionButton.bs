@@ -1,0 +1,152 @@
+sub init()
+    m.focusBorder = m.top.findNode("focusBorder")
+    m.background = m.top.findNode("background")
+    m.label = m.top.findNode("buttonLabel")
+    m.pressed = false
+    m.top.focusable = true
+    m.top.observeField("focusedChild", "updateButton")
+    updateButton()
+end sub
+
+sub updateButton()
+    if m.focusBorder = invalid or m.background = invalid or m.label = invalid then return
+    theme = GetTheme()
+    variant = m.top.variant
+    if type(variant) <> "String" then variant = "primary"
+    enabled = m.top.enabled
+    if type(enabled) <> "Boolean" then enabled = true
+    canFocus = false
+    if enabled
+        if variant <> "disabled" then canFocus = true
+    end if
+    m.top.focusable = canFocus
+
+    width = m.top.width
+    height = m.top.height
+    inset = 3
+    if m.top.borderWidth > 0 then inset = m.top.borderWidth
+    if inset < 1 then inset = 1
+    if inset > width / 2 then inset = width / 2
+    if inset > height / 2 then inset = height / 2
+    m.focusBorder.width = width
+    m.focusBorder.height = height
+    m.background.translation = [inset, inset]
+    m.background.width = width - (inset * 2)
+    m.background.height = height - (inset * 2)
+    m.label.translation = [inset, inset]
+    m.label.width = m.background.width
+    m.label.height = m.background.height
+    buttonText = m.top.text
+    m.label.text = buttonText
+    m.top.visible = true
+    m.focusBorder.visible = true
+    m.background.visible = true
+    m.label.visible = true
+
+    state = "normal"
+    if not canFocus then state = "disabled"
+    if canFocus
+        focusState = m.top.hasFocus()
+        if type(focusState) = "Boolean"
+            if focusState then state = "focused"
+        end if
+    end if
+    if m.pressed and canFocus then state = "pressed"
+
+    backgroundColor = theme.colors.textSecondary
+    textColor = theme.colors.textBlack
+    borderColor = theme.colors.accent
+    if backgroundColor = invalid then backgroundColor = "0xFFFFFFFF"
+    if textColor = invalid then textColor = theme.colors.textPrimary
+    if textColor = invalid then textColor = "0xFFFFFFFF"
+    if variant = "primary"
+        backgroundColor = theme.colors.textSecondary
+        textColor = theme.colors.textBlack
+        if textColor = invalid then textColor = theme.colors.textPrimary
+    else if variant = "secondary"
+        backgroundColor = theme.colors.surface
+        textColor = theme.colors.textPrimary
+    else if variant = "outlined"
+        backgroundColor = theme.colors.background
+        textColor = theme.colors.textPrimary
+    else if variant = "text"
+        backgroundColor = "0x00000000"
+        textColor = theme.colors.textPrimary
+    else if variant = "disabled" or not enabled
+        backgroundColor = theme.colors.disabled
+        textColor = theme.colors.textSecondary
+        borderColor = theme.colors.disabled
+    end if
+    if state = "focused"
+        backgroundColor = theme.colors.accent
+        if theme.colors.textBlack <> invalid
+            textColor = theme.colors.textBlack
+        else
+            textColor = theme.colors.textPrimary
+        end if
+        borderColor = theme.colors.focus
+    else if state = "pressed"
+        backgroundColor = theme.colors.focus
+        borderColor = theme.colors.focus
+    end if
+    if m.top.backgroundColor <> -1 then backgroundColor = m.top.backgroundColor
+    if m.top.textColor <> -1 then textColor = m.top.textColor
+    if m.top.borderColor <> -1 then borderColor = m.top.borderColor
+    m.focusBorder.color = borderColor
+    m.background.color = backgroundColor
+    if type(textColor) = "String"
+        m.label.color = ThemeColor(textColor)
+    else
+        m.label.color = textColor
+    end if
+    textSize = m.top.fontSize
+    if textSize <= 0 then textSize = theme.typography.sizes.button
+    m.label.font = CreateThemeFont(theme.typography.fonts.medium, textSize)
+
+    radius = m.top.cornerRadius
+    if radius < 0 then radius = theme.radii.md
+    gradientColors = m.top.gradientColors
+    gradientStyle = m.top.gradientStyle
+    gradientAngle = m.top.gradientAngle
+    gradientStops = m.top.gradientStops
+    presetName = m.top.gradientPreset
+    if presetName = "" and variant = "primary" and state = "focused" then presetName = "accent"
+    needsPreset = gradientColors = invalid
+    if not needsPreset then needsPreset = gradientColors.count() < 2
+    if needsPreset and presetName <> "" and theme.gradients <> invalid
+        preset = theme.gradients[presetName]
+        if preset <> invalid
+            gradientColors = preset.colors
+            gradientStyle = preset.style
+            gradientAngle = preset.angle
+            gradientStops = preset.stops
+        end if
+    end if
+    effectBorderColor = ThemeColor(borderColor)
+    ApplyNodeEffect(m.background, radius, 0, effectBorderColor, gradientColors, gradientStops, gradientStyle, gradientAngle)
+end sub
+
+function updateFocus() as boolean
+    updateButton()
+    return true
+end function
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    enabled = m.top.enabled
+    if enabled = invalid then enabled = true
+    variant = m.top.variant
+    if type(variant) <> "String" then variant = "primary"
+    if not enabled or variant = "disabled" then return false
+    if key = "OK" or key = "Select"
+        if press
+            m.pressed = true
+            updateButton()
+        else
+            m.pressed = false
+            updateButton()
+            m.top.activated = { text: m.top.text }
+        end if
+        return true
+    end if
+    return false
+end function

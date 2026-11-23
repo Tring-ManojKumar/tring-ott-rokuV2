@@ -1,0 +1,11 @@
+namespace rodash
+  ' Checks if the supplied value is a valid Array type and not empty
+  ' @since 0.0.21
+  ' @category Lang
+  ' @param {Dynamic} value The variable to be checked
+  ' @returns {Boolean} Results of the check
+  @inline
+  function isNonEmptyArray(value as Dynamic) as Boolean
+    return type(value) = "roArray" AND NOT value.isEmpty()
+  end function
+end namespace

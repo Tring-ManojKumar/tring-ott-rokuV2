@@ -1,0 +1,5 @@
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+
+function GetImagePath(logicalKey as string) as dynamic
+    return RokuCore.GetAssetPath("images", logicalKey)
+end function

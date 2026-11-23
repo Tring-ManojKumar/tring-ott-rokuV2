@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="AppButton" extends="Group">
+    <interface>
+        <field id="text" type="string" value="" onChange="updateButton" />
+        <field id="mediaType" type="string" value="" onChange="updateButton" />
+        <field id="contentType" type="string" value="" onChange="updateButton" />
+        <field id="width" type="float" value="260" onChange="updateButton" />
+        <field id="height" type="float" value="64" onChange="updateButton" />
+        <field id="variant" type="string" value="primary" onChange="updateButton" />
+        <field id="enabled" type="boolean" value="true" onChange="updateButton" />
+        <field id="focusEnabled" type="boolean" value="true" onChange="updateButton" />
+        <field id="cornerRadius" type="float" value="-1" onChange="updateButton" />
+        <field id="gradientPreset" type="string" value="" onChange="updateButton" />
+        <field id="backgroundColor" type="integer" value="-1" onChange="updateButton" />
+        <field id="gradientColors" type="array" onChange="updateButton" />
+        <field id="gradientStops" type="array" onChange="updateButton" />
+        <field id="gradientStyle" type="string" value="none" onChange="updateButton" />
+        <field id="gradientAngle" type="float" value="0" onChange="updateButton" />
+        <field id="borderWidth" type="float" value="0" onChange="updateButton" />
+        <field id="borderColor" type="integer" value="-1" onChange="updateButton" />
+        <field id="textColor" type="integer" value="-1" onChange="updateButton" />
+        <field id="fontSize" type="integer" value="0" onChange="updateButton" />
+        <field id="activated" type="assocarray" alwaysNotify="true" />
+        <function name="onKeyEvent" />
+        <function name="updateFocus" />
+    </interface>
+    <children>
+        <Rectangle id="background" width="0" height="0" color="0x00000000" />
+        <Rectangle id="borderTop" width="0" height="0" color="0x00000000" />
+        <Rectangle id="borderBottom" width="0" height="0" color="0x00000000" />
+        <Rectangle id="borderLeft" width="0" height="0" color="0x00000000" />
+        <Rectangle id="borderRight" width="0" height="0" color="0x00000000" />
+        <Label id="buttonLabel" width="0" height="0" text="Watch Now" horizAlign="center" vertAlign="center" visible="true" />
+    </children>
+    <script type="text/brightscript" uri="pkg:/source/rokuCore/theme/ThemeProvider.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/GeneratedTheme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Theme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Typography.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Colors.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Effects.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/components/ButtonTheme.bs" />
+    <script type="text/brightscript" uri="AppButton.bs" />
+</component>

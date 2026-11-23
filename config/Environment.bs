@@ -1,0 +1,12 @@
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+
+namespace AppEnvironment
+    ' Kept for source compatibility. New code reads the resolved environment.
+    const API_URL_ENVIRONMENT = "prod"
+
+    function GetEnvironment() as string
+        configuration = RokuCore.GetRuntimeConfiguration()
+        if configuration.environment = invalid then return API_URL_ENVIRONMENT
+        return configuration.environment.ToStr()
+    end function
+end namespace

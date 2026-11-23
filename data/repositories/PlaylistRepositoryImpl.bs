@@ -1,0 +1,29 @@
+import "pkg:/domain/repositories/PlaylistRepository.bs"
+import "pkg:/data/dto/PlaylistResponseDTO.bs"
+
+namespace Data
+    class PlaylistRepositoryImpl extends Domain.PlaylistRepository
+        private dataSource as object ' Data.JWPlayerRemoteDataSource
+        private mapper as object     ' Data.MediaItemMapper
+
+        function new(dataSource as object, mapper as object)
+            super()
+            m.dataSource = dataSource
+            m.mapper = mapper
+        end function
+
+         override function getPlaylist() as object
+            response = m.dataSource.fetchPlaylist()
+            if response = invalid or not response.ok then return response
+
+            responseDto = new Data.PlaylistResponseDTO(response.data)
+            items = m.mapper.toDomainList(responseDto.items)
+            response.data = items
+            if items = invalid or items.count() = 0
+                response.category = "EMPTY"
+                response.userMessage = "No content available."
+            end if
+            return response
+        end function
+    end class
+end namespace

@@ -1,0 +1,11 @@
+namespace rodash
+  ' Gets the year.
+  ' @since 0.0.21
+  ' @category Date
+  ' @param {Boolean} asLocal - Whether to get the local year. Default is false.
+  ' @returns {Integer} The year.
+  @inline
+  function getYear(asLocal = false as Boolean) as Integer
+    return rodash.internal.getDateObject(asLocal).getYear()
+  end function
+end namespace

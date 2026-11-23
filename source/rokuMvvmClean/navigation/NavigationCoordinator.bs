@@ -1,0 +1,55 @@
+import "pkg:/source/rokuCore/navigation/NavigationCoordinator.bs"
+
+' Compatibility adapter. Screen and route state are owned by Roku Core.
+namespace RokuMvvmClean
+class RokuMvvmNavigationCoordinator
+    public sub new()
+        m.core = new RokuCore.RokuCoreNavigationCoordinator()
+    end sub
+    public function initialize(root as dynamic, initialRoute as dynamic, routes as dynamic, initialScreen = invalid as dynamic, initialParams = invalid as dynamic) as boolean
+        return m.core.initialize(root, initialRoute, routes, initialScreen, initialParams)
+    end function
+    public function getLastError() as string
+        return m.core.getLastError()
+    end function
+    public function setLogger(logger as dynamic)
+        m.core.setLogger(logger)
+    end function
+    public function handleEvent(event as dynamic) as boolean
+        return m.core.handleEvent(event)
+    end function
+    public function navigateTo(route as dynamic, params = invalid as dynamic) as boolean
+        return m.core.navigateTo(route, params)
+    end function
+    public function goBack() as boolean
+        return m.core.goBack()
+    end function
+    public function replace(route as dynamic, params = invalid as dynamic) as boolean
+        return m.core.replace(route, params)
+    end function
+    public function reset(route as dynamic, params = invalid as dynamic) as boolean
+        return m.core.reset(route, params)
+    end function
+    public function getCurrentRoute() as dynamic
+        return m.core.getCurrentRoute()
+    end function
+    public function getCurrentScreen() as dynamic
+        return m.core.getCurrentScreen()
+    end function
+    public function canGoBack() as boolean
+        return m.core.canGoBack()
+    end function
+    public function getScreenHistoryCount() as integer
+        return m.core.getScreenHistoryCount()
+    end function
+    public function registerRoute(route as dynamic, componentName as dynamic) as boolean
+        return m.core.registerRoute(route, componentName)
+    end function
+    public function resolveRoute(route as dynamic, params = invalid as dynamic) as dynamic
+        return m.core.resolveRoute(route, params)
+    end function
+    public sub onActiveScreenReady(screen = invalid as dynamic)
+        m.core.onActiveScreenReady(screen)
+    end sub
+end class
+end namespace

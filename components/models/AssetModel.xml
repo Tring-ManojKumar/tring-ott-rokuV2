@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="AssetModel" extends="ContentNode">
+    <interface>
+        <field id="mediaId" type="string" />
+        <field id="contentType" type="string" />
+        <field id="duration" type="integer" />
+        <field id="genre" type="string" />
+        <field id="image" type="string" />
+        <field id="images" type="assocarray" />
+        <field id="shelfImage" type="string" />
+        <field id="sources" type="array" />
+        <field id="tracks" type="array" />
+        <field id="variations" type="array" />
+        <field id="isLive" type="boolean" />
+        <field id="isDRMProtected" type="boolean" />
+        <field id="seriesId" type="string" />
+        <field id="seriesTitle" type="string" />
+        <field id="seasonNumber" type="integer" />
+        <field id="episodeNumber" type="integer" />
+        <field id="episodes" type="node" />
+        <field id="rating" type="string" />
+        <field id="agerating" type="string" />
+        <field id="studio" type="string" />
+        <field id="producer" type="string" /><field id="director" type="string" /><field id="author" type="string" />
+        <field id="media_type" type="string" />
+    </interface>
+</component>

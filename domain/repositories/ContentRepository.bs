@@ -1,0 +1,7 @@
+namespace Domain
+    class ContentRepository
+        function getSeasonEpisodes(seriesId as string, seasonNumber as string, pageLimit as integer, pageOffset as integer) as object
+            throw "Domain.ContentRepository.getSeasonEpisodes() must be implemented by a concrete repository"
+        end function
+    end class
+end namespace

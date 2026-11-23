@@ -1,0 +1,259 @@
+import "pkg:/config/AppConfig.bs"
+import "pkg:/source/navigation/NavigationEvents.bs"
+import "pkg:/source/navigation/AppRoutes.bs"
+
+sub init()
+    AppLogInfo("HomeScreen", "Initialization started")
+    m.grid = m.top.findNode("homeGrid")
+    m.grid.focusable = true
+    m.marketButton = m.top.findNode("marketButton")
+    m.contentActionButton = m.top.findNode("contentActionButton")
+    if m.marketButton = invalid
+        AppLogError("HomeScreen", "Market button node not found")
+    else
+        AppLogDebug("HomeScreen", "Market button node found")
+    end if
+    m.viewModel = m.top.findNode("viewModel")
+    m.imageGallery = m.top.findNode("imageGallery")
+    m.requestController = m.top.findNode("requestController")
+    m.items = []
+    m.cleanedUp = false
+    m.top.observeField("frameworkSuspended", "onFrameworkSuspended")
+    m.top.observeField("frameworkResumed", "onFrameworkResumed")
+
+    if m.marketButton <> invalid
+        m.marketButton.visible = true
+        m.marketButton.focusable = true
+    end if
+
+    m.top.observeField("focusedChild", "onHomeFocusChanged")
+    m.viewModel.observeField("content", "onContentChanged")
+    m.requestController.requestTask = m.viewModel
+    m.requestController.observeField("fallbackVisible", "onFallbackVisibilityChanged")
+    m.requestController.observeField("retryRequested", "onRetryRequested")
+    m.grid.observeField("itemSelected", "onGridItemSelected")
+    m.grid.observeField("itemFocused", "onGridItemFocused")
+    if m.marketButton <> invalid then m.marketButton.observeField("activated", "onMarketButtonActivated")
+    if m.contentActionButton <> invalid
+        m.contentActionButton.observeField("activated", "onContentActionButtonActivated")
+    end if
+    updatePrimaryButton()
+
+    m.viewModel.playlistUrl = AppConfig.GetPlaylistUrl()
+    m.viewModel.callFunc("loadPlaylist")
+    ' The UI is usable while the playlist task runs; readiness is independent
+    ' of network success or response time so the splash cannot block the app.
+    m.top.isReady = true
+end sub
+
+sub updatePrimaryButton(event = invalid as dynamic)
+    if m.marketButton = invalid then return
+    m.marketButton.text = m.top.primaryButtonText
+    m.marketButton.width = m.top.primaryButtonWidth
+    m.marketButton.height = m.top.primaryButtonHeight
+end sub
+
+sub onMarketButtonActivated(event as object)
+    scene = m.top.getScene()
+    if scene = invalid or not scene.hasField("navigationEvent") then return
+    events = new NavigationEvents()
+    scene.navigationEvent = events.navigate(AppRoutes.NETWORK_CHECK)
+end sub
+
+sub onContentActionButtonActivated(event as object)
+    buttonInfo = event.getData()
+    if buttonInfo <> invalid
+        if buttonInfo.doesExist("text")
+            AppLogInfo("HomeScreen", "Content action: " + buttonInfo.text)
+        end if
+    end if
+end sub
+
+sub onHomeFocusChanged(event as object)
+    if m.marketButton <> invalid then m.marketButton.callFunc("updateFocus")
+end sub
+
+sub onGridItemFocused(event as object)
+    index = event.getData()
+    if index = invalid or index < 0 or index >= m.items.count() then return
+    updateContentActionButton(m.items[index])
+end sub
+
+sub onContentChanged(event as object)
+    content = event.getData()
+    if content <> invalid
+        gridContent = CreateObject("roSGNode", "ContentNode")
+        m.items = []
+        for rowIndex = 0 to content.getChildCount() - 1
+            row = content.getChild(rowIndex)
+            for itemIndex = 0 to row.getChildCount() - 1
+                item = row.getChild(itemIndex)
+                gridItem = gridContent.createChild("ContentNode")
+                gridItem.title = item.title
+                gridItem.HDPosterUrl = item.HDPosterUrl
+                mediaType = ""
+                contentType = ""
+                if item.hasField("media_type") then mediaType = item.getField("media_type")
+                if item.hasField("content_type") then contentType = item.getField("content_type")
+                gridItem.AddFields({
+                    media_type: mediaType,
+                    content_type: contentType
+                })
+                m.items.push(item)
+            end for
+        end for
+        m.grid.content = gridContent
+        if m.contentActionButton <> invalid
+            if m.items.count() > 0
+                updateContentActionButtonPosition()
+                updateContentActionButton(m.items[0])
+                m.contentActionButton.visible = true
+            end if
+        end if
+        if m.items.count() > 0 or m.marketButton <> invalid then m.top.isReady = true
+    end if
+end sub
+
+sub updateContentActionButton(item as object)
+    if m.contentActionButton = invalid or item = invalid then return
+    mediaType = ""
+    contentType = ""
+    if item.hasField("media_type") then mediaType = getContentFieldString(item.getField("media_type"))
+    if item.hasField("content_type") then contentType = getContentFieldString(item.getField("content_type"))
+    m.contentActionButton.mediaType = mediaType
+    m.contentActionButton.contentType = contentType
+end sub
+
+function getContentFieldString(value as dynamic) as string
+    if value = invalid then return ""
+    valueType = LCase(type(value))
+    if valueType <> "string" and valueType <> "rostring" then return ""
+    return value
+end function
+
+sub updateContentActionButtonPosition()
+    if m.grid = invalid or m.contentActionButton = invalid then return
+
+    itemSize = m.grid.itemSize
+    itemSpacing = m.grid.itemSpacing
+    columns = m.grid.numColumns
+    if itemSize = invalid or itemSpacing = invalid or columns < 1 then return
+
+    rowCount = 1
+    if m.items.count() > 0 then rowCount = int((m.items.count() + columns - 1) / columns)
+    maxRows = m.grid.numRows
+    if maxRows > 0 and rowCount > maxRows then rowCount = maxRows
+
+    gridWidth = columns * itemSize[0] + (columns - 1) * itemSpacing[0]
+    gridHeight = rowCount * itemSize[1] + (rowCount - 1) * itemSpacing[1]
+    buttonX = m.grid.translation[0] + (gridWidth - m.contentActionButton.width) / 2
+    buttonY = m.grid.translation[1] + gridHeight + 20
+    m.contentActionButton.translation = [buttonX, buttonY]
+end sub
+
+function setInitialFocus() as boolean
+    if m.requestController <> invalid and m.requestController.fallbackVisible and m.requestController.retryVisible
+        if m.requestController.callFunc("focusRetry") then return true
+    end if
+    if m.grid = invalid then return false
+    m.grid.focusable = true
+    m.grid.setFocus(true)
+    if m.grid.hasFocus() then return true
+    if m.contentActionButton <> invalid
+        m.contentActionButton.setFocus(true)
+        if m.contentActionButton.hasFocus() then return true
+    end if
+    if m.marketButton <> invalid
+        m.marketButton.setFocus(true)
+        if m.marketButton.hasFocus() then return true
+    end if
+    return false
+end function
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    if not press or m.grid = invalid or m.marketButton = invalid or m.contentActionButton = invalid then return false
+
+    if key = "down" and m.grid.hasFocus() and m.items.count() > 0
+        columns = m.grid.numColumns
+        focusedIndex = m.grid.itemFocused
+        if columns > 0 and focusedIndex <> invalid and focusedIndex >= 0
+            currentRow = int(focusedIndex / columns)
+            lastRow = int((m.items.count() - 1) / columns)
+            if currentRow >= lastRow
+                if m.contentActionButton.visible
+                    m.contentActionButton.setFocus(true)
+                    if m.contentActionButton.hasFocus() then return true
+                end if
+                m.marketButton.setFocus(true)
+                return m.marketButton.hasFocus()
+            end if
+        end if
+    end if
+
+    if key = "up" and m.marketButton.hasFocus()
+        m.contentActionButton.setFocus(true)
+        return m.contentActionButton.hasFocus()
+    end if
+
+    if key = "up" and m.contentActionButton.hasFocus()
+        m.grid.setFocus(true)
+        return m.grid.hasFocus()
+    end if
+
+    if key = "down" and m.contentActionButton.hasFocus()
+        m.marketButton.setFocus(true)
+        return m.marketButton.hasFocus()
+    end if
+
+    return false
+end function
+
+sub onFallbackVisibilityChanged(event as object)
+    if event.getData() and m.requestController.retryVisible
+        m.top.isReady = true
+    end if
+end sub
+
+sub onFrameworkCleanupRequested(event as object)
+    if not event.getData() then return
+    if m.cleanedUp then return
+    m.cleanedUp = true
+    if m.top <> invalid
+        m.top.unobserveField("frameworkSuspended")
+        m.top.unobserveField("frameworkResumed")
+    end if
+    if m.top <> invalid then m.top.unobserveField("focusedChild")
+    if m.viewModel <> invalid then m.viewModel.unobserveField("content")
+    if m.viewModel <> invalid then m.viewModel.callFunc("cleanup")
+    if m.requestController <> invalid
+        m.requestController.unobserveField("fallbackVisible")
+        m.requestController.unobserveField("retryRequested")
+    end if
+    if m.grid <> invalid
+        m.grid.unobserveField("itemSelected")
+        m.grid.unobserveField("itemFocused")
+    end if
+    if m.marketButton <> invalid then m.marketButton.unobserveField("activated")
+    if m.contentActionButton <> invalid then m.contentActionButton.unobserveField("activated")
+    if m.requestController <> invalid then m.requestController.requestTask = invalid
+end sub
+
+sub onFrameworkSuspended(event as object)
+    if event.getData() and m.viewModel <> invalid then m.viewModel.callFunc("suspend")
+end sub
+
+sub onFrameworkResumed(event as object)
+    if event.getData() and m.viewModel <> invalid then m.viewModel.callFunc("resume")
+end sub
+
+sub onRetryRequested(event as object)
+    m.viewModel.callFunc("loadPlaylist")
+end sub
+
+sub onGridItemSelected(event as object)
+    index = event.getData()
+    if index = invalid or index < 0 or index >= m.items.count() then return
+    selectedItem = m.items[index]
+    m.imageGallery.images = selectedItem.images
+    m.imageGallery.visible = true
+end sub

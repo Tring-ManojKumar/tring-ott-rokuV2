@@ -1,0 +1,43 @@
+namespace Data
+    class EpisodeDTO
+        public mediaId as string
+        public title as string
+        public description as string
+        public image as string
+        public contentType as string
+        public mediaType as string
+        public seriesId as string
+        public seriesTitle as string
+        public seasonNumber as integer
+        public episodeNumber as integer
+        public duration as integer
+
+        function new(raw as object)
+            m.mediaId = m.firstString(raw, "mediaid", "mediaId")
+            m.title = m.stringValue(raw, "title")
+            m.description = m.stringValue(raw, "description")
+            m.image = m.stringValue(raw, "image")
+            m.contentType = m.firstString(raw, "content_type", "contentType")
+            m.mediaType = m.firstString(raw, "media_type", "mediaType")
+            m.seriesId = m.firstString(raw, "series_id", "seriesId")
+            m.seriesTitle = m.firstString(raw, "series_title", "seriesTitle")
+            m.seasonNumber = m.integerValue(raw, "season_number")
+            m.episodeNumber = m.integerValue(raw, "episode_number")
+            m.duration = m.integerValue(raw, "duration")
+        end function
+
+        private function stringValue(raw as object, key as string) as string
+            if raw = invalid or not raw.DoesExist(key) or raw[key] = invalid then return ""
+            return raw[key].ToStr()
+        end function
+        private function firstString(raw as object, firstKey as string, secondKey as string) as string
+            value = m.stringValue(raw, firstKey)
+            if value = "" then value = m.stringValue(raw, secondKey)
+            return value
+        end function
+        private function integerValue(raw as object, key as string) as integer
+            if raw = invalid or not raw.DoesExist(key) or raw[key] = invalid then return 0
+            return Int(Val(raw[key].ToStr()))
+        end function
+    end class
+end namespace

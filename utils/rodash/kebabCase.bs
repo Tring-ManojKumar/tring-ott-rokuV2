@@ -1,0 +1,11 @@
+namespace rodash
+  ' Converts a string to kebab case.
+  ' @since 0.0.21
+  ' @category String
+  function kebabCase(value = "" as string)
+    value = value.replace("-", " ").replace("_", " ")
+    value = value.trim()
+    valueArray = value.split(" ")
+    return lcase(rodash.join(valueArray,"-"))
+  end function
+end namespace

@@ -1,0 +1,41 @@
+import "pkg:/domain/usecases/GetSeasonEpisodesUseCase.bs"
+import "pkg:/data/repositories/ContentRepositoryImpl.bs"
+import "pkg:/adapters/ContentUiAdapter.bs"
+
+sub init()
+    m.top.functionName = "execute"
+end sub
+
+sub execute()
+    m.top.requestState = "LOADING"
+    m.top.error = ""
+    m.top.errorResult = invalid
+    m.top.response = invalid
+    repository = new Data.ContentRepositoryImpl()
+    useCase = new Domain.GetSeasonEpisodesUseCase(repository)
+    result = useCase.execute(m.top.seriesId, m.top.seasonNumber, m.top.pageLimit, m.top.pageOffset)
+    if result = invalid
+        m.top.error = "Unable to load episodes"
+        m.top.errorResult = { category: "UNEXPECTED", message: "Unable to load episodes", retryable: false, statusCode: 0 }
+        m.top.requestState = "ERROR"
+        return
+    end if
+    if not result.ok
+        m.top.error = result.userMessage
+        m.top.errorResult = result
+        if result.category = "OFFLINE"
+            m.top.requestState = "OFFLINE"
+        else
+            m.top.requestState = "ERROR"
+        end if
+        return
+    end if
+    uiAdapter = new Presentation.ContentUiAdapter()
+    m.top.response = uiAdapter.episodesToContentNode(result.data)
+    m.top.errorResult = invalid
+    if result.category = "EMPTY"
+        m.top.requestState = "EMPTY"
+    else
+        m.top.requestState = "SUCCESS"
+    end if
+end sub

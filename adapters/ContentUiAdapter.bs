@@ -1,0 +1,47 @@
+import "pkg:/domain/entities/MediaItem.bs"
+import "pkg:/domain/entities/Episode.bs"
+
+namespace Presentation
+    class ContentUiAdapter
+        function playlistToContentNode(items as object) as object
+            root = CreateObject("roSGNode", "ContentNode")
+            row = root.CreateChild("ContentNode")
+            row.title = "Playlist"
+            if items = invalid then return root
+            for each item in items
+                node = row.CreateChild("ContentNode")
+                node.title = item.title
+                node.description = item.description
+                node.HDPosterUrl = item.posterUrl
+                node.AddFields({
+                    images: item.images,
+                    media_type: item.mediaType,
+                    content_type: item.contentType
+                })
+            end for
+            return root
+        end function
+
+        function episodesToContentNode(episodes as object) as object
+            root = CreateObject("roSGNode", "ContentNode")
+            if episodes = invalid then return root
+            for each episode in episodes
+                node = CreateObject("roSGNode", "EpisodeModel")
+                node.title = episode.title
+                node.description = episode.description
+                node.HDPosterUrl = episode.posterUrl
+                node.mediaId = episode.id
+                node.contentType = episode.contentType
+                node.media_type = episode.mediaType
+                node.seriesId = episode.seriesId
+                node.seriesTitle = episode.seriesTitle
+                node.seasonNumber = episode.seasonNumber
+                node.episodeNumber = episode.episodeNumber
+                node.duration = episode.duration
+                node.AddFields({ content_type: episode.contentType })
+                root.AppendChild(node)
+            end for
+            return root
+        end function
+    end class
+end namespace

@@ -1,0 +1,32 @@
+namespace rodash
+  ' This method is like `sum` except that it accepts `iteratee` which is invoked for each element in array to generate the value to be summed.
+  ' The iteratee is invoked with one argument: (value).
+  ' @since 0.0.21
+  ' @category Math
+  ' @param {Array} array - The array to iterate over
+  ' @param {Function} iteratee - The iteratee invoked per element
+  ' @returns {Integer} Returns the sum
+  function sumBy(array = CreateObject("roArray", 0, true) as Object, iteratee = Invalid) as Dynamic
+    if rodash.isEmpty(array) then return Invalid
+
+    sumValue = Invalid
+    if rodash.isInvalid(iteratee) then
+      sumValue = 0
+      for each value in array
+        sumValue += value
+      end for
+    else if rodash.isFunction(iteratee) AND rodash.isAA(array[0]) then
+      sumValue = 0
+      for each value in array
+        sumValue += iteratee(value)
+      end for
+    else if rodash.isString(iteratee) AND rodash.isAA(array[0]) then
+      sumValue = 0
+      for each value in array
+        sumValue += value[iteratee]
+      end for
+    end if
+
+    return sumValue
+  end function
+end namespace

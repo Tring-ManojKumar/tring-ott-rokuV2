@@ -1,0 +1,52 @@
+namespace RokuCore
+    function GetRuntimeConfiguration() as object
+        raw = ReadAsciiFile("pkg:/config/config.json")
+        if raw = invalid or raw = "" then return {}
+        configuration = ParseJson(raw)
+        if configuration = invalid or not IsConfigurationAssociativeArray(configuration) then return {}
+        return configuration
+    end function
+
+    function GetApiConfiguration() as object
+        configuration = GetRuntimeConfiguration()
+        if configuration.api = invalid or not IsConfigurationAssociativeArray(configuration.api) then return {}
+        return configuration.api
+    end function
+
+    function GetApiEndpoint(endpointName as string) as dynamic
+        api = GetApiConfiguration()
+        if api.endpoints = invalid
+            if endpointName = "playlist" and api.defaultPlaylistUrl <> invalid then return api.defaultPlaylistUrl
+            return api[endpointName + "Url"]
+        end if
+        return api.endpoints[endpointName]
+    end function
+
+    function GetApiBaseUrl(name as string) as dynamic
+        api = GetApiConfiguration()
+        if api.baseUrls = invalid
+            if name = "content" then return api.contentBaseUrls
+            return invalid
+        end if
+        return api.baseUrls[name]
+    end function
+
+    function GetApiRoute(routeName as string) as dynamic
+        api = GetApiConfiguration()
+        if api.routes = invalid then return api[routeName]
+        return api.routes[routeName]
+    end function
+
+    ' Asset maps are resolved at build time to final pkg:/assets/... paths.
+    function GetAssetPath(category as string, logicalKey as string) as dynamic
+        configuration = GetRuntimeConfiguration()
+        if configuration.assets = invalid then return invalid
+        if configuration.assets[category] = invalid then return invalid
+        return configuration.assets[category][logicalKey]
+    end function
+
+    function IsConfigurationAssociativeArray(value as dynamic) as boolean
+        if value = invalid then return false
+        return type(value) = "roAssociativeArray"
+    end function
+end namespace

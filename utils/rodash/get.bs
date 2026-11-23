@@ -1,0 +1,47 @@
+namespace rodash
+    ' Gets the value at path of object. If the resolved value is undefined, the defaultValue is returned in its place.
+    ' @since 0.0.21
+    ' @category Object
+    ' @param {Object} aa - Object to drill down into.
+    ' @param {String} keyPath - A dot notation based string to the expected value.
+    ' @param {Dynamic} fallback - A return fallback value if the requested field could not be found or did not pass the validator function.
+    ' @param {Function} validator - A function used to validate the output value matches what you expected.
+    ' @returns {Dynamic} The result of the drill down process
+    ' @example
+    ' rodash.get({a: {b: {c: 3}}}, 'a.b.c') ' => 3
+    ' rodash.get({a: {b: {c: 3}}}, 'a.b.d') ' => invalid
+    ' rodash.get({a: {b: {c: 3}}}, 'a.b.d', 'default') ' => 'default'
+    ' rodash.get({a: {b: {c: 3}}}, 'a.b.c', -1, rodash.isNumber) ' => 3
+    ' rodash.get({a: {b: {c: 3}}}, 'a.b.d', -1, rodash.isNumber) ' => -1
+    function get(aa as Object, keyPath as String, fallback = Invalid as Dynamic, validator = rodash.isNotInvalid as Function) as Dynamic
+        nextValue = aa
+        for each key in keyPath.split(".")
+            if rodash.internal.isKeyedValueType(nextValue) then
+                nextValue = nextValue[key]
+            else if rodash.isArrayLike(nextValue) then
+                index = val(key, 10)
+                if index = 0 AND key <> "0" then
+                    nextValue = Invalid
+                    exit for
+                end if
+
+                nextValue = nextValue[index]
+                if nextValue = Invalid then
+                    exit for
+                end if
+            else
+                ' item was not a container
+                nextValue = Invalid
+                exit for
+            end if
+
+            if nextValue = Invalid then
+                exit for
+            end if
+        end for
+
+        if validator(nextValue) then return nextValue
+
+        return fallback
+    end function
+end namespace

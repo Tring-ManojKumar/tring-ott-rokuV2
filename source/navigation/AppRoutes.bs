@@ -1,0 +1,6 @@
+' Stable application route identifiers. These values are stored in navigation history.
+namespace AppRoutes
+    const HOME = "home"
+    const SETTINGS = "settings"
+    const NETWORK_CHECK = "networkCheck"
+end namespace

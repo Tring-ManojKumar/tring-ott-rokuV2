@@ -1,0 +1,118 @@
+sub init()
+    m.card = m.top.findNode("card")
+    m.poster = m.top.findNode("poster")
+    m.title = m.top.findNode("title")
+    if m.card <> invalid
+        m.card.observeField("shape", "onAppCardShapeChanged")
+        m.top.shape = m.card.shape
+    end if
+    onItemContentChanged()
+    onFocusPercentChanged()
+end sub
+
+sub onAppCardShapeChanged(event as object)
+    if m.card = invalid then return
+    shape = m.card.shape
+    if type(shape) = "String"
+        if shape <> m.top.shape then m.top.shape = shape
+    end if
+end sub
+
+sub onItemContentChanged(event = invalid as dynamic)
+    item = m.top.itemContent
+    if item = invalid then return
+    if m.card = invalid then return
+    mediaType = getHomeCardString(item, "media_type")
+    if mediaType = "" then mediaType = getHomeCardString(item, "mediaType")
+    contentType = getHomeCardString(item, "content_type")
+    if contentType = "" then contentType = getHomeCardString(item, "contentType")
+    m.card.mediaType = mediaType
+    m.card.contentType = contentType
+    title = item.title
+    if title = invalid then title = ""
+    m.title.text = title
+    posterUri = item.HDPosterUrl
+    if posterUri <> invalid
+        m.poster.uri = posterUri
+    else
+        m.poster.uri = ""
+    end if
+    updateCardLayout()
+end sub
+
+function getHomeCardString(item as object, fieldName as string) as string
+    if item = invalid then return ""
+    if not item.hasField(fieldName) then return ""
+    value = item.getField(fieldName)
+    if value = invalid then return ""
+    valueType = LCase(type(value))
+    if valueType <> "string" and valueType <> "rostring" then return ""
+    return LCase(value.Trim())
+end function
+
+sub onFocusPercentChanged(event = invalid as dynamic)
+    updateCardLayout()
+end sub
+
+sub updateCardLayout()
+    if m.card = invalid then return
+    if m.poster = invalid then return
+    progress = m.top.focusPercent
+    if type(progress) <> "Float" and type(progress) <> "Integer" then progress = 0
+    if progress < 0 then progress = 0
+    if progress > 1 then progress = 1
+
+    shape = m.top.shape
+    if type(shape) <> "String" then shape = m.card.shape
+    if type(shape) <> "String" then shape = ""
+    shape = LCase(shape.Trim())
+    isSquare = shape = "square"
+    if isSquare
+         imageSize = 180
+        imageX = (300 - imageSize) / 2
+        imageY = 10
+        titleX = 10
+        titleWidth = 280
+        titleY = 194
+        titleHeight = 26
+        m.card.translation = [10, 10]
+        m.card.width = 280
+        m.card.height = 180
+    else
+        imageSize = 0
+        imageX = 10
+        imageY = 10
+        titleX = 10
+        titleWidth = 280
+        titleY = 174
+        titleHeight = 36
+        m.card.translation = [10, 10]
+        m.card.width = 280
+        m.card.height = 158
+    end if
+
+    inset = 6 * progress
+    if progress > 0
+        m.card.variant = "outlined"
+    else
+        m.card.variant = "plain"
+    end if
+    m.card.opacity = progress
+    m.card.shape = shape
+    if progress > 0
+        m.card.borderWidth = 6
+    else
+        m.card.borderWidth = 0
+    end if
+    if isSquare
+        m.poster.translation = [imageX + inset, imageY + inset]
+        m.poster.width = imageSize - inset * 2
+        m.poster.height = imageSize - inset * 2
+    else
+        m.poster.translation = [imageX + inset, imageY + inset]
+        m.poster.width = 280 - inset * 2
+        m.poster.height = 158 - inset * 2
+    end if
+    m.title.translation = [titleX, titleY]
+    m.title.width = titleWidth
+end sub

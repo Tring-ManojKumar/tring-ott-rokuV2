@@ -1,0 +1,95 @@
+import "pkg:/source/rokuCore/registry/RegistryManager.bs"
+namespace Data
+    ' Roku Registry stores strings. Keep all Registry API calls in this class so
+    ' repositories and callers do not depend on roRegistrySection directly.
+    class RegistryDataSource
+        function new()
+            m.registry = new RokuCore.RegistryManager()
+        end function
+
+        function read(sectionName as string, key as string, defaultValue = invalid as dynamic) as dynamic
+            if not m.isValidRegistryName(sectionName) or not m.isValidRegistryName(key) then return defaultValue
+            return m.registry.read(sectionName, key, defaultValue)
+        end function
+
+        function write(sectionName as string, key as string, value as dynamic) as boolean
+            if not m.isValidRegistryName(sectionName) or not m.isValidRegistryName(key) or value = invalid then return false
+
+            return m.registry.writeString(sectionName, key, value)
+        end function
+
+        function contains(sectionName as string, key as string) as boolean
+            if not m.isValidRegistryName(sectionName) or not m.isValidRegistryName(key) then return false
+            return m.registry.read(sectionName, key, invalid) <> invalid
+        end function
+
+        function remove(sectionName as string, key as string) as boolean
+            if not m.isValidRegistryName(sectionName) or not m.isValidRegistryName(key) then return false
+            return m.registry.delete(sectionName, key)
+        end function
+
+        function clearSection(sectionName as string) as boolean
+            if not m.isValidRegistryName(sectionName) then return false
+            return m.registry.clearSection(sectionName)
+        end function
+
+        function getActiveMarketId() as dynamic
+            ' Use the resolved market as the stable namespace. Older config
+            ' files used brand, so keep it as a fallback for saved settings.
+            configText = ReadAsciiFile("pkg:/config/config.json")
+            if not m.isValidRegistryName(configText) then return invalid
+            config = ParseJson(configText)
+            return m.getMarketIdFromConfiguration(config)
+        end function
+
+        function getMarketIdFromConfiguration(config as dynamic) as dynamic
+            if config = invalid then return invalid
+            configType = LCase(type(config))
+            if configType <> "roassociativearray" and configType <> "associativearray" then return invalid
+            marketId = config.market
+            if not m.isValidRegistryName(marketId) then marketId = config.brand
+            if not m.isValidRegistryName(marketId) then return invalid
+            marketId = LCase(marketId.Trim())
+            if not m.isValidMarketId(marketId) then return invalid
+            return marketId
+        end function
+
+        ' These methods are read-only and are used by the temporary development
+        ' diagnostic. GetSectionList/GetKeyList return roList objects, so expose
+        ' ordinary arrays to keep callers independent of Roku list interfaces.
+        function getRegistrySectionNames() as object
+            result = []
+            registry = CreateObject("roRegistry")
+            if registry = invalid then return result
+            for each sectionName in registry.GetSectionList()
+                result.Push(sectionName)
+            end for
+            return result
+        end function
+
+        function getRegistryKeyNames(sectionName as string) as object
+            result = []
+            if not m.isValidRegistryName(sectionName) then return result
+            section = CreateObject("roRegistrySection", sectionName)
+            if section = invalid then return result
+            for each key in section.GetKeyList()
+                result.Push(key)
+            end for
+            return result
+        end function
+
+        private function isValidRegistryName(value as dynamic) as boolean
+            return value <> invalid and (LCase(type(value)) = "rostring" or LCase(type(value)) = "string") and value.Trim() <> ""
+        end function
+
+        private function isValidMarketId(value as string) as boolean
+            for index = 1 to Len(value)
+                character = Mid(value, index, 1)
+                if (character < "a" or character > "z") and (character < "0" or character > "9") and character <> "-" and character <> "_"
+                    return false
+                end if
+            end for
+            return true
+        end function
+    end class
+end namespace

@@ -1,0 +1,13 @@
+namespace Domain
+    class GetPlaylistUseCase
+        private repository as object ' Domain.PlaylistRepository
+
+        function new(repository as object)
+            m.repository = repository
+        end function
+
+        function execute() as object
+            return m.repository.getPlaylist()
+        end function
+    end class
+end namespace

@@ -1,0 +1,28 @@
+import "pkg:/utils/theme/Colors.bs"
+
+function GetLabelTheme(theme as object, variant as string) as object
+    typography = theme.typography
+    sizes = typography.sizes
+    fonts = typography.fonts
+    colors = GetThemeColors(theme)
+    sizeName = "body"
+    colorName = "textPrimary"
+    fontName = "regular"
+    if theme.components <> invalid and theme.components.labels <> invalid
+        configured = theme.components.labels[variant]
+        if configured <> invalid
+            if configured.size <> invalid then sizeName = configured.size
+            if configured.color <> invalid then colorName = configured.color
+            if configured.font <> invalid then fontName = configured.font
+        end if
+    end if
+    if variant = "heading" then sizeName = "heading": fontName = "bold"
+    if variant = "subtitle" then sizeName = "title": fontName = "medium": colorName = "textSecondary"
+    if variant = "caption" then sizeName = "caption": colorName = "textSecondary"
+    if variant = "button" then sizeName = "button": fontName = "medium"
+    return {
+        size: sizes[sizeName],
+        color: ThemeColor(colors[colorName]),
+        font: fonts[fontName]
+    }
+end function

@@ -1,0 +1,18 @@
+' Optional screen contract. Call these named functions only when implemented by a screen.
+namespace RokuCore
+function ScreenIsReady(screen as dynamic) as boolean
+    if screen = invalid then return false
+    if screen.hasField("isReady") then return screen.isReady
+    return true
+end function
+
+' A readiness callback is valid only for its original observer node while that
+' node remains the active, visible, live screen.
+function IsCurrentScreenReady(screen as dynamic, observedScreen as dynamic, activeScreen as dynamic, notificationValue = true as dynamic) as boolean
+    if notificationValue <> true or screen = invalid or observedScreen = invalid or activeScreen = invalid then return false
+    if not screen.isSameNode(observedScreen) or not screen.isSameNode(activeScreen) then return false
+    if screen.hasField("visible") and not screen.visible then return false
+    if screen.hasField("frameworkDestroyed") and screen.frameworkDestroyed then return false
+    return ScreenIsReady(screen)
+end function
+end namespace

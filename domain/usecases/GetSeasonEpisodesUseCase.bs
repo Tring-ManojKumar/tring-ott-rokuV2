@@ -1,0 +1,11 @@
+namespace Domain
+    class GetSeasonEpisodesUseCase
+        private repository as object
+        function new(repository as object)
+            m.repository = repository
+        end function
+        function execute(seriesId as string, seasonNumber as string, pageLimit as integer, pageOffset as integer) as object
+            return m.repository.getSeasonEpisodes(seriesId, seasonNumber, pageLimit, pageOffset)
+        end function
+    end class
+end namespace

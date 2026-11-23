@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="ImageGallery" extends="Group">
+    <interface>
+        <field id="images" type="array" onChange="onImagesChanged" />
+    </interface>
+    <children>
+        <Rectangle id="background" width="1920" height="1080" color="0x000000E6" />
+        <MarkupGrid
+            id="grid"
+            translation="[80, 80]"
+            itemSize="[300, 220]"
+            itemComponentName="ImageItem"
+            numColumns="5"
+            numRows="2"
+            itemSpacing="[20, 20]"
+        />
+    </children>
+    <script type="text/brightscript" uri="pkg:/source/rokuCore/theme/ThemeProvider.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Theme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Colors.bs" />
+    <script type="text/brightscript" uri="ImageGallery.bs" />
+</component>

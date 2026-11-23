@@ -1,0 +1,43 @@
+function LifecycleDiagnosticScreenId(screen as dynamic) as string
+    if screen = invalid then return "unknown"
+    if screen.hasField("frameworkScreenIdentity") and screen.frameworkScreenIdentity <> ""
+        return screen.frameworkScreenIdentity
+    end if
+    if screen.hasField("id") and screen.id <> "" then return "pending-node-" + screen.id
+    return "pending"
+end function
+
+function IsLifecycleRequestTerminal(requestState as dynamic) as boolean
+    return requestState = "SUCCESS" or requestState = "EMPTY" or requestState = "ERROR" or requestState = "OFFLINE"
+end function
+
+sub LogLifecycleTaskControl(screen as dynamic, route as string, taskId as string, task as dynamic, requestedControl as string, previousState as string)
+#if isRegistryDiagnosticBuild
+    if screen = invalid or task = invalid then return
+    print "[LIFECYCLE][AppTask] screenId=" + LifecycleDiagnosticScreenId(screen) + " screenType=" + screen.subtype() + " route=" + route + " resourceType=Task resourceId=" + taskId + " event=control_requested requested=" + LCase(requestedControl) + " stateBefore=" + previousState + " stateAfterWrite=" + task.state + " result=control_write_issued"
+#end if
+end sub
+
+sub LogLifecycleTaskState(screen as dynamic, route as string, taskId as string, previousState as string, nextState as string)
+#if isRegistryDiagnosticBuild
+    if screen = invalid then return
+    print "[LIFECYCLE][AppTask] screenId=" + LifecycleDiagnosticScreenId(screen) + " screenType=" + screen.subtype() + " route=" + route + " resourceType=Task resourceId=" + taskId + " event=task_state_changed previous=" + previousState + " next=" + nextState + " result=observed"
+#end if
+end sub
+
+sub LogLifecycleRequestState(screen as dynamic, route as string, taskId as string, previousState as string, nextState as string)
+#if isRegistryDiagnosticBuild
+    if screen = invalid then return
+    outcome = "in_progress"
+    if nextState = "SUCCESS" or nextState = "EMPTY" then outcome = "completed"
+    if nextState = "ERROR" or nextState = "OFFLINE" then outcome = "failed"
+    print "[LIFECYCLE][AppTask] screenId=" + LifecycleDiagnosticScreenId(screen) + " screenType=" + screen.subtype() + " route=" + route + " resourceType=request resourceId=" + taskId + " event=request_state_changed previous=" + previousState + " next=" + nextState + " outcome=" + outcome
+#end if
+end sub
+
+sub LogLifecycleObserverCleanup(screen as dynamic, route as string, taskId as string, taskState as string)
+#if isRegistryDiagnosticBuild
+    if screen = invalid then return
+    print "[LIFECYCLE][AppTask] screenId=" + LifecycleDiagnosticScreenId(screen) + " screenType=" + screen.subtype() + " route=" + route + " resourceType=Task resourceId=" + taskId + " event=observer_cleanup_completed taskStateAtRelease=" + taskState + " result=observers_unobserved"
+#end if
+end sub

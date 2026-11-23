@@ -1,0 +1,56 @@
+' Coordinates requests through Roku's native SceneGraph focus system.
+namespace RokuCore
+class FocusManager
+    public function isValidTarget(target as dynamic, screen = invalid as dynamic) as boolean
+        if target = invalid or type(target) <> "roSGNode" then return false
+        if target.hasField("visible") and not target.visible then return false
+        if target.hasField("focusable") and not target.focusable then return false
+        if screen <> invalid then return m.isDescendant(target, screen)
+        return true
+    end function
+
+    public function setFocus(target as dynamic, screen = invalid as dynamic) as boolean
+        if not m.isValidTarget(target, screen) then return false
+        target.setFocus(true)
+        return target.hasFocus()
+    end function
+
+    public function getFocusedNode(screen as dynamic) as dynamic
+        if screen = invalid then return invalid
+        target = screen
+        depth = 0
+        while depth < 32 and target.hasField("focusedChild")
+            child = target.focusedChild
+            if child = invalid then exit while
+            target = child
+            depth = depth + 1
+        end while
+        if target.hasFocus() and m.isValidTarget(target, screen) then return target
+        return invalid
+    end function
+
+    public function restore(target as dynamic, screen as dynamic) as boolean
+        return m.setFocus(target, screen)
+    end function
+
+    public function setInitialFocus(screen as dynamic) as boolean
+        if screen = invalid or (screen.hasField("visible") and not screen.visible) then return false
+        if screen.hasField("frameworkSupportsInitialFocus") and screen.frameworkSupportsInitialFocus
+            return screen.callFunc("setInitialFocus") = true
+        end if
+        return false
+    end function
+
+    private function isDescendant(target as dynamic, screen as dynamic) as boolean
+        node = target
+        depth = 0
+        while node <> invalid and depth < 32
+            if node.hasField("visible") and not node.visible then return false
+            if node.isSameNode(screen) then return true
+            node = node.getParent()
+            depth = depth + 1
+        end while
+        return false
+    end function
+end class
+end namespace

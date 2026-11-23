@@ -1,0 +1,26 @@
+import "pkg:/domain/entities/MediaItem.bs"
+import "pkg:/data/dto/MediaItemDTO.bs"
+
+namespace Data
+    class MediaItemMapper
+        function toDomain(dto as Data.MediaItemDTO) as object
+            return new Domain.MediaItem(
+                dto.mediaid,
+                dto.title,
+                dto.description,
+                dto.image,
+                dto.images,
+                dto.media_type,
+                dto.content_type
+            )
+        end function
+
+        function toDomainList(dtoList as object) as object
+            result = []
+            for each dto in dtoList
+                result.push(m.toDomain(dto))
+            end for
+            return result
+        end function
+    end class
+end namespace

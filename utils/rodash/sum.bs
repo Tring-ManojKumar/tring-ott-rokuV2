@@ -1,0 +1,18 @@
+namespace rodash
+  ' Computes the sum of the values in an array.
+  ' @since 0.0.21
+  ' @category Math
+  ' @param {Array} array - The array to sum
+  ' @returns {Integer} Returns the sum of the values in the array
+  function sum(array as Object)
+    if NOT rodash.isArray(array) then return 0
+
+    sumValue = 0
+
+    for each item in array
+      sumValue += item
+    end for
+
+    return sumValue
+  end function
+end namespace

@@ -1,0 +1,92 @@
+namespace tests.components
+
+    @SGNode("AppButton")
+    @suite("AppButton component")
+    class AppButtonTests extends rooibos.BaseTestSuite
+
+        @describe("configuration")
+        @it("provides reusable defaults and updates its presentation fields")
+        function _()
+            m.assertEqual(m.top.variant, "primary")
+            m.assertTrue(m.top.enabled)
+            m.assertEqual(m.top.width, 260)
+            m.assertEqual(m.top.height, 64)
+
+            m.top.text = "Continue"
+            m.top.variant = "outlined"
+            m.top.enabled = false
+            label = m.top.findNode("buttonLabel")
+            m.assertEqual(label.text, "Continue")
+            m.assertFalse(m.top.focusable)
+        end function
+
+        @it("resolves the confirmed audio mapping")
+        function resolvesAudioText()
+            m.top.text = ""
+            m.top.mediaType = "audio"
+            m.top.contentType = "podcast"
+
+            m.assertEqual(m.top.findNode("buttonLabel").text, "Listen Now")
+            m.assertTrue(m.top.findNode("buttonLabel").visible)
+        end function
+
+        @it("uses the fallback for missing and unsupported values")
+        function usesFallbackText()
+            m.top.text = ""
+            m.top.mediaType = ""
+            m.top.contentType = "movie"
+            m.assertEqual(m.top.findNode("buttonLabel").text, "Watch Now")
+
+            m.top.mediaType = "unmapped-media"
+            m.top.contentType = "unmapped-content"
+            m.assertEqual(m.top.findNode("buttonLabel").text, "Watch Now")
+
+            m.top.mediaType = "audio"
+            m.top.contentType = ""
+            m.assertEqual(m.top.findNode("buttonLabel").text, "Listen Now")
+        end function
+
+        @it("keeps a non-empty explicit label ahead of dynamic text")
+        function explicitTextOverridesDynamicText()
+            m.top.text = "Open details"
+            m.top.mediaType = "audio"
+            m.top.contentType = "podcast"
+
+            m.assertEqual(m.top.findNode("buttonLabel").text, "Open details")
+        end function
+
+        @it("refreshes the label when media type changes")
+        function updatesOnMediaTypeChange()
+            m.top.text = ""
+            m.top.mediaType = "video"
+            m.assertEqual(m.top.findNode("buttonLabel").text, "Watch Now")
+
+            m.top.mediaType = "audio"
+            m.assertEqual(m.top.findNode("buttonLabel").text, "Listen Now")
+        end function
+
+        @it("refreshes when content type changes and can be reused independently")
+        function updatesOnContentTypeChangeOutsideHomeCard()
+            m.top.text = ""
+            m.top.mediaType = "audio"
+            m.top.contentType = "podcast"
+            m.assertEqual(m.top.findNode("buttonLabel").text, "Listen Now")
+
+            m.top.contentType = "podcast_episode"
+            m.assertEqual(m.top.findNode("buttonLabel").text, "Listen Now")
+        end function
+
+        @it("preserves focus and activation behavior")
+        function preservesFocusAndActivation()
+            m.top.text = "Continue"
+            m.top.enabled = true
+            m.assertTrue(m.top.focusable)
+            m.assertTrue(m.top.callFunc("onKeyEvent", "OK", true))
+            m.assertTrue(m.top.callFunc("onKeyEvent", "OK", false))
+            m.assertEqual(m.top.activated.text, "Continue")
+            m.assertEqual(m.top.activated.variant, m.top.variant)
+        end function
+
+    end class
+
+end namespace

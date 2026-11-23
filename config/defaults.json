@@ -1,0 +1,5 @@
+{
+  "architecture": "mvvm-clean",
+  "defaultMarket": "base",
+  "defaultEnvironment": "prod"
+}

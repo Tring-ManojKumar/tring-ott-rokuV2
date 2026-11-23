@@ -1,0 +1,22 @@
+namespace tests.components
+
+    @SGNode("AppCard")
+    @suite("AppCard component")
+    class AppCardTests extends rooibos.BaseTestSuite
+
+        @describe("layout configuration")
+        @it("uses themed padding and supports an outlined variant")
+        function _()
+            m.assertEqual(m.top.width, 400)
+            m.assertEqual(m.top.height, 240)
+            m.assertEqual(m.top.variant, "surface")
+
+            m.top.padding = 12
+            m.top.variant = "outlined"
+            m.assertEqual(m.top.padding, 12)
+            m.assertEqual(m.top.variant, "outlined")
+        end function
+
+    end class
+
+end namespace

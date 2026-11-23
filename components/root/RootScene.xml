@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<component name="RootScene" extends="Scene">
+
+    <interface>
+        <field id="navigationEvent" type="assocarray" alwaysNotify="true" onChange="onNavigationEventChanged" />
+    </interface>
+
+    <script type="text/brightscript" uri="../../utils/theme/GeneratedTheme.bs" />
+    <script type="text/brightscript" uri="../../utils/theme/Theme.bs" />
+    <script type="text/brightscript" uri="../../utils/theme/Typography.bs" />
+    <script type="text/brightscript" uri="../../utils/theme/Colors.bs" />
+    <script type="text/brightscript" uri="../../utils/logging/Logger.bs" />
+    <script type="text/brightscript" uri="RootScene.bs" />
+
+    <children>
+        <Rectangle id="sceneBackground" width="1920" height="1080" color="0x000000FF" />
+        <Group id="navigationHost">
+            <HomeScreen
+                id="homeScreen"
+                translation="[0,150]"
+                primaryButtonText="Explore"
+                primaryButtonWidth="340"
+                primaryButtonHeight="72"
+            />
+        </Group>
+
+       <!-- <Rectangle
+            id="registryDiagnosticBackground"
+            translation="[60, 60]"
+            width="1800"
+            height="960"
+            color="0x101820F5"
+            visible="false"
+        />
+        <Label
+            id="registryDiagnostic"
+            translation="[100, 100]"
+            width="1720"
+            height="880"
+            text=""
+            color="0xFFFFFFFF"
+            font="font:SmallSystemFont"
+            wrap="true"
+            visible="false"
+        /> -->
+        <SplashScreen id="splashScreen" />
+    </children>
+
+</component>

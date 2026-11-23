@@ -1,0 +1,21 @@
+namespace rodash
+  ' Recursively flattens array.
+  ' @since 0.0.21
+  ' @category Array
+  ' @param {Array} array - The array to flatten
+  ' @returns {Dynamic} Returns the new flattened array
+  ' @example
+  ' rodash.flattenDeep([1, [2, [3, [4]], 5]]) ' => [1, 2, 3, 4, 5]
+  ' rodash.flattenDeep([1, [2, [3, [4]], 5], 6]) ' => [1, 2, 3, 4, 5, 6]
+  function flattenDeep(array = CreateObject("roArray", 0, true))
+    returnArray = CreateObject("roArray", 0, true)
+    for each item in array
+      if type(item) = "roArray" then
+        returnArray.append(rodash.flattenDeep(item))
+      else
+        returnArray.push(item)
+      end if
+    end for
+    return returnArray
+  end function
+end namespace

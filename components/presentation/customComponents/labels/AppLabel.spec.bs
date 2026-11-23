@@ -1,0 +1,19 @@
+namespace tests.components
+
+    @SGNode("AppLabel")
+    @suite("AppLabel component")
+    class AppLabelTests extends rooibos.BaseTestSuite
+
+        @describe("theme variants")
+        @it("applies the heading typography from the current theme")
+        function _()
+            m.top.variant = "heading"
+            m.top.text = "Featured"
+            m.assertEqual(m.top.text, "Featured")
+            m.assertEqual(m.top.font.size, 32)
+            m.assertEqual(m.top.font.uri, "pkg:/assets/fonts/Bold.otf")
+        end function
+
+    end class
+
+end namespace

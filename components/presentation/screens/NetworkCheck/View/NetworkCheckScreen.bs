@@ -1,0 +1,210 @@
+import "pkg:/config/AppConfig.bs"
+import "pkg:/source/navigation/NavigationEvents.bs"
+import "pkg:/utils/logging/LifecycleDiagnostics.bs"
+
+sub init()
+    m.status = m.top.findNode("status")
+    m.runAgain = m.top.findNode("runAgain")
+    m.requestController = m.top.findNode("requestController")
+    m.task = m.top.findNode("playlistTask")
+    m.requestInFlight = false
+    m.suspended = false
+    m.cleanedUp = false
+    m.resumeCheckOnReturn = false
+    m.pendingTaskRun = false
+    m.top.observeField("frameworkSuspended", "onFrameworkSuspended")
+    m.top.observeField("frameworkResumed", "onFrameworkResumed")
+
+    m.task.observeField("content", "onContentChanged")
+    m.task.observeField("state", "onPlaylistTaskStateChanged")
+    m.task.observeField("requestState", "onPlaylistRequestStateChanged")
+    m.lastTaskState = m.task.state
+    m.lastRequestState = m.task.requestState
+    m.requestController.requestTask = m.task
+    m.requestController.observeField("requestState", "onRequestStateChanged")
+    m.requestController.observeField("retryRequested", "onRetryRequested")
+    m.requestController.observeField("secondaryRequested", "onSecondaryRequested")
+    m.runAgain.observeField("activated", "onRunAgain")
+
+    m.task.playlistUrl = AppConfig.GetPlaylistUrl()
+    m.task.retryLimit = 0
+    m.task.timeoutMs = 8000
+    runCheck("screen_init")
+end sub
+
+sub runCheck(trigger as string)
+    accepted = not m.requestInFlight and not m.suspended and not m.cleanedUp
+#if isRegistryDiagnosticBuild
+    decision = "accepted"
+    if not accepted then decision = "skipped"
+    print "[LIFECYCLE][AppTask] screenId=" + LifecycleDiagnosticScreenId(m.top) + " screenType=" + m.top.subtype() + " route=networkCheck resourceType=request resourceId=playlistTask event=run_check_requested trigger=" + trigger + " decision=" + decision + " requestState=" + m.task.requestState + " taskState=" + m.task.state
+#end if
+    if not accepted then return
+    m.requestInFlight = true
+    m.status.visible = true
+    m.status.text = "Checking playlist API connectivity..."
+    m.runAgain.visible = true
+    m.task.playlistUrl = AppConfig.GetPlaylistUrl()
+    previousTaskState = m.task.state
+    if previousTaskState = "run" or previousTaskState = "done"
+        m.pendingTaskRun = true
+        m.task.control = "STOP"
+        LogLifecycleTaskControl(m.top, "networkCheck", "playlistTask", m.task, "STOP", previousTaskState)
+    else
+        m.pendingTaskRun = false
+        m.task.control = "RUN"
+        LogLifecycleTaskControl(m.top, "networkCheck", "playlistTask", m.task, "RUN", previousTaskState)
+    end if
+end sub
+
+sub onPlaylistTaskStateChanged(event as object)
+    state = event.getData()
+    LogLifecycleTaskState(m.top, "networkCheck", "playlistTask", m.lastTaskState, state)
+    m.lastTaskState = state
+    if state = "done" and m.pendingTaskRun and not m.suspended and not m.cleanedUp
+        previousTaskState = m.task.state
+        m.task.control = "STOP"
+        LogLifecycleTaskControl(m.top, "networkCheck", "playlistTask", m.task, "STOP", previousTaskState)
+    else if state = "stop" and m.pendingTaskRun and not m.suspended and not m.cleanedUp
+        m.pendingTaskRun = false
+        previousTaskState = m.task.state
+        m.task.control = "RUN"
+        LogLifecycleTaskControl(m.top, "networkCheck", "playlistTask", m.task, "RUN", previousTaskState)
+    end if
+end sub
+
+sub onPlaylistRequestStateChanged(event as object)
+    state = event.getData()
+    LogLifecycleRequestState(m.top, "networkCheck", "playlistTask", m.lastRequestState, state)
+    m.lastRequestState = state
+    if IsLifecycleRequestTerminal(state)
+        m.pendingTaskRun = false
+        if m.suspended then m.resumeCheckOnReturn = false
+        m.requestInFlight = false
+    end if
+end sub
+
+sub onRequestStateChanged(event as object)
+    if m.suspended or m.cleanedUp then return
+    applyRequestState(event.getData())
+end sub
+
+sub applyRequestState(state as string)
+    if state = "LOADING"
+        m.requestInFlight = true
+        m.status.visible = true
+        m.status.text = "Checking playlist API connectivity..."
+        m.runAgain.visible = true
+    else if state = "SUCCESS"
+        m.requestInFlight = false
+        m.status.text = "Connection succeeded. The playlist API returned content."
+        m.status.visible = true
+        m.runAgain.visible = true
+    else if state = "EMPTY"
+        m.requestInFlight = false
+        m.status.text = "The playlist API responded, but returned no content."
+        m.status.visible = true
+        m.runAgain.visible = true
+    else if state = "ERROR" or state = "OFFLINE"
+        m.requestInFlight = false
+        m.status.visible = false
+        m.runAgain.visible = false
+    end if
+end sub
+
+sub onContentChanged(event as object)
+    if m.suspended or m.cleanedUp then return
+    content = event.getData()
+    if content <> invalid and m.task.requestState = "SUCCESS"
+        m.status.text = "Connection succeeded. The playlist API returned content."
+    end if
+end sub
+
+sub onRunAgain(event as object)
+    runCheck("check_again_button")
+end sub
+
+sub onRetryRequested(event as object)
+    runCheck("request_controller_retry")
+end sub
+
+sub onFrameworkCleanupRequested(event as object)
+    if not event.getData() then return
+    if m.cleanedUp then return
+    m.cleanedUp = true
+    m.suspended = true
+    m.pendingTaskRun = false
+    if m.top <> invalid
+        m.top.unobserveField("frameworkSuspended")
+        m.top.unobserveField("frameworkResumed")
+    end if
+    if m.task <> invalid
+        previousTaskState = m.task.state
+        m.task.control = "STOP"
+        LogLifecycleTaskControl(m.top, "networkCheck", "playlistTask", m.task, "STOP", previousTaskState)
+        m.task.unobserveField("content")
+        m.task.unobserveField("state")
+        m.task.unobserveField("requestState")
+    end if
+    if m.requestController <> invalid
+        m.requestController.unobserveField("requestState")
+        m.requestController.unobserveField("fallbackVisible")
+        m.requestController.unobserveField("retryRequested")
+        m.requestController.unobserveField("secondaryRequested")
+        m.requestController.requestTask = invalid
+    end if
+    if m.runAgain <> invalid then m.runAgain.unobserveField("activated")
+    if m.task <> invalid then LogLifecycleObserverCleanup(m.top, "networkCheck", "playlistTask", m.task.state)
+end sub
+
+sub onFrameworkSuspended(event as object)
+    if not event.getData() or m.cleanedUp then return
+    m.suspended = true
+    m.resumeCheckOnReturn = m.requestInFlight
+    m.pendingTaskRun = false
+    if m.task <> invalid
+        previousTaskState = m.task.state
+        m.task.control = "STOP"
+        LogLifecycleTaskControl(m.top, "networkCheck", "playlistTask", m.task, "STOP", previousTaskState)
+    end if
+    m.requestInFlight = false
+end sub
+
+sub onFrameworkResumed(event as object)
+    if not event.getData() or m.cleanedUp then return
+    m.suspended = false
+    if m.resumeCheckOnReturn
+        m.resumeCheckOnReturn = false
+        runCheck("lifecycle_resume")
+    else if IsLifecycleRequestTerminal(m.task.requestState)
+        applyRequestState(m.task.requestState)
+    end if
+end sub
+
+sub onSecondaryRequested(event as object)
+    scene = m.top.getScene()
+    if scene = invalid or not scene.hasField("navigationEvent") then return
+    events = new NavigationEvents()
+    scene.navigationEvent = events.back()
+end sub
+
+function setInitialFocus() as boolean
+    if m.requestController.fallbackVisible
+        if m.requestController.callFunc("focusInitialAction") then return true
+    end if
+    if m.runAgain.visible
+        m.runAgain.setFocus(true)
+        if m.runAgain.hasFocus() then return true
+    end if
+    m.status.setFocus(true)
+    return m.status.hasFocus()
+end function
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    if not press or key <> "back" then return false
+    scene = m.top.getScene()
+    if scene = invalid or not scene.hasField("navigationEvent") then return false
+    events = new NavigationEvents()
+    scene.navigationEvent = events.back()
+    return true
+end function

@@ -1,0 +1,17 @@
+namespace rodash
+  ' This method is like rodash.fromPairs except that it accepts two arrays, one of property identifiers and one of corresponding values.
+  ' @since 0.0.21
+  ' @category Array
+  ' @param {Array} array - The property identifiers
+  ' @param {Array} values - The property values
+  ' @returns {Object} Returns the new object
+  function zipObject(props = CreateObject("roArray", 0, true) as Object, values = CreateObject("roArray", 0, true) as Object) as Object
+    returnObject = CreateObject("roAssociativeArray")
+
+    for i = 0 to props.count() - 1
+      returnObject[props[i]] = values[i]
+    end for
+
+    return returnObject
+  end function
+end namespace

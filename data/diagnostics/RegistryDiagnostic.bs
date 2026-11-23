@@ -1,0 +1,109 @@
+' Development-only diagnostic. The preprocessor removes every function in
+' production builds, and the diagnostic is never called during app startup.
+#if isRegistryDiagnosticBuild
+import "pkg:/data/datasources/RegistryDataSource.bs"
+
+function RunRegistryDiagnostic() as string
+    registryDataSource = new Data.RegistryDataSource()
+    marketId = registryDataSource.getActiveMarketId()
+    lines = []
+
+    addRegistryDiagnosticLine(lines, "[Registry Diagnostic] Read-only scan started")
+    if isRegistryDiagnosticString(marketId)
+        settingsSection = "Market_" + marketId + "_Settings"
+        addRegistryDiagnosticLine(lines, "[Registry Diagnostic] Active market: " + marketId)
+        addRegistryDiagnosticLine(lines, "[Registry Diagnostic] Active settings section: " + settingsSection)
+    else
+        addRegistryDiagnosticLine(lines, "[Registry Diagnostic] Active market: unavailable or invalid")
+        addRegistryDiagnosticLine(lines, "[Registry Diagnostic] No market settings section was selected")
+    end if
+
+    knownSections = getRegistryDiagnosticKnownSections()
+    existingSections = registryDataSource.getRegistrySectionNames()
+    foundCount = 0
+
+    for each sectionName in existingSections
+        if isRegistryDiagnosticKnownSection(sectionName, knownSections)
+            foundCount = foundCount + 1
+            addRegistryDiagnosticLine(lines, "[Registry Diagnostic] Section: " + sectionName)
+            keys = registryDataSource.getRegistryKeyNames(sectionName)
+            if keys.Count() = 0
+                addRegistryDiagnosticLine(lines, "[Registry Diagnostic]   (no keys)")
+            else
+                for each key in keys
+                    if isRegistryDiagnosticAuthSection(sectionName) or isRegistryDiagnosticSensitiveKey(key)
+                        addRegistryDiagnosticLine(lines, "[Registry Diagnostic]   " + key + " = [REDACTED]")
+                    else
+                        value = registryDataSource.read(sectionName, key, "")
+                        if isRegistryDiagnosticSensitiveValue(value)
+                            addRegistryDiagnosticLine(lines, "[Registry Diagnostic]   " + key + " = [REDACTED]")
+                        else
+                            addRegistryDiagnosticLine(lines, "[Registry Diagnostic]   " + key + " = " + value)
+                        end if
+                    end if
+                end for
+            end if
+        end if
+    end for
+
+    if foundCount = 0
+        addRegistryDiagnosticLine(lines, "[Registry Diagnostic] No existing app Registry sections found")
+    end if
+    addRegistryDiagnosticLine(lines, "[Registry Diagnostic] Read-only scan finished")
+
+    result = ""
+    for each line in lines
+        result = result + line + Chr(10)
+    end for
+    return result
+end function
+
+sub addRegistryDiagnosticLine(lines as object, line as string)
+    lines.Push(line)
+    AppLogDebug("RegistryDiagnostic", line)
+end sub
+
+function isRegistryDiagnosticAuthSection(sectionName as string) as boolean
+    return Right(sectionName, 5) = "_Auth"
+end function
+
+function isRegistryDiagnosticKnownSection(sectionName as string, knownSections as object) as boolean
+    for each knownSection in knownSections
+        if sectionName = knownSection then return true
+    end for
+    return false
+end function
+
+function getRegistryDiagnosticKnownSections() as object
+    sections = ["App_Global"]
+    markets = ["base", "tringplay", "blive"]
+    for each market in markets
+        sections.Push("Market_" + market + "_Settings")
+        sections.Push("Market_" + market + "_Auth")
+    end for
+    return sections
+end function
+
+function isRegistryDiagnosticSensitiveKey(key as string) as boolean
+    normalizedKey = LCase(key)
+    sensitiveMarkers = ["token", "password", "secret", "auth", "credential", "jwt", "api_key", "apikey"]
+    for each marker in sensitiveMarkers
+        if Instr(1, normalizedKey, marker) > 0 then return true
+    end for
+    return false
+end function
+
+function isRegistryDiagnosticSensitiveValue(value as dynamic) as boolean
+    if not isRegistryDiagnosticString(value) then return false
+    normalizedValue = LCase(value)
+    sensitiveMarkers = ["access_token", "refresh_token", "password", "client_secret", "authorization", "jwt", "idtoken"]
+    for each marker in sensitiveMarkers
+        if Instr(1, normalizedValue, marker) > 0 then return true
+    end for
+    return false
+end function
+
+function isRegistryDiagnosticString(value as dynamic) as boolean
+    return value <> invalid and (LCase(type(value)) = "rostring" or LCase(type(value)) = "string") and value <> ""
+end function
+#endif

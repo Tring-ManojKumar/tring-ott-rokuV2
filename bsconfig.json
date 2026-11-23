@@ -1,0 +1,36 @@
+{
+    "rootDir": ".",
+    "files": [
+        "manifest",
+        "source/**/*",
+        "components/**/*",
+        "adapters/**/*",
+        "config/**/*",
+        "data/**/*",
+        "domain/**/*",
+        "enums/**/*",
+        "managers/**/*",
+        "services/**/*",
+        "utils/**/*",
+        "!**/*.spec.bs"
+    ],
+    "stagingDir": ".build",
+    "outFile": "out/roku-mvvm-clean-starter.zip",
+    "manifest": {
+        "bs_const": {
+            "isDebugBuild": false,
+            "isRegistryDiagnosticBuild": false,
+            "isTestBuild": false
+        }
+    },
+    "retainStagingDir": true,
+    "sourceMap": true,
+    "allowBrighterScriptInBrightScript": true,
+    "autoImportComponentScript": true,
+    "plugins": [
+        "./plugins/plugin.ts"
+    ],
+    "require": [
+        "ts-node/register"
+    ]
+}

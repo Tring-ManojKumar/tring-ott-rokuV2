@@ -1,0 +1,42 @@
+sub init()
+    m.brand = m.top.findNode("brand")
+    m.video = m.top.findNode("brandVideo")
+    m.top.observeField("splashConfig", "onSplashConfigChanged")
+    if m.top.splashConfig <> invalid then configureSplash(m.top.splashConfig)
+end sub
+
+sub onSplashConfigChanged(event as object)
+    configureSplash(event.getData())
+end sub
+
+sub configureSplash(splashConfig as dynamic)
+    if splashConfig = invalid or splashConfig.uri = invalid then return
+    m.splashConfig = splashConfig
+
+    if splashConfig.type = "video"
+        m.video.observeField("state", "onVideoStateChanged")
+        content = CreateObject("roSGNode", "ContentNode")
+        content.url = splashConfig.uri
+        content.streamFormat = "mp4"
+        m.video.content = content
+        m.video.visible = true
+        m.video.control = "play"
+    else
+        m.video.control = "stop"
+        m.video.visible = false
+        m.brand.uri = splashConfig.uri
+        m.brand.visible = true
+    end if
+end sub
+
+sub onVideoStateChanged(event as object)
+    state = event.getData()
+    if state = "error"
+        if m.splashConfig.fallbackImage <> invalid
+            m.video.control = "stop"
+            m.video.visible = false
+            m.brand.uri = m.splashConfig.fallbackImage
+            m.brand.visible = true
+        end if
+    end if
+end sub

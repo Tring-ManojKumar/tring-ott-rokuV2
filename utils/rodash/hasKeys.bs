@@ -1,0 +1,24 @@
+namespace rodash
+  ' Checks if first level of the supplied AssociativeArray contains the Array of key strings.
+  ' @since 0.0.21
+  ' @category Object
+  ' @param {Dynamic} aaValue - AssociativeArray to be checked
+  ' @param {Array} keys - Array of key strings
+  ' @returns {Boolean} - Returns `true` if first level of the supplied AssociativeArray contains the Array of key strings, else `false`.
+  ' @example
+  ' rodash.hasKeys({a: 1, b: 2, c: 3}, ["a", "b"]) ' => true
+  ' rodash.hasKeys({a: 1, b: 2, c: 3}, ["a", "d"]) ' => false
+  ' rodash.hasKeys({a: 1, b: 2, c: 3}, ["a", "b", "c"]) ' => true
+  ' rodash.hasKeys([1,2,3], ["a", "b", "d"]) ' => false
+  function hasKeys(aaValue as Dynamic, keys as Dynamic) as Boolean
+    if NOT rodash.internal.isKeyedValueType(aaValue) OR aaValue.isEmpty() OR NOT rodash.isArray(keys) OR keys.isEmpty() then return false
+
+    for each key in keys
+      if NOT aaValue.doesExist(key) then
+        return false
+      end if
+    end for
+
+    return true
+  end function
+end namespace

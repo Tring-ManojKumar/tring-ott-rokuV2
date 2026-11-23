@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="ImageItem" extends="Group">
+    <interface>
+        <field id="itemContent" type="node" />
+        <field id="focusPercent" type="float" />
+    </interface>
+    <children>
+        <Poster id="poster" width="280" height="180" />
+        <Label id="label" translation="[0, 185]" width="280" height="30" horizAlign="center" color="0xFFFFFFFF" />
+    </children>
+    <script type="text/brightscript" uri="pkg:/source/rokuCore/theme/ThemeProvider.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Theme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Colors.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Typography.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/components/LabelTheme.bs" />
+    <script type="text/brightscript" uri="ImageItem.bs" />
+</component>

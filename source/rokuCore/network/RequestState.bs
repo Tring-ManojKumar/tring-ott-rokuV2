@@ -1,0 +1,5 @@
+namespace RokuCore
+function CreateRequestState(status as string, payload = invalid as dynamic, error = invalid as dynamic) as object
+    return { status: UCase(status), data: payload, error: error }
+end function
+end namespace

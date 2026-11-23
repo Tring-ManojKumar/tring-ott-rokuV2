@@ -1,0 +1,99 @@
+sub init()
+    m.top.focusable = false
+    m.panel = m.top.findNode("fallbackPanel")
+    m.panel.observeField("retryRequested", "onPanelRetryRequested")
+    m.panel.observeField("secondaryRequested", "onPanelSecondaryRequested")
+    updatePanelActions()
+end sub
+
+sub updatePanelActions()
+    if m.panel = invalid then return
+    m.panel.secondaryVisible = m.top.secondaryVisible
+    m.panel.secondaryText = m.top.secondaryText
+end sub
+
+sub onRequestTaskChanged(event as object)
+    task = event.getData()
+    if task = invalid then return
+    if task.hasField("requestState") then task.observeField("requestState", "onTaskStateChanged")
+    if task.hasField("errorMessage") then task.observeField("errorMessage", "onTaskMessageChanged")
+    if task.hasField("errorResult") then task.observeField("errorResult", "onTaskErrorResultChanged")
+    syncFromTask()
+end sub
+
+sub onTaskStateChanged(event as object)
+    syncFromTask()
+end sub
+
+sub onTaskMessageChanged(event as object)
+    syncFromTask()
+end sub
+
+sub onTaskErrorResultChanged(event as object)
+    syncFromTask()
+end sub
+
+sub syncFromTask()
+    task = m.top.requestTask
+    if task = invalid or not task.hasField("requestState") then return
+
+    state = task.requestState
+    if state = invalid or state = "" then state = "IDLE"
+    m.top.requestState = state
+
+    if state = "ERROR" or state = "OFFLINE" or state = "EMPTY"
+        message = "Something went wrong. Please try again."
+        if task.hasField("errorMessage") and task.errorMessage <> invalid and task.errorMessage <> ""
+            message = task.errorMessage
+        else if state = "EMPTY"
+            message = "No content available."
+        else if state = "OFFLINE"
+            message = "You are offline. Check your connection and try again."
+        end if
+
+        retryable = state = "OFFLINE"
+        if task.hasField("errorResult") and task.errorResult <> invalid
+            if task.errorResult.retryable then retryable = true
+        end if
+        if state = "EMPTY" then retryable = false
+
+        m.top.message = message
+        if state = "OFFLINE"
+            m.panel.title = "No Internet Connection"
+        else if state = "EMPTY"
+            m.panel.title = "No Content Available"
+        else
+            m.panel.title = "Unable to Load Content"
+        end if
+        m.top.retryVisible = retryable
+        m.panel.message = message
+        m.panel.retryVisible = retryable
+        m.panel.visible = true
+        m.top.focusable = true
+        m.top.fallbackVisible = true
+    else
+        m.panel.visible = false
+        m.top.focusable = false
+        m.top.fallbackVisible = false
+        m.top.retryVisible = false
+        m.top.message = ""
+    end if
+end sub
+
+sub onPanelRetryRequested(event as object)
+    m.top.retryRequested = not m.top.retryRequested
+end sub
+
+sub onPanelSecondaryRequested(event as object)
+    m.top.secondaryRequested = not m.top.secondaryRequested
+end sub
+
+function focusRetry() as boolean
+    if not m.top.fallbackVisible or not m.top.retryVisible then return false
+    return m.panel.callFunc("focusRetry")
+end function
+
+function focusInitialAction() as boolean
+    if not m.top.fallbackVisible then return false
+    return m.panel.callFunc("focusInitialAction")
+end function

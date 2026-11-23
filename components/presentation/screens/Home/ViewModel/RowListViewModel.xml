@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<component name="RowListViewModel" extends="Node">
+
+    <interface>
+        <field id="playlistUrl" type="string" />
+        <field id="content" type="node" />
+        <field id="isLoading" type="boolean" />
+        <field id="errorMessage" type="string" />
+        <field id="errorResult" type="assocarray" />
+        <field id="requestState" type="string" value="IDLE" />
+        <field id="seasonResponse" type="node" />
+        <field id="seasonError" type="string" />
+        <field id="seasonLoading" type="boolean" value="false" />
+        <field id="seasonState" type="string" value="IDLE" />
+        <field id="seasonErrorResult" type="assocarray" />
+        <function name="loadPlaylist" />
+        <function name="loadSeasonEpisodes" />
+        <function name="cleanup" />
+        <function name="suspend" />
+        <function name="resume" />
+    </interface>
+
+    <children>
+        <PlaylistFetchTask id="fetchTask" />
+        <SeasonEpisodesTask id="seasonTask" />
+    </children>
+
+    <script type="text/brightscript" uri="RowListViewModel.bs" />
+
+</component>

@@ -1,0 +1,187 @@
+sub init()
+    m.background = m.top.findNode("background")
+    m.borderTop = m.top.findNode("borderTop")
+    m.borderBottom = m.top.findNode("borderBottom")
+    m.borderLeft = m.top.findNode("borderLeft")
+    m.borderRight = m.top.findNode("borderRight")
+    m.label = m.top.findNode("buttonLabel")
+    m.pressed = false
+    m.top.focusable = true
+    m.top.observeField("focusedChild", "updateButton")
+    m.top.observeField("text", "updateButton")
+    m.top.observeField("variant", "updateButton")
+    m.top.observeField("enabled", "updateButton")
+    updateButton()
+end sub
+
+sub updateButton()
+    if m.background = invalid then return
+    theme = GetTheme()
+    variant = m.top.variant
+    if type(variant) <> "String" then variant = "primary"
+    enabled = m.top.enabled
+    if type(enabled) <> "Boolean" then enabled = true
+    focusEnabled = m.top.focusEnabled
+    if type(focusEnabled) <> "Boolean" then focusEnabled = true
+    radius = m.top.cornerRadius
+    if radius < 0 then radius = theme.radii.md
+    canFocus = false
+    if enabled
+        if focusEnabled
+            if variant <> "disabled" then canFocus = true
+        end if
+    end if
+    m.top.focusable = canFocus
+    m.background.width = m.top.width
+    m.background.height = m.top.height
+    m.background.visible = true
+    m.borderTop.width = m.top.width
+    m.borderBottom.width = m.top.width
+    m.borderBottom.translation = [0, m.top.height - 2]
+    m.borderLeft.height = m.top.height
+    m.borderRight.height = m.top.height
+    m.borderRight.translation = [m.top.width - 2, 0]
+    m.label.width = m.top.width
+    m.label.height = m.top.height
+    m.label.visible = true
+    buttonText = m.top.text
+    if buttonText = invalid then buttonText = ""
+    if buttonText.Trim() = ""
+        buttonText = getButtonText(m.top.mediaType, m.top.contentType)
+    end if
+    m.label.text = buttonText
+
+    state = "normal"
+    if not enabled or variant = "disabled" then state = "disabled"
+    if canFocus
+        focusState = m.top.hasFocus()
+        if type(focusState) = "Boolean"
+            if focusState then state = "focused"
+        end if
+    end if
+    if m.pressed and enabled then state = "pressed"
+    style = GetButtonTheme(theme, variant, state)
+    backgroundColor = m.top.backgroundColor
+    if backgroundColor <> invalid
+        if backgroundColor <> -1 then style.background = backgroundColor
+    end if
+    textColor = m.top.textColor
+    if textColor <> invalid
+        if textColor <> -1 then style.text = textColor
+    end if
+    borderColor = m.top.borderColor
+    if borderColor <> invalid
+        if borderColor <> -1 then style.border = borderColor
+    end if
+    if m.top.borderWidth > 0 then style.borderWidth = m.top.borderWidth
+    m.background.color = style.background
+    labelColor = style.text
+    labelType = LCase(type(labelColor))
+    if labelType = "string" or labelType = "rostring" then labelColor = ThemeColor(labelColor)
+    m.label.color = labelColor
+    edge = style.borderWidth
+    if edge < 1 then edge = 1
+    if edge > m.top.height / 2 then edge = m.top.height / 2
+    m.borderTop.height = edge
+    m.borderBottom.height = edge
+    m.borderBottom.translation = [0, m.top.height - edge]
+    m.borderLeft.width = edge
+    m.borderRight.width = edge
+    m.borderRight.translation = [m.top.width - edge, 0]
+    m.borderTop.color = style.border
+    m.borderBottom.color = style.border
+    m.borderLeft.color = style.border
+    m.borderRight.color = style.border
+    m.borderTop.opacity = 1
+    if style.borderWidth <= 0 then m.borderTop.opacity = 0
+    m.borderBottom.opacity = m.borderTop.opacity
+    m.borderLeft.opacity = m.borderTop.opacity
+    m.borderRight.opacity = m.borderTop.opacity
+
+    textSize = m.top.fontSize
+    if textSize <= 0 then textSize = theme.typography.sizes.button
+    fontUri = theme.typography.fonts.medium
+    m.label.font = CreateThemeFont(fontUri, textSize)
+
+    colors = m.top.gradientColors
+    gradientStyle = m.top.gradientStyle
+    gradientAngle = m.top.gradientAngle
+    gradientStops = m.top.gradientStops
+    presetName = m.top.gradientPreset
+    if presetName = ""
+        if variant = "primary"
+            if state <> "disabled" then presetName = "accent"
+        end if
+    end if
+    needsPreset = colors = invalid
+    if not needsPreset then needsPreset = colors.count() < 2
+    if needsPreset
+        if presetName <> ""
+            if theme.gradients <> invalid
+                preset = theme.gradients[presetName]
+                if preset <> invalid
+                    colors = preset.colors
+                    gradientStyle = preset.style
+                    gradientAngle = preset.angle
+                    gradientStops = preset.stops
+                end if
+            end if
+        end if
+    end if
+    effectBorderColor = style.border
+    borderType = LCase(type(effectBorderColor))
+    if borderType = "string" or borderType = "rostring" then effectBorderColor = ThemeColor(effectBorderColor)
+    if ApplyNodeEffect(m.background, radius, style.borderWidth, effectBorderColor, colors, gradientStops, gradientStyle, gradientAngle)
+        m.borderTop.opacity = 0
+        m.borderBottom.opacity = 0
+        m.borderLeft.opacity = 0
+        m.borderRight.opacity = 0
+    end if
+end sub
+
+function updateFocus() as boolean
+    updateButton()
+    return true
+end function
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    enabled = m.top.enabled
+    if enabled = invalid then enabled = true
+    variant = m.top.variant
+    if type(variant) <> "String" then variant = "primary"
+    if not enabled then return false
+    if variant = "disabled" then return false
+    if key = "OK" or key = "Select"
+        if press
+            m.pressed = true
+            updateButton()
+        else
+            m.pressed = false
+            updateButton()
+            m.top.activated = { text: m.label.text, variant: variant }
+        end if
+        return true
+    end if
+    return false
+end function
+
+function getButtonText(mediaType as dynamic, contentType as dynamic) as string
+    normalizedMediaType = normalizeButtonType(mediaType)
+    normalizedContentType = normalizeButtonType(contentType)
+    mappings = [
+        { mediaType: "audio", contentType: "*", text: "Listen Now" }
+    ]
+    for each mapping in mappings
+        mediaMatches = mapping.mediaType = "*" or mapping.mediaType = normalizedMediaType
+        contentMatches = mapping.contentType = "*" or mapping.contentType = normalizedContentType
+        if mediaMatches and contentMatches then return mapping.text
+    end for
+    return "Watch Now"
+end function
+
+function normalizeButtonType(value as dynamic) as string
+    if value = invalid then return ""
+    valueType = LCase(type(value))
+    if valueType <> "string" and valueType <> "rostring" then return ""
+    return LCase(value.Trim())
+end function

@@ -1,0 +1,16 @@
+import "pkg:/source/rokuCore/network/NetworkStatus.bs"
+import "pkg:/source/rokuCore/errors/FrameworkError.bs"
+
+namespace RokuCore
+class NetworkGuard
+    public sub new(status = invalid as dynamic)
+        m.status = status
+        if m.status = invalid then m.status = new RokuCore.NetworkStatus()
+    end sub
+
+    public function check() as object
+        if m.status.isOnline() then return { ok: true, error: invalid }
+        return { ok: false, error: CreateFrameworkError("OFFLINE", "Roku reports no network link", "Check your connection and try again.", true) }
+    end function
+end class
+end namespace

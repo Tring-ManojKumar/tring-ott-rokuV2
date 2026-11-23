@@ -1,0 +1,19 @@
+namespace rodash
+  ' Creates a duplicate-free version of an array, using SameValueZero for equality comparisons, in which only the first occurrence of each element is kept. The order of result values is determined by the order they occur in the array.
+  ' @since 0.0.21
+  ' @category Array
+  ' @param {Array} array - The array to inspect
+  ' @returns {Object} Returns the new duplicate free array
+  function uniq(array = CreateObject("roArray", 0, true) as Object) as Object
+    returnArray = CreateObject("roArray", 0, true)
+    table = CreateObject("roAssociativeArray")
+    for each item in array
+      key = item.toStr()
+      if NOT table.doesExist(key)
+        returnArray.push(item)
+        table[key] = true
+      end if
+    end for
+    return returnArray
+  end function
+end namespace

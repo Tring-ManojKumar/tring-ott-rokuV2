@@ -1,0 +1,5 @@
+namespace RokuCore
+function CreateFrameworkError(category as string, message as string, userMessage = "" as string, retryable = false as boolean) as object
+    return { category: category, message: message, userMessage: userMessage, retryable: retryable }
+end function
+end namespace

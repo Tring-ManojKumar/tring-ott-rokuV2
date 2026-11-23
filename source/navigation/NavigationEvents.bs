@@ -1,0 +1,32 @@
+ ' Creates the standard navigation event payloads consumed by NavigationCoordinator.
+class NavigationEvents
+
+    public function navigate(route as dynamic, params = invalid as dynamic) as object
+        return {
+            type: "navigate"
+            route: route
+            params: params
+        }
+    end function
+
+    public function back() as object
+        return { type: "back" }
+    end function
+
+    public function replace(route as dynamic, params = invalid as dynamic) as object
+        return {
+            type: "replace"
+            route: route
+            params: params
+        }
+    end function
+
+    public function reset(route as dynamic, params = invalid as dynamic) as object
+        return {
+            type: "reset"
+            route: route
+            params: params
+        }
+    end function
+
+end class

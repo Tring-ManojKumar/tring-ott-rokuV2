@@ -1,0 +1,135 @@
+sub init()
+    m.list = m.top.findNode("settingsList")
+    m.details = m.top.findNode("details")
+    m.viewModel = m.top.findNode("viewModel")
+    m.languages = []
+    m.selectedLanguageCode = ""
+    m.isChoosingLanguage = false
+    m.isInitialized = false
+    m.cleanedUp = false
+    m.viewModel.observeField("selectedLanguageCode", "onSelectedLanguageChanged")
+    m.list.observeField("itemSelected", "onItemSelected")
+    if m.top.navigationParams <> invalid then initializeSettings(m.top.navigationParams)
+end sub
+
+sub onFrameworkCleanupRequested(event as object)
+    if not event.getData() then return
+    if m.cleanedUp then return
+    m.cleanedUp = true
+    if m.viewModel <> invalid then m.viewModel.unobserveField("selectedLanguageCode")
+    if m.list <> invalid then m.list.unobserveField("itemSelected")
+    if m.top <> invalid then m.top.unobserveField("navigationParams")
+end sub
+
+sub onNavigationParamsChanged(event as object)
+    initializeSettings(event.getData())
+end sub
+
+sub initializeSettings(params as dynamic)
+    m.languages = []
+    if params <> invalid and params.languages <> invalid then m.languages = params.languages
+
+    languageNode = CreateObject("roSGNode", "ContentNode")
+    for each language in m.languages
+        if language <> invalid and language.code <> invalid and language.name <> invalid
+            item = languageNode.createChild("ContentNode")
+            item.title = language.name
+            item.addFields({ code: language.code, name: language.name })
+        end if
+    end for
+    m.viewModel.languages = languageNode
+    m.selectedLanguageCode = m.viewModel.selectedLanguageCode
+    m.isInitialized = true
+    showMainSettings()
+end sub
+
+function setInitialFocus() as boolean
+    if m.list = invalid then return false
+    m.list.setFocus(true)
+    return m.list.hasFocus()
+end function
+
+sub onSelectedLanguageChanged(event as object)
+    m.selectedLanguageCode = event.getData()
+    if m.isInitialized and not m.isChoosingLanguage then showMainSettings()
+end sub
+
+sub showMainSettings()
+    m.isChoosingLanguage = false
+    items = CreateObject("roSGNode", "ContentNode")
+    addSettingItem(items, "Terms of Use")
+    addSettingItem(items, "Privacy Policy")
+    languageLabel = "Language"
+    selectedName = getLanguageName(m.selectedLanguageCode)
+    if selectedName <> "" then languageLabel = languageLabel + " - " + selectedName
+    addSettingItem(items, languageLabel)
+    addSettingItem(items, "Display")
+    m.list.content = items
+    m.list.jumpToItem = 0
+end sub
+
+sub showLanguageChoices()
+    m.isChoosingLanguage = true
+    items = CreateObject("roSGNode", "ContentNode")
+    for each language in m.languages
+        if language <> invalid and language.code <> invalid and language.name <> invalid
+            addSettingItem(items, language.name)
+        end if
+    end for
+    addSettingItem(items, "Back to Settings")
+    m.list.content = items
+    m.list.jumpToItem = 0
+    if m.languages.count() = 0
+        m.details.text = "No languages are configured for this build."
+    else
+        m.details.text = "Choose a language offered by this app configuration."
+    end if
+end sub
+
+sub addSettingItem(parent as object, title as string)
+    item = parent.createChild("ContentNode")
+    item.title = title
+end sub
+
+sub onItemSelected(event as object)
+    index = event.getData()
+    if index = invalid or index < 0 then return
+
+    if m.isChoosingLanguage
+        if index >= m.languages.count()
+            showMainSettings()
+            return
+        end if
+        language = m.languages[index]
+        if language <> invalid and language.name <> invalid
+            saved = m.viewModel.callFunc("selectLanguage", language.code)
+            if saved
+                m.details.text = "Selected " + language.name + ". This choice is saved for this market."
+            else
+                m.details.text = "Could not save the language selection."
+            end if
+            showMainSettings()
+        end if
+        return
+    end if
+
+    if index = 0
+        m.details.text = "Terms of Use are not configured for this application build."
+    else if index = 1
+        m.details.text = "Privacy Policy is not configured for this application build."
+    else if index = 2
+        showLanguageChoices()
+    else if index = 3
+        m.details.text = "No user-selectable display preferences are mapped in the available Registry plan. The app currently uses its packaged theme."
+    end if
+end sub
+
+function getLanguageName(code as string) as string
+    if code = "" then return ""
+    for each language in m.languages
+        if language <> invalid and language.code <> invalid and LCase(language.code) = LCase(code)
+            return language.name
+        end if
+    end for
+    return ""
+end function

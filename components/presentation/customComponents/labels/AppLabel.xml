@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="AppLabel" extends="Label">
+    <interface>
+        <field id="variant" type="string" value="body" onChange="applyTheme" />
+        <field id="fontFamily" type="string" value="" onChange="applyTheme" />
+        <field id="fontSize" type="integer" value="0" onChange="applyTheme" />
+        <field id="textColor" type="integer" value="-1" onChange="applyTheme" />
+    </interface>
+    <script type="text/brightscript" uri="pkg:/source/rokuCore/theme/ThemeProvider.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Theme.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Colors.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/Typography.bs" />
+    <script type="text/brightscript" uri="pkg:/utils/theme/components/LabelTheme.bs" />
+    <script type="text/brightscript" uri="AppLabel.bs" />
+</component>

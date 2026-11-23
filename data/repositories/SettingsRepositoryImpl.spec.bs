@@ -1,0 +1,54 @@
+import "pkg:/data/repositories/SettingsRepositoryImpl.bs"
+
+namespace tests.data
+
+    class FakeSettingsDataSource
+        values as object
+        lastSection as string
+
+        function new()
+            m.values = {}
+            m.lastSection = ""
+        end function
+
+        function getActiveMarketId() as dynamic
+            return "tringplay"
+        end function
+
+        function read(sectionName as string, key as string, defaultValue = invalid as dynamic) as dynamic
+            m.lastSection = sectionName
+            if m.values.doesExist(key) then return m.values[key]
+            return defaultValue
+        end function
+
+        function write(sectionName as string, key as string, value as dynamic) as boolean
+            m.lastSection = sectionName
+            m.values[key] = value
+            return true
+        end function
+
+        function remove(sectionName as string, key as string) as boolean
+            m.lastSection = sectionName
+            if m.values.doesExist(key) then m.values.Delete(key)
+            return true
+        end function
+    end class
+
+    @suite("Market language preference persistence")
+    class SettingsRepositoryImplTests extends rooibos.BaseTestSuite
+
+        @describe("Registry persistence")
+        @it("reads and saves a language in the same market Registry section")
+        function readsSavesAndRestoresLanguage()
+            dataSource = new FakeSettingsDataSource()
+            repository = new Data.SettingsRepositoryImpl(dataSource)
+            m.assertEqual(repository.get("language", ""), "")
+            m.assertTrue(repository.save("language", "fr"))
+            m.assertEqual(dataSource.lastSection, "Market_tringplay_Settings")
+            m.assertEqual(repository.get("language", ""), "fr")
+            m.assertEqual(dataSource.lastSection, "Market_tringplay_Settings")
+        end function
+
+    end class
+
+end namespace

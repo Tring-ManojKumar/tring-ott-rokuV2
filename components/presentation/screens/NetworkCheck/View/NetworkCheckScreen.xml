@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="NetworkCheckScreen" extends="Group">
+    <interface>
+        <field id="isReady" type="boolean" value="true" />
+        <field id="frameworkSupportsInitialFocus" type="boolean" value="true" />
+        <field id="frameworkLifecycleEvent" type="string" value="" />
+        <field id="frameworkScreenIdentity" type="string" value="" />
+        <field id="frameworkCreated" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkInitialized" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkPresented" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkSuspended" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkResumed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkExited" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkDestroyed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkCleanupRequested" type="boolean" value="false" alwaysNotify="true" onChange="onFrameworkCleanupRequested" />
+        <function name="setInitialFocus" />
+    </interface>
+    <script type="text/brightscript" uri="NetworkCheckScreen.bs" />
+    <children>
+        <Rectangle id="background" width="1920" height="1080" color="0x343444FF" />
+        <AppLabel id="heading" translation="[100, 100]" width="1200" height="72" text="Network Check" variant="heading" />
+        <Label id="status" translation="[100, 230]" width="1500" height="140" wrap="true" color="0xFFFFFFFF" font="font:MediumSystemFont" text="Checking playlist API connectivity..." />
+        <AppButton id="runAgain" translation="[100, 430]" width="320" height="72" text="Check Again" variant="primary" />
+        <Label id="backHint" translation="[100, 940]" width="800" height="48" text="Press Back to return" color="0xB3B3B3FF" font="font:SmallSystemFont" />
+        <RequestStateController id="requestController" secondaryVisible="true" secondaryText="Back" />
+        <PlaylistFetchTask id="playlistTask" />
+    </children>
+</component>

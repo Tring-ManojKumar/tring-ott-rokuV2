@@ -1,0 +1,12 @@
+namespace rodash
+  ' Check for the existence of a given sub string
+  ' @since 0.0.21
+  ' @category String
+  ' @param {String} value The string to search
+  ' @param {String} subString The sub string to search for
+  ' @returns {Boolean} Results of the search
+  @inline
+  function stringIncludes(value as String, subString as String) as Boolean
+    return value.Instr(subString) > -1
+  end function
+end namespace

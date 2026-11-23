@@ -1,0 +1,66 @@
+function ApplyNodeEffect(target as object, radius as float, borderWidth as float, borderColor as integer, gradientColors as object, gradientStops as object, gradientStyle as string, gradientAngle as float) as boolean
+    if target = invalid then return false
+    if not target.hasField("effect") then return false
+
+    ' Effect nodes were added in Roku OS 16. Check the OS before attempting
+    ' to construct one, then verify platform support on the node itself.
+    deviceInfo = CreateObject("roDeviceInfo")
+    osVersion = deviceInfo.GetOSVersion()
+    if osVersion = invalid
+        target.effect = invalid
+        return false
+    end if
+    if osVersion.major = invalid
+        target.effect = invalid
+        return false
+    end if
+    if Val(osVersion.major) < 16
+        target.effect = invalid
+        return false
+    end if
+
+    effectNodeName = "Effect"
+    effect = CreateObject("roSGNode", effectNodeName)
+    if effect = invalid
+        target.effect = invalid
+        return false
+    end if
+    if not effect.supported
+        target.effect = invalid
+        return false
+    end if
+    effect.borderRadius = [radius]
+    effect.borderWidth = borderWidth
+    effect.borderColor = borderColor
+    effect.borderPadding = 0
+    hasGradient = gradientColors <> invalid
+    if hasGradient then hasGradient = gradientColors.count() >= 2
+    if hasGradient
+        if gradientStyle <> "none"
+            effect.gradientColors = ToEffectColors(gradientColors)
+            effect.gradientStyle = gradientStyle
+            effect.gradientAngle = gradientAngle
+            effect.gradientFillContent = true
+            effect.gradientFillBorder = false
+            if gradientStops <> invalid
+                if gradientStops.count() = gradientColors.count()
+                    effect.gradientStops = gradientStops
+                end if
+            end if
+        end if
+    end if
+    target.effect = effect
+    return true
+end function
+
+function ToEffectColors(values as object) as object
+    result = []
+    for each value in values
+        if type(value) = "Integer"
+            result.push(value)
+        else
+            result.push(ThemeColor(value.toStr()))
+        end if
+    end for
+    return result
+end function

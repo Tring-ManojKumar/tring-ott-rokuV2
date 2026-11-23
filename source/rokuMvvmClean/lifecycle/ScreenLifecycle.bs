@@ -1,0 +1,8 @@
+' Optional screen contract. Call these named functions only when implemented by a screen.
+namespace RokuMvvmClean
+function ScreenIsReady(screen as dynamic) as boolean
+    if screen = invalid then return false
+    if screen.hasField("isReady") then return screen.isReady
+    return true
+end function
+end namespace

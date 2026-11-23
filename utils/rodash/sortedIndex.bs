@@ -1,0 +1,20 @@
+namespace rodash
+  ' Uses a binary search to determine the lowest index at which value should be inserted into array in order to maintain its sort order.
+  ' @since 0.0.21
+  ' @category Array
+  ' @param {Array} array - The sorted array to inspect
+  ' @returns {Object} Returns the index at which value should be inserted into array
+  function sortedIndex(array = CreateObject("roArray", 0, true) as Object, value = 0 as Integer)
+    for i = 0 to array.count() - 1
+      item = array[i]
+      nextItem = array[i + 1]
+      if rodash.isNotInvalid(nextItem) then
+        if (item >= value AND value <= nextItem) then
+          return i
+        end if
+      end if
+    end for
+
+    return i
+  end function
+end namespace

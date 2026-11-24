@@ -1,8 +1,22 @@
 sub init()
     m.brand = m.top.findNode("brand")
     m.video = m.top.findNode("brandVideo")
+    m.loading = m.top.findNode("loading")
+    m.error = m.top.findNode("error")
     m.top.observeField("splashConfig", "onSplashConfigChanged")
+    m.top.observeField("statusText", "onStatusTextChanged")
+    m.top.observeField("errorText", "onErrorTextChanged")
     if m.top.splashConfig <> invalid then configureSplash(m.top.splashConfig)
+end sub
+
+sub onStatusTextChanged(event as object)
+    if m.loading <> invalid then m.loading.text = event.getData()
+end sub
+
+sub onErrorTextChanged(event as object)
+    if m.error = invalid then return
+    m.error.text = event.getData()
+    m.error.visible = m.error.text <> ""
 end sub
 
 sub onSplashConfigChanged(event as object)

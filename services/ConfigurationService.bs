@@ -1,0 +1,44 @@
+import "pkg:/data/api/BaseApi.bs"
+import "pkg:/data/api/ApiResult.bs"
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+
+namespace DataLayer
+    class ConfigurationService
+        private api as object
+
+        function new(api = invalid as dynamic)
+            if api = invalid then api = new DataLayer.BaseApi()
+            m.api = api
+        end function
+
+        function fetchRemoteConfig(constants as dynamic) as object
+            errors = new DataLayer.ApiResult()
+            if constants = invalid or constants.REMOTE_CONFIG = invalid
+                return errors.failure("CONFIGURATION", "Firebase request constants are unavailable")
+            end if
+            remote = constants.REMOTE_CONFIG
+            if remote.PROJECT_ID = invalid or remote.APP_INSTANCE_ID = invalid or remote.APP_ID = invalid or remote.KEY = invalid
+                return errors.failure("CONFIGURATION", "Firebase request constants are incomplete")
+            end if
+            url = "https://firebaseremoteconfig.googleapis.com/v1/projects/" + remote.PROJECT_ID.ToStr() + "/namespaces/firebase:fetch"
+            body = {
+                app_instance_id: remote.APP_INSTANCE_ID
+                app_id: remote.APP_ID
+                language_code: "en-GB"
+            }
+            return m.api.post(url, body, { key: remote.KEY }, { "content-type": "application/json" })
+        end function
+
+        function getAppConfig(configId as string) as object
+            errors = new DataLayer.ApiResult()
+            if configId = "" then return errors.failure("CONFIGURATION", "App Config ID is required")
+            baseUrl = RokuCore.GetApiBaseUrl("content")
+            endpoint = RokuCore.GetApiEndpoint("config")
+            if baseUrl = invalid or endpoint = invalid
+                return errors.failure("CONFIGURATION", "App Config URL is missing from the selected build configuration")
+            end if
+            url = baseUrl.ToStr() + endpoint.ToStr().Replace("{{config-id}}", configId)
+            return m.api.get(url)
+        end function
+    end class
+end namespace

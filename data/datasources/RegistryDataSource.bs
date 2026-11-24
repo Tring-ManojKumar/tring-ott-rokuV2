@@ -1,5 +1,5 @@
 import "pkg:/source/rokuCore/registry/RegistryManager.bs"
-namespace Data
+namespace DataLayer
     ' Roku Registry stores strings. Keep all Registry API calls in this class so
     ' repositories and callers do not depend on roRegistrySection directly.
     class RegistryDataSource

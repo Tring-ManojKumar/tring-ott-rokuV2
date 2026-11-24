@@ -16,13 +16,6 @@
     <children>
         <Rectangle id="sceneBackground" width="1920" height="1080" color="0x000000FF" />
         <Group id="navigationHost">
-            <HomeScreen
-                id="homeScreen"
-                translation="[0,150]"
-                primaryButtonText="Explore"
-                primaryButtonWidth="340"
-                primaryButtonHeight="72"
-            />
         </Group>
 
        <!-- <Rectangle
@@ -45,6 +38,10 @@
             visible="false"
         /> -->
         <SplashScreen id="splashScreen" />
+        <Timer id="splashMinimumTimer" duration="2.0" repeat="false" />
+        <ConfigurationInitializerTask id="configurationTask" />
+        <AppConfigFetchTask id="homeConfigurationTask" />
+        <AuthenticationRestoreTask id="authenticationRestoreTask" />
     </children>
 
 </component>

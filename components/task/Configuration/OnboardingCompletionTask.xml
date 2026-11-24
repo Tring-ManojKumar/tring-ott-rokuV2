@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="OnboardingCompletionTask" extends="Task">
+    <interface>
+        <field id="configId" type="string" />
+        <field id="completed" type="boolean" value="false" />
+        <field id="requestState" type="string" value="IDLE" alwaysNotify="true" />
+    </interface>
+    <script type="text/brightscript" uri="OnboardingCompletionTask.bs" />
+</component>

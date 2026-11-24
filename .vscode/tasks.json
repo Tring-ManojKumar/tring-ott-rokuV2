@@ -1,0 +1,48 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "command": "npm run build",
+      "type": "shell",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "build:blive",
+      "command": "npm run build:blive",
+      "type": "shell"
+    },
+    {
+      "label": "build:tringplay",
+      "command": "npm run build:tringplay",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:blive:stage",
+      "command": "npm run build:blive:stage",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:blive:stage:debug",
+      "command": "npx bsc --brand=blive --env=stage --debug",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:tringplay:stage",
+      "command": "npm run build:tringplay:stage",
+      "type": "shell"
+    },
+    {
+      "label": "build:test",
+      "command": "npm run test:build",
+      "type": "shell",
+      "group": "build"
+    }
+  ]
+}

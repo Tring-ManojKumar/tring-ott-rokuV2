@@ -1,9 +1,9 @@
 import "pkg:/data/dto/MediaItemDTO.bs"
 
-namespace Data
+namespace DataLayer
     class PlaylistResponseDTO
         public title as string
-        public items as object ' array of Data.MediaItemDTO
+        public items as object ' array of DataLayer.MediaItemDTO
 
         function new(rawJson as object)
             m.title = rawJson.title
@@ -15,7 +15,7 @@ namespace Data
 
             items = []
             for each rawItem in rawPlaylist
-                items.push(new Data.MediaItemDTO(rawItem))
+                items.push(new DataLayer.MediaItemDTO(rawItem))
             end for
             m.items = items
         end function

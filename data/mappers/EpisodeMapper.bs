@@ -1,9 +1,9 @@
 import "pkg:/data/dto/EpisodeDTO.bs"
 import "pkg:/domain/entities/Episode.bs"
 
-namespace Data
+namespace DataLayer
     class EpisodeMapper
-        function toDomain(dto as Data.EpisodeDTO) as object
+        function toDomain(dto as DataLayer.EpisodeDTO) as object
             return new Domain.Episode(
                 dto.mediaId, dto.title, dto.description, dto.image, dto.contentType, dto.mediaType,
                 dto.seriesId, dto.seriesTitle, dto.seasonNumber, dto.episodeNumber, dto.duration
@@ -14,7 +14,7 @@ namespace Data
             result = []
             if rawItems = invalid then return result
             for each raw in rawItems
-                result.Push(m.toDomain(new Data.EpisodeDTO(raw)))
+                result.Push(m.toDomain(new DataLayer.EpisodeDTO(raw)))
             end for
             return result
         end function

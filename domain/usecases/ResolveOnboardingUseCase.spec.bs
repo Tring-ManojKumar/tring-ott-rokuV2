@@ -1,0 +1,70 @@
+import "pkg:/domain/usecases/ResolveOnboardingUseCase.bs"
+
+namespace tests.domain
+    class FakeStartupStateRepositoryForOnboarding extends Domain.StartupStateRepository
+        public completed as boolean
+        function hasCompletedOnboarding(configId as string) as boolean
+            return m.completed
+        end function
+        function markOnboardingCompleted(configId as string) as boolean
+            m.completed = true
+            return true
+        end function
+        function readUserSession() as dynamic
+            return invalid
+        end function
+        function saveUserSession(response as dynamic) as boolean
+            return false
+        end function
+        function clearUserSession() as boolean
+            return true
+        end function
+    end class
+
+    @suite("Market App Config onboarding decision")
+    class ResolveOnboardingUseCaseTests extends rooibos.BaseTestSuite
+        @describe("Feature and Roku platform precedence")
+        @it("uses the Roku platform override and exposes Firebase Roku slides")
+        function platformOverrideAndSlides()
+            repository = new FakeStartupStateRepositoryForOnboarding()
+            useCase = new Domain.ResolveOnboardingUseCase(repository)
+            resolved = {
+                configId: "market-config"
+                featureFlags: { is_onboarding_screen_enabled: true }
+                platforms: { is_onboarding_screen_enabled: false }
+                rokuConfig: { onBoarding: [{ page_title: "Welcome" }] }
+            }
+            decision = useCase.execute(resolved)
+            m.assertFalse(decision.enabled)
+            m.assertFalse(decision.shouldShow)
+            m.assertEqual(decision.slides.Count(), 1)
+        end function
+
+        @describe("Market App Config completion")
+        @it("shows onboarding once per configured App Config ID")
+        function configSpecificCompletion()
+            repository = new FakeStartupStateRepositoryForOnboarding()
+            useCase = new Domain.ResolveOnboardingUseCase(repository)
+            resolved = {
+                configId: "market-a"
+                featureFlags: { is_onboarding_screen_enabled: true }
+                platforms: {}
+                rokuConfig: { onBoarding: [{ page_title: "Welcome" }] }
+            }
+            first = useCase.execute(resolved)
+            m.assertTrue(first.shouldShow)
+            repository.completed = true
+            nextLaunch = useCase.execute(resolved)
+            m.assertTrue(nextLaunch.completed)
+            m.assertFalse(nextLaunch.shouldShow)
+            repository.completed = false
+            otherMarket = useCase.execute({
+                configId: "market-b"
+                featureFlags: { is_onboarding_screen_enabled: true }
+                platforms: {}
+                rokuConfig: { onBoarding: [{ page_title: "Welcome" }] }
+            })
+            m.assertTrue(otherMarket.shouldShow)
+        end function
+    end class
+end namespace

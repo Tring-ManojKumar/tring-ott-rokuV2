@@ -6,11 +6,13 @@ namespace AppNavigationConfig
     function GetConfig() as object
         routes = {}
         routes[AppRoutes.HOME] = "HomeScreen"
+        routes[AppRoutes.ONBOARDING] = "OnboardingScreen"
+        routes[AppRoutes.AUTH_CHECK] = "AuthCheckScreen"
         routes[AppRoutes.SETTINGS] = "SettingsScreen"
         routes[AppRoutes.NETWORK_CHECK] = "NetworkCheckScreen"
 
         return {
-            initialRoute: AppRoutes.HOME
+            initialRoute: AppRoutes.AUTH_CHECK
             routes: routes
         }
     end function

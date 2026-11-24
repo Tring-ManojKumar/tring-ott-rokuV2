@@ -22,6 +22,33 @@ namespace Presentation
             return root
         end function
 
+        function landingSectionsToContentNode(sections as object) as object
+            root = CreateObject("roSGNode", "ContentNode")
+            if sections = invalid then return root
+            for each section in sections
+                row = root.CreateChild("ContentNode")
+                row.title = section.title
+                row.AddFields({
+                    sectionId: section.id
+                    sectionType: section.type
+                    featured: section.featured
+                    railType: section.railType
+                })
+                for each item in section.items
+                    node = row.CreateChild("ContentNode")
+                    node.title = item.title
+                    node.description = item.description
+                    node.HDPosterUrl = item.posterUrl
+                    node.AddFields({
+                        media_type: item.mediaType
+                        content_type: item.contentType
+                        images: item.images
+                    })
+                end for
+            end for
+            return root
+        end function
+
         function episodesToContentNode(episodes as object) as object
             root = CreateObject("roSGNode", "ContentNode")
             if episodes = invalid then return root

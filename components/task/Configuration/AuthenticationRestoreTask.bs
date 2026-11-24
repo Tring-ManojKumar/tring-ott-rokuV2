@@ -1,0 +1,14 @@
+import "pkg:/data/api/BaseApi.bs"
+
+sub init()
+    m.top.functionName = "execute"
+end sub
+
+sub execute()
+    m.top.requestState = "LOADING"
+    m.top.session = invalid
+    api = new DataLayer.BaseApi(1, invalid, 30000, m.global)
+    restoreResult = api.restoreSession()
+    m.top.session = restoreResult.session
+    m.top.requestState = restoreResult.status
+end sub

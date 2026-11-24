@@ -2,14 +2,14 @@ import "pkg:/domain/repositories/SettingsRepository.bs"
 import "pkg:/data/datasources/RegistryDataSource.bs"
 import "pkg:/utils/logging/Logger.bs"
 
-namespace Data
+namespace DataLayer
     class SettingsRepositoryImpl extends Domain.SettingsRepository
         private dataSource as object
         private sectionName as string
 
         function new(dataSource = invalid as dynamic)
             super()
-            if dataSource = invalid then dataSource = new Data.RegistryDataSource()
+            if dataSource = invalid then dataSource = new DataLayer.RegistryDataSource()
             m.dataSource = dataSource
             marketId = m.dataSource.getActiveMarketId()
             if m.isValidString(marketId) then m.sectionName = "Market_" + marketId + "_Settings"

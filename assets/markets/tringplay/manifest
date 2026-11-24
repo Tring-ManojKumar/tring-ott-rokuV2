@@ -2,9 +2,9 @@ mm_icon_focus_fhd=pkg:/images/icon_focus_fhd.png
 mm_icon_focus_hd=pkg:/images/icon_focus_hd.png
 mm_icon_focus_sd=pkg:/images/icon_focus_sd.png
 
-splash_screen_fhd=pkg:/assets/tringplay/images/loader_red.png
-splash_screen_hd=pkg:/assets/tringplay/images/loader_red.png
-splash_screen_sd=pkg:/assets/tringplay/images/loader_red.png
+splash_screen_fhd=pkg:/assets/images/loader_red.png
+splash_screen_hd=pkg:/assets/images/loader_red.png
+splash_screen_sd=pkg:/assets/images/loader_red.png
 
 ui_resolutions=fhd
 uri_resolution_autosub=$$RES$$,sd,hd,fhd

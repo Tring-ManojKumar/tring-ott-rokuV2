@@ -1,4 +1,4 @@
-namespace Data
+namespace DataLayer
     class MediaItemDTO 'mirrors JWplayer naming
         public mediaid as string
         public title as string

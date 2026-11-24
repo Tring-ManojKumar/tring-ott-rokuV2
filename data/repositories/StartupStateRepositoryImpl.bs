@@ -1,0 +1,142 @@
+import "pkg:/domain/repositories/StartupStateRepository.bs"
+import "pkg:/data/datasources/RegistryDataSource.bs"
+
+namespace DataLayer
+    class StartupStateRepositoryImpl extends Domain.StartupStateRepository
+        private dataSource as object
+        private sectionName as string
+
+        function new(dataSource = invalid as dynamic, sectionName = invalid as dynamic)
+            super()
+            if dataSource = invalid then dataSource = new DataLayer.RegistryDataSource()
+            m.dataSource = dataSource
+            if sectionName = invalid
+                appInfo = CreateObject("roAppInfo")
+                sectionName = appInfo.GetValue("app_bundle")
+            end if
+            m.sectionName = ""
+            if sectionName <> invalid then m.sectionName = sectionName.ToStr()
+        end function
+
+        override function hasCompletedOnboarding(configId as string) as boolean
+            key = m.onboardingRegistryKey(configId)
+            if key = "" then return false
+            value = m.dataSource.read(m.sectionName, key, "")
+            ' V1 writes "false" when onboarding was completed. Its decision
+            ' treats any existing non-empty value as already seen.
+            return value <> invalid and value.ToStr() <> ""
+        end function
+
+        override function markOnboardingCompleted(configId as string) as boolean
+            key = m.onboardingRegistryKey(configId)
+            if key = "" then return false
+            return m.dataSource.write(m.sectionName, key, "false")
+        end function
+
+        override function readUserSession() as dynamic
+            raw = m.dataSource.read(m.sectionName, "user_token", invalid)
+            if raw = invalid or raw = "" then return invalid
+            parsed = ParseJson(raw)
+            if not m.isAssociativeArray(parsed) or not m.isValidString(parsed.access_token) then return invalid
+            return parsed
+        end function
+
+        override function saveUserSession(response as dynamic) as boolean
+            if not m.isAssociativeArray(response) then return false
+            tokenResponse = response
+            if m.isAssociativeArray(response.responseData) then tokenResponse = response.responseData
+            if m.isAssociativeArray(tokenResponse.data) then tokenResponse = tokenResponse.data
+            accessToken = m.firstString(tokenResponse, ["AccessToken", "access_token", "token", "jwt"])
+            if accessToken = "" or accessToken = "GUEST_TOKEN" then return false
+            refreshToken = m.firstString(tokenResponse, ["RefreshToken", "refresh_token", "refreshToken"])
+            idToken = m.firstString(tokenResponse, ["idToken", "idtoken"])
+            customerId = m.firstString(tokenResponse, ["customerId", "customerid"])
+            expires = invalid
+            expiryValue = tokenResponse.ExpiresIn
+            if expiryValue = invalid then expiryValue = tokenResponse.expires_in
+            if expiryValue <> invalid
+                expires = CreateObject("roDateTime").AsSeconds() + Val(expiryValue.ToStr())
+            else if tokenResponse.expires <> invalid
+                expires = tokenResponse.expires
+            end if
+
+            session = { access_token: accessToken }
+            if refreshToken <> "" then session.refresh_token = refreshToken
+            if idToken <> "" then session.idToken = idToken
+            if customerId <> "" then session.customerId = customerId
+            if expires <> invalid then session.expires = expires
+            return m.dataSource.write(m.sectionName, "user_token", FormatJson(session))
+        end function
+
+        ' V1 refreshes preserve fields that the provider omits and extend the
+        ' previous expiry by the returned duration (900 seconds by default).
+        function persistRefreshedUserSession(response as dynamic) as dynamic
+            if not m.isAssociativeArray(response) then return invalid
+            current = m.readUserSession()
+            if current = invalid then return invalid
+            tokenResponse = response
+            if m.isAssociativeArray(response.responseData) then tokenResponse = response.responseData
+            if m.isAssociativeArray(tokenResponse.data) then tokenResponse = tokenResponse.data
+
+            accessToken = m.firstString(tokenResponse, ["access_token", "AccessToken", "jwt"])
+            if accessToken = "" then accessToken = current.access_token
+            refreshToken = m.firstString(tokenResponse, ["refresh_token", "RefreshToken", "refreshToken"])
+            if refreshToken = "" and current.refresh_token <> invalid then refreshToken = current.refresh_token
+            idToken = m.firstString(tokenResponse, ["idtoken", "idToken"])
+            if idToken = "" and current.idToken <> invalid then idToken = current.idToken
+            customerId = m.firstString(tokenResponse, ["customerId", "customerid"])
+            if customerId = "" and current.customerId <> invalid then customerId = current.customerId
+
+            expiryDuration = tokenResponse.expires
+            if expiryDuration = invalid then expiryDuration = tokenResponse.expires_in
+            if expiryDuration = invalid then expiryDuration = tokenResponse.expiresIn
+            if expiryDuration = invalid then expiryDuration = 900
+            if Val(expiryDuration.ToStr()) <= 0 then return invalid
+            ' Provider values are lifetimes, not absolute timestamps. Anchor
+            ' the refreshed expiry at refresh time so a delayed refresh cannot
+            ' immediately restore another already-expired token.
+            expires = CreateObject("roDateTime").AsSeconds() + Val(expiryDuration.ToStr())
+
+            updated = { access_token: accessToken, expires: expires }
+            if refreshToken <> "" then updated.refresh_token = refreshToken
+            if idToken <> "" then updated.idToken = idToken
+            if customerId <> "" then updated.customerId = customerId
+            if accessToken = "" or accessToken = "GUEST_TOKEN" then return invalid
+            if not m.dataSource.write(m.sectionName, "user_token", FormatJson(updated)) then return invalid
+            return updated
+        end function
+
+        override function clearUserSession() as boolean
+            return m.dataSource.remove(m.sectionName, "user_token")
+        end function
+
+        function onboardingRegistryKey(configId as string) as string
+            if configId = "" then return ""
+            bytes = CreateObject("roByteArray")
+            bytes.FromAsciiString("OnboardingScreen" + configId)
+            digest = CreateObject("roEVPDigest")
+            if not digest.Setup("sha1") then return ""
+            return digest.Process(bytes)
+        end function
+
+        private function firstString(source as dynamic, keys as object) as string
+            for each key in keys
+                value = source[key]
+                if m.isValidString(value) then return value.ToStr()
+            end for
+            return ""
+        end function
+
+        private function isAssociativeArray(value as dynamic) as boolean
+            if value = invalid then return false
+            valueType = LCase(type(value))
+            return valueType = "roassociativearray" or valueType = "associativearray"
+        end function
+
+        private function isValidString(value as dynamic) as boolean
+            if value = invalid then return false
+            valueType = LCase(type(value))
+            return (valueType = "rostring" or valueType = "string") and value.Trim() <> ""
+        end function
+    end class
+end namespace

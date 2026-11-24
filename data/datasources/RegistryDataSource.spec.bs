@@ -1,6 +1,6 @@
 import "pkg:/data/datasources/RegistryDataSource.bs"
 
-namespace tests.data
+namespace tests.dataLayer
 
     @suite("Registry market namespace")
     class RegistryDataSourceTests extends rooibos.BaseTestSuite
@@ -8,21 +8,21 @@ namespace tests.data
         @describe("market ID resolution")
         @it("uses market ahead of the legacy brand field")
         function marketTakesPriority()
-            source = new Data.RegistryDataSource()
+            source = new DataLayer.RegistryDataSource()
             marketId = source.getMarketIdFromConfiguration({ market: "TringPlay", brand: "blive" })
             m.assertEqual(marketId, "tringplay")
         end function
 
         @it("falls back to brand when older resolved configuration has no market")
         function legacyBrandFallback()
-            source = new Data.RegistryDataSource()
+            source = new DataLayer.RegistryDataSource()
             marketId = source.getMarketIdFromConfiguration({ brand: "BLive" })
             m.assertEqual(marketId, "blive")
         end function
 
         @it("rejects a missing or unsafe market identifier")
         function invalidMarketIdentifiers()
-            source = new Data.RegistryDataSource()
+            source = new DataLayer.RegistryDataSource()
             m.assertInvalid(source.getMarketIdFromConfiguration({}))
             m.assertInvalid(source.getMarketIdFromConfiguration({ market: "../other" }))
         end function

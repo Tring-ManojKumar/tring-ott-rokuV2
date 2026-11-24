@@ -1,4 +1,4 @@
-namespace Data
+namespace DataLayer
     class EpisodeDTO
         public mediaId as string
         public title as string

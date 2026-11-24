@@ -1,0 +1,41 @@
+import "pkg:/data/mappers/LandingSectionMapper.bs"
+
+namespace tests.dataLayer
+    @suite("Landing section mapping")
+    class LandingSectionMapperTests extends rooibos.BaseTestSuite
+        @describe("V1 Home section filtering")
+        @it("preserves configured playlist order and filters pseudo and unsupported sections")
+        function mapsSupportedPlaylistSections()
+            mapper = new DataLayer.LandingSectionMapper()
+            appConfig = {
+                content: [
+                    { title: "Hero", type: "playlist", contentId: "hero-id", featured: true }
+                    { title: "Web only", type: "playlist", contentId: "web-id", custom: { supportedPlatforms: "web" } }
+                    { title: "Top 10", type: "playlist", contentId: "pseudo-id" }
+                    { title: "Catalog", type: "playlist", contentId: "catalog-id", custom: { supportedPlatforms: "roku,web" } }
+                ]
+                features: {}
+            }
+            sections = mapper.mapConfiguredSections(appConfig, false)
+            m.assertEqual(sections.Count(), 2)
+            m.assertEqual(sections[0].id, "hero-id")
+            m.assertTrue(sections[0].featured)
+            m.assertEqual(sections[1].id, "catalog-id")
+        end function
+
+        @describe("Personalized sections")
+        @it("does not request favorites or continue watching for a signed-out viewer")
+        function excludesPersonalSectionsForGuest()
+            mapper = new DataLayer.LandingSectionMapper()
+            appConfig = {
+                content: [
+                    { title: "Favorites", type: "favorites", contentId: "favorites" }
+                    { title: "Continue", type: "continue_watching", contentId: "continue" }
+                ]
+                features: { favoritesList: "enabled", continueWatchingList: "enabled" }
+            }
+            sections = mapper.mapConfiguredSections(appConfig, false)
+            m.assertEqual(sections.Count(), 0)
+        end function
+    end class
+end namespace

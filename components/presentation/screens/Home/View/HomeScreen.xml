@@ -16,8 +16,8 @@
         <field id="frameworkExited" type="boolean" value="false" alwaysNotify="true" />
         <field id="frameworkDestroyed" type="boolean" value="false" alwaysNotify="true" />
         <field id="frameworkCleanupRequested" type="boolean" value="false" alwaysNotify="true" onChange="onFrameworkCleanupRequested" />
-        <field id="primaryButtonText" type="string" value="Market Action" onChange="updatePrimaryButton" />
-        <field id="primaryButtonWidth" type="float" value="320" onChange="updatePrimaryButton" />
+        <field id="primaryButtonText" type="string" value="Explore" onChange="updatePrimaryButton" />
+        <field id="primaryButtonWidth" type="float" value="340" onChange="updatePrimaryButton" />
         <field id="primaryButtonHeight" type="float" value="72" onChange="updatePrimaryButton" />
         <function name="setInitialFocus" />
     </interface>
@@ -31,22 +31,23 @@
     <children>
 
         <AppLabel id="heading" translation="[90, 0]" width="1000" height="52" text="Browse" variant="heading" />
-        <HomeGrid
-            id="homeGrid"
+        <RowList
+            id="homeRows"
             translation="[90, 70]"
+            width="1740"
+            height="850"
             itemComponentName="HomeCard"
             itemSize="[300, 220]"
             itemSpacing="[12, 12]"
-            numColumns="5"
+            rowItemSize="[1740, 220]"
+            rowItemSpacing="[0, 32]"
             numRows="2"
-            vertFocusAnimationStyle="floatingFocus"
             focusable="true"
-            drawFocusFeedback="true"
         />
-        <AppButton id="contentActionButton" width="280" height="48" variant="primary" visible="true" />
+        <AppButton id="contentActionButton" width="280" height="48" variant="primary" visible="false" />
         <HomeActionButton
             id="marketButton"
-            translation="[90, 600]"
+            translation="[90, 990]"
             width="340"
             height="72"
             text="Explore"

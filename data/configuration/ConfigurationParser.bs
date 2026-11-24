@@ -1,0 +1,184 @@
+namespace DataLayer
+    class ConfigurationParser
+        function parseConstants(rawText as dynamic) as object
+            errors = new DataLayer.ApiResult()
+            if not m.isValidString(rawText) then return errors.failure("CONFIGURATION", "Market constants file is missing or empty")
+            constants = ParseJson(rawText)
+            if not m.isAssociativeArray(constants) then return errors.failure("PARSE", "Market constants file contains invalid JSON")
+            if not m.isAssociativeArray(constants.API) or not m.isValidString(constants.API.CONFIG_ID)
+                return errors.failure("CONFIGURATION", "Market constants must define API.CONFIG_ID")
+            end if
+            remote = constants.REMOTE_CONFIG
+            if not m.isAssociativeArray(remote) or not m.isValidString(remote.PROJECT_ID) or not m.isValidString(remote.APP_INSTANCE_ID) or not m.isValidString(remote.APP_ID) or not m.isValidString(remote.KEY)
+                return errors.failure("CONFIGURATION", "Market constants must define the Firebase project, app instance, app ID, and key")
+            end if
+            return errors.success(constants)
+        end function
+
+        function selectRemoteConfiguration(response as dynamic, buildType as string) as object
+            errors = new DataLayer.ApiResult()
+            if not m.isAssociativeArray(response) or not m.isAssociativeArray(response.entries)
+                return errors.failure("PARSE", "Firebase Remote Config response has no entries map")
+            end if
+
+            entries = response.entries
+            selectedKey = "global_remote_config_dev"
+            normalizedBuildType = LCase(buildType)
+            if Instr(1, normalizedBuildType, "stage") > 0
+                if entries.lookup("global_remote_config_staging") <> invalid
+                    selectedKey = "global_remote_config_staging"
+                else if entries.lookup("global_remote_config_test") <> invalid
+                    selectedKey = "global_remote_config_test"
+                end if
+            else if Instr(1, normalizedBuildType, "prod") > 0
+                selectedKey = "global_remote_config"
+            else if Instr(1, normalizedBuildType, "testers") > 0
+                selectedKey = "global_remote_config_testers"
+            else if Instr(1, normalizedBuildType, "test") > 0
+                selectedKey = "global_remote_config_test"
+            end if
+
+            value = entries.lookup(selectedKey)
+            if not m.isValidString(value)
+                return errors.failure("CONFIGURATION", "Firebase Remote Config is missing the selected " + selectedKey + " entry")
+            end if
+            selected = ParseJson(value)
+            if not m.isAssociativeArray(selected)
+                return errors.failure("PARSE", "Firebase Remote Config entry " + selectedKey + " contains invalid JSON")
+            end if
+
+            analytics = {}
+            analyticsText = entries.lookup("analytics_config")
+            if not m.isValidString(analyticsText) then analyticsText = entries.lookup("global_analytics_config")
+            if m.isValidString(analyticsText)
+                parsedAnalytics = ParseJson(analyticsText)
+                if not m.isAssociativeArray(parsedAnalytics)
+                    return errors.failure("PARSE", "Firebase analytics configuration contains invalid JSON")
+                end if
+                analytics = parsedAnalytics
+            end if
+
+            rokuConfig = {}
+            rokuConfigText = entries.lookup("roku_config")
+            if m.isValidString(rokuConfigText)
+                parsedRokuConfig = ParseJson(rokuConfigText)
+                if not m.isAssociativeArray(parsedRokuConfig)
+                    return errors.failure("PARSE", "Firebase Roku configuration contains invalid JSON")
+                end if
+                rokuConfig = parsedRokuConfig
+            end if
+
+            return errors.success({
+                key: selectedKey
+                selected: selected
+                analytics: analytics
+                rokuConfig: rokuConfig
+            })
+        end function
+
+        ' Keep the V1 App Config fields that startup and Home consume explicit.
+        ' Optional collections get stable empty defaults; malformed present
+        ' values fail early instead of reaching a SceneGraph screen as bad data.
+        function normalizeAppConfiguration(raw as dynamic) as object
+            errors = new DataLayer.ApiResult()
+            if not m.isAssociativeArray(raw)
+                return errors.failure("PARSE", "Application configuration response is not a JSON object")
+            end if
+
+            content = raw.content
+            if content = invalid then content = []
+            if not m.isArray(content)
+                return errors.failure("PARSE", "Application configuration content must be an array")
+            end if
+
+            menu = raw.menu
+            if menu = invalid then menu = []
+            if not m.isArray(menu)
+                return errors.failure("PARSE", "Application configuration menu must be an array")
+            end if
+
+            features = raw.features
+            if features = invalid then features = {}
+            if not m.isAssociativeArray(features)
+                return errors.failure("PARSE", "Application configuration features must be an object")
+            end if
+
+            normalized = {}
+            for each key in raw
+                normalized[key] = raw[key]
+            end for
+            normalized.content = content
+            normalized.menu = menu
+            normalized.features = features
+            if not m.isAssociativeArray(normalized.integrations) then normalized.integrations = {}
+            if not m.isAssociativeArray(normalized.custom) then normalized.custom = {}
+            if not m.isAssociativeArray(normalized.uiSettings) then normalized.uiSettings = {}
+
+            return errors.success(normalized)
+        end function
+
+        ' V1 Home preserves configured order, excludes the Top 10 pseudo rail,
+        ' and ignores rails that explicitly do not target Roku.
+        function getHomeSections(appConfiguration as dynamic) as object
+            sections = []
+            if not m.isAssociativeArray(appConfiguration) or not m.isArray(appConfiguration.content)
+                return sections
+            end if
+            for each section in appConfiguration.content
+                if not m.isAssociativeArray(section) then continue for
+                title = ""
+                if m.isValidString(section.title) then title = section.title.Trim()
+                if title = "Top 10" then continue for
+                if not m.isRokuSupported(section) then continue for
+                if not m.isValidString(section.type) then continue for
+                sectionType = LCase(section.type.Trim())
+                if sectionType = "playlist" or sectionType = "favorites" or sectionType = "continue_watching"
+                    sections.Push(section)
+                end if
+            end for
+            return sections
+        end function
+
+        function resolveEnvironment(remoteConfiguration as dynamic, packagedEnvironment as string) as object
+            errors = new DataLayer.ApiResult()
+            environment = packagedEnvironment
+            if remoteConfiguration <> invalid and remoteConfiguration.common <> invalid and remoteConfiguration.common.environment_type <> invalid
+                environment = remoteConfiguration.common.environment_type
+            end if
+            if not m.isValidString(environment)
+                return errors.failure("CONFIGURATION", "Application environment is not configured")
+            end if
+            normalized = LCase(environment.Trim())
+            isSupported = normalized = "dev" or normalized = "development" or normalized = "stage" or normalized = "staging" or normalized = "test" or normalized = "testers" or normalized = "prod" or normalized = "production"
+            if not isSupported
+                return errors.failure("CONFIGURATION", "Unsupported application environment: " + environment)
+            end if
+            return errors.success(normalized)
+        end function
+
+        function isAssociativeArray(value as dynamic) as boolean
+            if value = invalid then return false
+            return LCase(type(value)) = "roassociativearray" or LCase(type(value)) = "associativearray"
+        end function
+
+        function isArray(value as dynamic) as boolean
+            return value <> invalid and (LCase(type(value)) = "roarray" or LCase(type(value)) = "array")
+        end function
+
+        private function isRokuSupported(section as dynamic) as boolean
+            if section.custom = invalid or section.custom.supportedPlatforms = invalid then return true
+            platforms = section.custom.supportedPlatforms
+            if not m.isValidString(platforms) then return true
+            for each platform in platforms.Tokenize(",")
+                if LCase(platform.Trim()) = "roku" then return true
+            end for
+            return false
+        end function
+
+        function isValidString(value as dynamic) as boolean
+            if value = invalid then return false
+            valueType = LCase(type(value))
+            return (valueType = "string" or valueType = "rostring") and value.Trim() <> ""
+        end function
+    end class
+end namespace

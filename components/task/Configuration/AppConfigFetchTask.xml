@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="AppConfigFetchTask" extends="Task">
+    <interface>
+        <field id="configId" type="string" />
+        <field id="result" type="assocarray" />
+        <field id="errorMessage" type="string" value="" />
+        <field id="requestState" type="string" value="IDLE" alwaysNotify="true" />
+    </interface>
+    <script type="text/brightscript" uri="AppConfigFetchTask.bs" />
+</component>

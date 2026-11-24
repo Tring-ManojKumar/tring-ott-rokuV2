@@ -1,7 +1,7 @@
 import "pkg:/services/ContentService.bs"
 import "pkg:/data/api/ApiResult.bs"
 
-namespace Data
+namespace DataLayer
     class JWPlayerRemoteDataSource
         private playlistUrl as string
         private maxRetries as integer
@@ -15,10 +15,10 @@ namespace Data
 
         ' Returns the complete API result so error details are not discarded.
         function fetchPlaylist() as object
-            service = new Data.ContentService(invalid, m.maxRetries, m.timeoutMs)
+            service = new DataLayer.ContentService(invalid, m.maxRetries, m.timeoutMs)
             response = service.getPlaylist(m.playlistUrl)
             if response = invalid
-                errors = new Data.ApiResult()
+                errors = new DataLayer.ApiResult()
                 return errors.failure("UNEXPECTED", "Content service returned no response", 0, false)
             end if
             return response

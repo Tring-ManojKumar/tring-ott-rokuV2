@@ -1,0 +1,16 @@
+import "pkg:/data/repositories/StartupStateRepositoryImpl.bs"
+
+sub init()
+    m.top.functionName = "execute"
+end sub
+
+sub execute()
+    m.top.requestState = "LOADING"
+    repository = new DataLayer.StartupStateRepositoryImpl()
+    m.top.completed = repository.markOnboardingCompleted(m.top.configId)
+    if m.top.completed
+        m.top.requestState = "SUCCESS"
+    else
+        m.top.requestState = "ERROR"
+    end if
+end sub

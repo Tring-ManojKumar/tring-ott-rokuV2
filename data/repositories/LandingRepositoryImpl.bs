@@ -1,0 +1,51 @@
+import "pkg:/domain/repositories/LandingRepository.bs"
+import "pkg:/data/mappers/LandingSectionMapper.bs"
+import "pkg:/data/dto/PlaylistResponseDTO.bs"
+import "pkg:/data/mappers/MediaItemMapper.bs"
+import "pkg:/services/ContentService.bs"
+import "pkg:/data/api/ApiResult.bs"
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+
+namespace DataLayer
+    class LandingRepositoryImpl extends Domain.LandingRepository
+        private sectionMapper as object
+        private mediaMapper as object
+        private service as object
+
+        function new(service = invalid as dynamic, sectionMapper = invalid as dynamic, mediaMapper = invalid as dynamic)
+            super()
+            if service = invalid then service = new DataLayer.ContentService()
+            if sectionMapper = invalid then sectionMapper = new DataLayer.LandingSectionMapper()
+            if mediaMapper = invalid then mediaMapper = new DataLayer.MediaItemMapper()
+            m.service = service
+            m.sectionMapper = sectionMapper
+            m.mediaMapper = mediaMapper
+        end function
+
+        override function getHomeSections(appConfiguration as dynamic, isAuthenticated as boolean) as object
+            errors = new DataLayer.ApiResult()
+            configured = m.sectionMapper.mapConfiguredSections(appConfiguration, isAuthenticated)
+            sections = []
+            firstFailure = invalid
+            for each configuration in configured
+                endpoint = RokuCore.GetApiEndpoint("playlist")
+                baseUrl = RokuCore.GetApiBaseUrl("content")
+                if endpoint = invalid or baseUrl = invalid
+                    return errors.failure("CONFIGURATION", "Home playlist endpoint or content base URL is missing")
+                end if
+                url = baseUrl.ToStr() + endpoint.ToStr().Replace("{{content-id}}", configuration.id)
+                response = m.service.getPlaylist(url)
+                if response = invalid or not response.ok
+                    if firstFailure = invalid then firstFailure = response
+                    continue for
+                end if
+                dto = new DataLayer.PlaylistResponseDTO(response.data)
+                items = m.mediaMapper.toDomainList(dto.items)
+                if items.Count() = 0 then continue for
+                sections.Push(m.sectionMapper.toDomainSection(configuration, items))
+            end for
+            if sections.Count() = 0 and firstFailure <> invalid then return firstFailure
+            return errors.success(sections)
+        end function
+    end class
+end namespace

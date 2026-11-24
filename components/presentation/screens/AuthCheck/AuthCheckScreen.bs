@@ -1,0 +1,5 @@
+' The RootScene application coordinator starts the Registry restore task when
+' this centralized route becomes active. This view intentionally has no auth
+' or persistence logic.
+sub init()
+end sub

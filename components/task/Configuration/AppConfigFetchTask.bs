@@ -1,0 +1,21 @@
+import "pkg:/data/repositories/ConfigurationRepositoryImpl.bs"
+
+sub init()
+    m.top.functionName = "execute"
+end sub
+
+sub execute()
+    m.top.requestState = "LOADING"
+    m.top.result = invalid
+    m.top.errorMessage = ""
+    repository = new DataLayer.ConfigurationRepositoryImpl()
+    result = repository.fetchAppConfiguration(m.top.configId)
+    if result = invalid or not result.ok
+        m.top.requestState = "ERROR"
+        if result <> invalid then m.top.errorMessage = result.userMessage
+        if m.top.errorMessage = "" then m.top.errorMessage = "Unable to load the Home application configuration."
+        return
+    end if
+    m.top.result = result.data
+    m.top.requestState = "SUCCESS"
+end sub

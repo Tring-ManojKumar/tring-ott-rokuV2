@@ -1,0 +1,86 @@
+import "pkg:/domain/repositories/ConfigurationRepository.bs"
+import "pkg:/data/configuration/ConfigurationParser.bs"
+import "pkg:/services/ConfigurationService.bs"
+import "pkg:/data/api/ApiResult.bs"
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+
+namespace DataLayer
+    class ConfigurationRepositoryImpl extends Domain.ConfigurationRepository
+        private service as object
+        private parser as object
+
+        function new(service = invalid as dynamic, parser = invalid as dynamic)
+            super()
+            if service = invalid then service = new DataLayer.ConfigurationService()
+            if parser = invalid then parser = new DataLayer.ConfigurationParser()
+            m.service = service
+            m.parser = parser
+        end function
+
+        override function initialize() as object
+            errors = new DataLayer.ApiResult()
+            constantsResult = m.parser.parseConstants(ReadAsciiFile("pkg:/assets/config/config.json"))
+            if constantsResult = invalid or not constantsResult.ok then return constantsResult
+            constants = constantsResult.data
+
+            remoteResult = m.service.fetchRemoteConfig(constants)
+            if remoteResult = invalid or not remoteResult.ok then return remoteResult
+            remoteResponse = remoteResult.data
+
+            appInfo = CreateObject("roAppInfo")
+            buildType = "dev"
+            if appInfo <> invalid and appInfo.GetValue("buildType") <> invalid
+                buildType = appInfo.GetValue("buildType").ToStr()
+            end if
+            selectedResult = m.parser.selectRemoteConfiguration(remoteResponse, buildType)
+            if selectedResult = invalid or not selectedResult.ok then return selectedResult
+            remoteConfiguration = selectedResult.data.selected
+
+            configId = constants.API.CONFIG_ID.ToStr()
+            if remoteConfiguration.jwplayer <> invalid and m.parser.isValidString(remoteConfiguration.jwplayer.config_id)
+                configId = remoteConfiguration.jwplayer.config_id
+            end if
+            environmentResult = m.parser.resolveEnvironment(remoteConfiguration, RokuCore.GetRuntimeConfiguration().environment)
+            if environmentResult = invalid or not environmentResult.ok then return environmentResult
+
+            appConfigResult = m.service.getAppConfig(configId)
+            if appConfigResult = invalid or not appConfigResult.ok then return appConfigResult
+            normalizedAppConfig = m.parser.normalizeAppConfiguration(appConfigResult.data)
+            if normalizedAppConfig = invalid or not normalizedAppConfig.ok then return normalizedAppConfig
+            appConfig = normalizedAppConfig.data
+
+            platforms = remoteConfiguration.platforms
+            if platforms <> invalid and m.parser.isAssociativeArray(platforms.roku) then platforms = platforms.roku
+
+            resolvedConfig = {
+                environment: environmentResult.data
+                buildType: buildType
+                firebaseEntry: selectedResult.data.key
+                configId: configId
+                common: remoteConfiguration.common
+                authentication: remoteConfiguration.authentication
+                platforms: platforms
+                featureFlags: remoteConfiguration.feature_flags
+                uiSettings: remoteConfiguration.ui_settings
+                analytics: selectedResult.data.analytics
+                rokuConfig: selectedResult.data.rokuConfig
+                remote: remoteConfiguration
+            }
+            return errors.success({
+                constants: constants
+                remoteConfig: remoteResponse
+                appConfig: appConfig
+                resolvedConfig: resolvedConfig
+                environment: environmentResult.data
+            }, appConfigResult.statusCode, appConfigResult.attempts)
+        end function
+
+        override function fetchAppConfiguration(configId as string) as object
+            result = m.service.getAppConfig(configId)
+            if result = invalid or not result.ok then return result
+            normalized = m.parser.normalizeAppConfiguration(result.data)
+            if normalized = invalid or not normalized.ok then return normalized
+            return normalized
+        end function
+    end class
+end namespace

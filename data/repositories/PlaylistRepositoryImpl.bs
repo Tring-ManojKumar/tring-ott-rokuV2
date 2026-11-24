@@ -1,10 +1,10 @@
 import "pkg:/domain/repositories/PlaylistRepository.bs"
 import "pkg:/data/dto/PlaylistResponseDTO.bs"
 
-namespace Data
+namespace DataLayer
     class PlaylistRepositoryImpl extends Domain.PlaylistRepository
-        private dataSource as object ' Data.JWPlayerRemoteDataSource
-        private mapper as object     ' Data.MediaItemMapper
+        private dataSource as object ' DataLayer.JWPlayerRemoteDataSource
+        private mapper as object     ' DataLayer.MediaItemMapper
 
         function new(dataSource as object, mapper as object)
             super()
@@ -16,7 +16,7 @@ namespace Data
             response = m.dataSource.fetchPlaylist()
             if response = invalid or not response.ok then return response
 
-            responseDto = new Data.PlaylistResponseDTO(response.data)
+            responseDto = new DataLayer.PlaylistResponseDTO(response.data)
             items = m.mapper.toDomainList(responseDto.items)
             response.data = items
             if items = invalid or items.count() = 0

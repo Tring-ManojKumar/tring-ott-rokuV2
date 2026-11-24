@@ -1,7 +1,7 @@
 import "pkg:/data/repositories/SettingsRepositoryImpl.bs"
 
 sub init()
-    m.repository = new Data.SettingsRepositoryImpl()
+    m.repository = new DataLayer.SettingsRepositoryImpl()
 end sub
 
 sub onLanguagesChanged(event as object)

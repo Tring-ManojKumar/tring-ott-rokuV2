@@ -13,14 +13,24 @@ import { ResolvedBuildConfiguration, resolveBuildConfiguration, writeResolvedCon
 export class AppConfigPlugin implements IBuildPlugin {
   name = "resolved-configuration-plugin";
   private resolved?: ResolvedBuildConfiguration;
+  private programBuilder?: ProgramBuilder;
+  private marketConstantsPath?: string;
+  private marketConstantsError?: string;
 
   beforeBuild(context: PluginContext, programBuilder: ProgramBuilder): void {
+    this.programBuilder = programBuilder;
     this.resolved = resolveBuildConfiguration(context.cwd, {
       market: (programBuilder.options as any).market,
       brand: (programBuilder.options as any).brand,
       env: (programBuilder.options as any).env,
       architecture: (programBuilder.options as any).architecture,
     });
+    this.marketConstantsPath = path.resolve(context.cwd, this.resolved.assetsRoot, "config", "config.json");
+    this.marketConstantsError = undefined;
+    if (!fs.existsSync(this.marketConstantsPath)) {
+      this.marketConstantsError =
+        `Market-specific config.json is missing for market "${this.resolved.market}": ${this.marketConstantsPath}`;
+    }
     const options = programBuilder.options as any;
     options.manifest = options.manifest || {};
     options.manifest.bs_const = { ...(options.manifest.bs_const || {}), ...(this.resolved.buildFlags || {}) };
@@ -32,10 +42,11 @@ export class AppConfigPlugin implements IBuildPlugin {
       if (typeof file === "string") return file !== "manifest" && file !== "assets/**/*";
       return file.dest !== "manifest" && !file.dest.startsWith("assets/");
     });
-    programBuilder.options.files.push(
-      { src: configOutput, dest: "config/config.json" },
-      { src: this.resolved.manifest, dest: "manifest" },
-    );
+    programBuilder.options.files.push({ src: configOutput, dest: "config/config.json" });
+    if (!this.marketConstantsError && this.marketConstantsPath) {
+      programBuilder.options.files.push({ src: this.marketConstantsPath, dest: "assets/config/config.json" });
+    }
+    programBuilder.options.files.push({ src: this.resolved.manifest, dest: "manifest" });
 
     context.log(`[Configuration] market=${this.resolved.market}, env=${this.resolved.environment}`);
   }
@@ -44,6 +55,15 @@ export class AppConfigPlugin implements IBuildPlugin {
     if (!this.resolved) throw new Error("Configuration must resolve before BrighterScript creates the program.");
     const manifestPath = path.resolve(program.options.cwd, this.resolved.manifest);
     program.loadManifest({ src: manifestPath, dest: "manifest" }, true);
+    if (this.marketConstantsError && this.programBuilder) {
+      const diagnostic = Object.assign({}, {
+        range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
+        severity: 1,
+        code: "MARKET_CONFIG_MISSING",
+        message: this.marketConstantsError,
+      }) as Parameters<ProgramBuilder["addDiagnostic"]>[1];
+      this.programBuilder.addDiagnostic(this.marketConstantsPath || manifestPath, diagnostic);
+    }
   }
 
   afterFilesLoaded(_context: PluginContext, _program: Program): void {
@@ -60,7 +80,6 @@ export class AppConfigPlugin implements IBuildPlugin {
     fs.writeFileSync(stagedConfig, JSON.stringify(this.resolved, null, 2) + "\n");
     fs.mkdirSync(path.join(cwdPath(stagingDir), "assets"), { recursive: true });
     fs.writeFileSync(path.join(cwdPath(stagingDir), "assets", "url.json"), JSON.stringify(this.resolved.api || {}, null, 2) + "\n");
-
     // Merge base files first, then the selected market. Relative package paths
     // are stable and a market file intentionally replaces a base file at the
     // same path. No other market asset root is visited.

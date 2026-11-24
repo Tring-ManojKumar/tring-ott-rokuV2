@@ -1,0 +1,66 @@
+namespace Domain
+    class ResolveOnboardingUseCase
+        private repository as object
+
+        function new(repository as object)
+            m.repository = repository
+        end function
+
+        function execute(resolvedConfiguration as dynamic) as object
+            if resolvedConfiguration = invalid then return { enabled: false, completed: false, shouldShow: false, slides: [] }
+            platforms = resolvedConfiguration.platforms
+            flags = resolvedConfiguration.featureFlags
+            if flags = invalid then flags = {}
+            enabled = m.toBoolean(flags.is_onboarding_screen_enabled)
+
+            if platforms <> invalid and platforms.build_version <> invalid
+                buildVersion = platforms.build_version.version
+                if m.isVersionMatched(buildVersion)
+                    enabled = m.toBoolean(platforms.build_version.is_onboarding_screen_enabled)
+                else if platforms.is_onboarding_screen_enabled <> invalid
+                    enabled = m.toBoolean(platforms.is_onboarding_screen_enabled)
+                end if
+            else if platforms <> invalid and platforms.is_onboarding_screen_enabled <> invalid
+                enabled = m.toBoolean(platforms.is_onboarding_screen_enabled)
+            end if
+
+            slides = []
+            rokuConfig = resolvedConfiguration.rokuConfig
+            if rokuConfig <> invalid and m.isArray(rokuConfig.onBoarding) and rokuConfig.onBoarding.Count() > 0
+                slides = rokuConfig.onBoarding
+            else if platforms <> invalid and m.isArray(platforms.onBoarding)
+                slides = platforms.onBoarding
+            end if
+
+            configId = ""
+            if resolvedConfiguration.configId <> invalid then configId = resolvedConfiguration.configId.ToStr()
+            completed = false
+            if configId <> "" then completed = m.repository.hasCompletedOnboarding(configId)
+            return { enabled: enabled, completed: completed, shouldShow: enabled and not completed and slides.Count() > 0, slides: slides, configId: configId }
+        end function
+
+        private function isVersionMatched(remoteVersion as dynamic) as boolean
+            if remoteVersion = invalid then return false
+            appInfo = CreateObject("roAppInfo")
+            localVersion = appInfo.GetVersion()
+            if localVersion = invalid then return false
+            return Val(localVersion.ToStr()) = Val(remoteVersion.ToStr())
+        end function
+
+        private function isArray(value as dynamic) as boolean
+            if value = invalid then return false
+            valueType = LCase(type(value))
+            return valueType = "roarray" or valueType = "array"
+        end function
+
+        private function toBoolean(value as dynamic) as boolean
+            if value = invalid then return false
+            if LCase(type(value)) = "boolean" then return value
+            if LCase(type(value)) = "integer" or LCase(type(value)) = "roint" then return value <> 0
+            if LCase(type(value)) = "string" or LCase(type(value)) = "rostring"
+                return LCase(value.Trim()) = "true"
+            end if
+            return false
+        end function
+    end class
+end namespace

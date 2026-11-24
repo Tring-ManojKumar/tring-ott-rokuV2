@@ -21,6 +21,6 @@ sca-results.json
 .history
 performanceResults.csv
 lcov.info
-
+.vscode
 ## SonarQube
 .scannerwork

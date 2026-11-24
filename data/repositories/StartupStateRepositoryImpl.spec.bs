@@ -1,0 +1,127 @@
+import "pkg:/data/repositories/StartupStateRepositoryImpl.bs"
+import "pkg:/source/rokuCore/GlobalConfigurationManager.bs"
+
+namespace tests.dataLayer
+    class FakeStartupRegistryDataSource
+        public values as object
+        function new()
+            m.values = {}
+        end function
+        function read(sectionName as string, key as string, defaultValue = invalid as dynamic) as dynamic
+            if m.values.doesExist(key) then return m.values[key]
+            return defaultValue
+        end function
+        function write(sectionName as string, key as string, value as dynamic) as boolean
+            m.values[key] = value
+            return true
+        end function
+        function remove(sectionName as string, key as string) as boolean
+            m.values.delete(key)
+            return true
+        end function
+    end class
+
+    @suite("V1 startup Registry persistence")
+    class StartupStateRepositoryTests extends rooibos.BaseTestSuite
+        @describe("Onboarding completion")
+        @it("stores the V1 SHA-1 onboarding key and false completion value")
+        function persistsOnboardingCompletion()
+            source = new FakeStartupRegistryDataSource()
+            repository = new DataLayer.StartupStateRepositoryImpl(source, "test-app")
+            key = repository.onboardingRegistryKey("config-123")
+            m.assertTrue(key <> "")
+            m.assertFalse(repository.hasCompletedOnboarding("config-123"))
+            m.assertTrue(repository.markOnboardingCompleted("config-123"))
+            m.assertEqual(source.values[key], "false")
+            m.assertTrue(repository.hasCompletedOnboarding("config-123"))
+            m.assertFalse(repository.hasCompletedOnboarding("config-456"))
+        end function
+
+        @describe("Authenticated session")
+        @it("persists and restores the V1 user_token fields without making a guest token")
+        function persistsAuthenticatedToken()
+            source = new FakeStartupRegistryDataSource()
+            repository = new DataLayer.StartupStateRepositoryImpl(source, "test-app")
+            saved = repository.saveUserSession({
+                AccessToken: "access-token"
+                RefreshToken: "refresh-token"
+                ExpiresIn: 3600
+                idToken: "identity-token"
+                customerId: "customer-1"
+            })
+            m.assertTrue(saved)
+            session = repository.readUserSession()
+            m.assertEqual(session.access_token, "access-token")
+            m.assertEqual(session.refresh_token, "refresh-token")
+            m.assertEqual(session.idToken, "identity-token")
+            m.assertEqual(session.customerId, "customer-1")
+            m.assertTrue(session.expires > CreateObject("roDateTime").AsSeconds())
+            m.assertFalse(repository.saveUserSession({ access_token: "GUEST_TOKEN" }))
+        end function
+
+        @it("persists refreshed tokens and keeps V1 Registry fields in sync")
+        function persistsRefreshedToken()
+            source = new FakeStartupRegistryDataSource()
+            repository = new DataLayer.StartupStateRepositoryImpl(source, "test-app")
+            source.values.user_token = FormatJson({ access_token: "old-access", refresh_token: "old-refresh", expires: 1, customerId: "customer-1" })
+            updated = repository.persistRefreshedUserSession({
+                responseData: { jwt: "new-access", refreshToken: "new-refresh", expires: 900 }
+            })
+            m.assertEqual(updated.access_token, "new-access")
+            m.assertEqual(updated.refresh_token, "new-refresh")
+            m.assertEqual(updated.customerId, "customer-1")
+            now = CreateObject("roDateTime").AsSeconds()
+            m.assertTrue(updated.expires > now)
+            m.assertTrue(updated.expires <= now + 900)
+            persisted = ParseJson(source.values.user_token)
+            m.assertEqual(persisted.access_token, "new-access")
+        end function
+
+        @it("normalizes provider token fields including a nested JWP QR token")
+        function acceptsProviderTokenShapes()
+            source = new FakeStartupRegistryDataSource()
+            repository = new DataLayer.StartupStateRepositoryImpl(source, "test-app")
+            responses = [
+                { AccessToken: "from-upper" }
+                { access_token: "from-lower" }
+                { jwt: "from-jwt" }
+                { data: { token: "from-jwp-qr" } }
+            ]
+            expected = ["from-upper", "from-lower", "from-jwt", "from-jwp-qr"]
+            for index = 0 to responses.Count() - 1
+                source.values = {}
+                m.assertTrue(repository.saveUserSession(responses[index]))
+                m.assertEqual(repository.readUserSession().access_token, expected[index])
+            end for
+        end function
+
+        @it("rejects an incomplete authentication response without writing Registry state")
+        function rejectsIncompleteTokenResponse()
+            source = new FakeStartupRegistryDataSource()
+            repository = new DataLayer.StartupStateRepositoryImpl(source, "test-app")
+            m.assertFalse(repository.saveUserSession({ data: { status: "authenticated" } }))
+            m.assertFalse(source.values.doesExist("user_token"))
+        end function
+
+        @it("clears a prior authenticated record when selecting an in-memory guest")
+        function guestCannotInheritPriorSession()
+            source = new FakeStartupRegistryDataSource()
+            source.values.user_token = FormatJson({ access_token: "prior-user", refresh_token: "prior-refresh", customerId: "prior-customer" })
+            repository = new DataLayer.StartupStateRepositoryImpl(source, "test-app")
+            globalNode = {
+                user_access_token: "prior-user"
+                refresh_token: "prior-refresh"
+                customerId: "prior-customer"
+                isUserAuthenticated: true
+                authenticationState: { status: "AUTHENTICATED", isAuthenticated: true, isGuest: false }
+            }
+            RokuCore.SetGuestAuthenticationState(globalNode, repository)
+            m.assertFalse(source.values.doesExist("user_token"))
+            m.assertEqual(globalNode.user_access_token, "GUEST_TOKEN")
+            m.assertEqual(globalNode.refresh_token, "")
+            m.assertEqual(globalNode.customerId, "")
+            m.assertFalse(globalNode.isUserAuthenticated)
+            m.assertEqual(RokuCore.GetRuntimeAccessToken(globalNode), "")
+        end function
+    end class
+end namespace

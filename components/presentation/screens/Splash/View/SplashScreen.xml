@@ -2,11 +2,14 @@
 <component name="SplashScreen" extends="Group">
     <interface>
         <field id="splashConfig" type="assocarray" onChange="onSplashConfigChanged" />
+        <field id="statusText" type="string" value="Loading…" onChange="onStatusTextChanged" />
+        <field id="errorText" type="string" value="" onChange="onErrorTextChanged" />
     </interface>
     <children>
         <Rectangle id="background" width="1920" height="1080" color="0x000000FF" />
         <Poster id="brand" translation="[760, 390]" width="400" height="300" loadDisplayMode="scaleToFit" visible="false" />
         <Video id="brandVideo" width="1920" height="1080" visible="false" enableUI="false" />
         <Label id="loading" translation="[0, 750]" width="1920" height="60" horizAlign="center" text="Loading…" color="0xFFFFFFFF" font="font:MediumSystemFont" />
+        <Label id="error" translation="[160, 830]" width="1600" height="120" horizAlign="center" vertAlign="center" wrap="true" color="0xFFFFFFFF" font="font:SmallSystemFont" visible="false" />
     </children>
 </component>

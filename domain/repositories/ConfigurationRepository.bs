@@ -1,0 +1,10 @@
+namespace Domain
+    class ConfigurationRepository
+        function initialize() as object
+            throw "Domain.ConfigurationRepository.initialize() must be implemented by a concrete repository"
+        end function
+        function fetchAppConfiguration(configId as string) as object
+            throw "Domain.ConfigurationRepository.fetchAppConfiguration() must be implemented by a concrete repository"
+        end function
+    end class
+end namespace

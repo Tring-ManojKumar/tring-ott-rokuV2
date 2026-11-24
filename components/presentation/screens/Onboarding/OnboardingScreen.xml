@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="OnboardingScreen" extends="Group">
+    <interface>
+        <field id="navigationParams" type="assocarray" onChange="onNavigationParamsChanged" />
+        <field id="isReady" type="boolean" value="false" />
+        <field id="frameworkSupportsInitialFocus" type="boolean" value="true" />
+        <field id="frameworkLifecycleEvent" type="string" value="" />
+        <field id="frameworkScreenIdentity" type="string" value="" />
+        <field id="frameworkCreated" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkInitialized" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkPresented" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkSuspended" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkResumed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkExited" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkDestroyed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkCleanupRequested" type="boolean" value="false" alwaysNotify="true" onChange="onCleanupRequested" />
+        <function name="setInitialFocus" />
+    </interface>
+    <children>
+        <Rectangle width="1920" height="1080" color="0x000000FF" />
+        <Poster id="slideImage" translation="[100, 70]" width="1720" height="610" loadDisplayMode="scaleToFit" />
+        <AppLabel id="slideTitle" translation="[100, 710]" width="1720" height="70" variant="heading" />
+        <Label id="slideDescription" translation="[100, 790]" width="1720" height="100" wrap="true" color="0xFFFFFFFF" font="font:MediumSystemFont" />
+        <Label id="pageNumber" translation="[100, 930]" width="300" height="55" color="0xFFFFFFFF" font="font:SmallSystemFont" />
+        <AppButton id="skipButton" translation="[1290, 920]" width="220" height="72" text="Skip" variant="secondary" />
+        <AppButton id="nextButton" translation="[1530, 920]" width="290" height="72" text="Next" variant="primary" />
+        <OnboardingCompletionTask id="completionTask" />
+    </children>
+    <script type="text/brightscript" uri="OnboardingScreen.bs" />
+</component>

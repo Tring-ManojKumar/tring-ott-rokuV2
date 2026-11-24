@@ -11,7 +11,7 @@ sub execute()
     m.top.error = ""
     m.top.errorResult = invalid
     m.top.response = invalid
-    repository = new Data.ContentRepositoryImpl()
+    repository = new DataLayer.ContentRepositoryImpl()
     useCase = new Domain.GetSeasonEpisodesUseCase(repository)
     result = useCase.execute(m.top.seriesId, m.top.seasonNumber, m.top.pageLimit, m.top.pageOffset)
     if result = invalid

@@ -1,0 +1,102 @@
+import "pkg:/data/configuration/ConfigurationParser.bs"
+
+namespace tests.dataLayer
+    @suite("V1 Remote Config selection rules")
+    class ConfigurationParserTests extends rooibos.BaseTestSuite
+        @describe("Remote Config entry selection")
+        @it("uses staging when available and falls back to test when staging is absent")
+        function selectsStagingAndTestFallback()
+            parser = new DataLayer.ConfigurationParser()
+            stagingValue = { common: { environment_type: "staging" } }
+            stagingResponse = { entries: { global_remote_config_staging: FormatJson(stagingValue) } }
+            selected = parser.selectRemoteConfiguration(stagingResponse, "stage")
+            m.assertTrue(selected.ok)
+            m.assertEqual(selected.data.key, "global_remote_config_staging")
+            m.assertEqual(selected.data.selected.common.environment_type, "staging")
+
+            fallbackResponse = { entries: { global_remote_config_test: FormatJson({ common: { environment_type: "test" } }) } }
+            fallback = parser.selectRemoteConfiguration(fallbackResponse, "stage")
+            m.assertTrue(fallback.ok)
+            m.assertEqual(fallback.data.key, "global_remote_config_test")
+        end function
+
+        @describe("Build environment entry selection")
+        @it("preserves the production, testers, test, and development entry choices")
+        function selectsOtherBuildEntries()
+            parser = new DataLayer.ConfigurationParser()
+            entries = {
+                global_remote_config: FormatJson({ common: { environment_type: "production" } })
+                global_remote_config_testers: FormatJson({ common: { environment_type: "testers" } })
+                global_remote_config_test: FormatJson({ common: { environment_type: "test" } })
+                global_remote_config_dev: FormatJson({ common: { environment_type: "development" } })
+            }
+            response = { entries: entries }
+            m.assertEqual(parser.selectRemoteConfiguration(response, "production").data.key, "global_remote_config")
+            m.assertEqual(parser.selectRemoteConfiguration(response, "testers").data.key, "global_remote_config_testers")
+            m.assertEqual(parser.selectRemoteConfiguration(response, "test").data.key, "global_remote_config_test")
+            m.assertEqual(parser.selectRemoteConfiguration(response, "dev").data.key, "global_remote_config_dev")
+        end function
+
+        @describe("Invalid remote configuration")
+        @it("rejects a missing selected Firebase entry and invalid remote JSON")
+        function rejectsInvalidRemoteEntry()
+            parser = new DataLayer.ConfigurationParser()
+            missing = parser.selectRemoteConfiguration({ entries: {} }, "production")
+            m.assertFalse(missing.ok)
+            m.assertEqual(missing.category, "CONFIGURATION")
+
+            malformed = parser.selectRemoteConfiguration({ entries: { global_remote_config: "{" } }, "production")
+            m.assertFalse(malformed.ok)
+            m.assertEqual(malformed.category, "PARSE")
+        end function
+
+        @describe("Market configuration and environment validation")
+        @it("validates market constants and environment names")
+        function validatesConstantsAndEnvironment()
+            parser = new DataLayer.ConfigurationParser()
+            validConstants = {
+                API: { CONFIG_ID: "cfg-test" }
+                REMOTE_CONFIG: { PROJECT_ID: "project", APP_INSTANCE_ID: "instance", APP_ID: "app", KEY: "key" }
+            }
+            constantsResult = parser.parseConstants(FormatJson(validConstants))
+            m.assertTrue(constantsResult.ok)
+            m.assertFalse(parser.parseConstants("not-json").ok)
+            m.assertFalse(parser.parseConstants(FormatJson({ API: {}, REMOTE_CONFIG: {} })).ok)
+
+            validEnvironment = parser.resolveEnvironment({ common: { environment_type: "production" } }, "prod")
+            m.assertTrue(validEnvironment.ok)
+            m.assertEqual(validEnvironment.data, "production")
+            m.assertFalse(parser.resolveEnvironment({ common: { environment_type: "unknown" } }, "prod").ok)
+        end function
+
+        @describe("App Config normalization and Home section selection")
+        @it("defaults optional App Config collections and preserves supported Home rail order")
+        function normalizesHomeConfiguration()
+            parser = new DataLayer.ConfigurationParser()
+            normalized = parser.normalizeAppConfiguration({
+                content: [
+                    { title: "Featured", type: "playlist", custom: { supportedPlatforms: "roku,web" } }
+                    { title: "Unsupported", type: "playlist", custom: { supportedPlatforms: "web" } }
+                    { title: "Top 10", type: "playlist" }
+                    { title: "Favorites", type: "favorites" }
+                ]
+            })
+            m.assertTrue(normalized.ok)
+            m.assertEqual(normalized.data.menu.Count(), 0)
+            m.assertTrue(normalized.data.features.DoesExist("missing") = false)
+            sections = parser.getHomeSections(normalized.data)
+            m.assertEqual(sections.Count(), 2)
+            m.assertEqual(sections[0].title, "Featured")
+            m.assertEqual(sections[1].title, "Favorites")
+        end function
+
+        @describe("Malformed App Config values")
+        @it("rejects invalid content, menu, and feature collection types")
+        function rejectsInvalidAppConfiguration()
+            parser = new DataLayer.ConfigurationParser()
+            m.assertFalse(parser.normalizeAppConfiguration({ content: "not-an-array" }).ok)
+            m.assertFalse(parser.normalizeAppConfiguration({ menu: {} }).ok)
+            m.assertFalse(parser.normalizeAppConfiguration({ features: [] }).ok)
+        end function
+    end class
+end namespace

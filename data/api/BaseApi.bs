@@ -1,17 +1,24 @@
 import "pkg:/data/api/NetworkStatus.bs"
 import "pkg:/data/api/ApiResult.bs"
-namespace Data
+import "pkg:/source/rokuCore/GlobalConfigurationManager.bs"
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+import "pkg:/data/repositories/StartupStateRepositoryImpl.bs"
+namespace DataLayer
     class BaseApi
         private maxRetries as integer
         private networkStatus as object
         private timeoutMs as integer
-        function new(maxRetries = 1 as integer, networkStatus = invalid as dynamic, timeoutMs = 30000 as integer)
+        private globalNode as dynamic
+        private sessionRepository as dynamic
+        function new(maxRetries = 1 as integer, networkStatus = invalid as dynamic, timeoutMs = 30000 as integer, globalNode = invalid as dynamic, sessionRepository = invalid as dynamic)
             if maxRetries < 0 then maxRetries = 0
             m.maxRetries = maxRetries
             if timeoutMs < 1000 then timeoutMs = 1000
             m.timeoutMs = timeoutMs
-            if networkStatus = invalid then networkStatus = new Data.NetworkStatus()
+            if networkStatus = invalid then networkStatus = new DataLayer.NetworkStatus()
             m.networkStatus = networkStatus
+            m.globalNode = globalNode
+            m.sessionRepository = sessionRepository
         end function
         function get(url as string, query = invalid as dynamic, headers = invalid as dynamic) as object
             return m.execute(url, "GET", query, invalid, headers)
@@ -26,8 +33,184 @@ namespace Data
             return m.execute(url, "DELETE", query, invalid, headers)
         end function
 
+        ' Authenticated endpoints opt into centralized token restoration,
+        ' expiry refresh, Registry persistence, and Authorization headers.
+        function getAuthenticated(url as string, query = invalid as dynamic, headers = invalid as dynamic) as object
+            return m.executeAuthenticated(url, "GET", query, invalid, headers)
+        end function
+        function postAuthenticated(url as string, body = invalid as dynamic, query = invalid as dynamic, headers = invalid as dynamic) as object
+            return m.executeAuthenticated(url, "POST", query, body, headers)
+        end function
+        function putAuthenticated(url as string, body = invalid as dynamic, query = invalid as dynamic, headers = invalid as dynamic) as object
+            return m.executeAuthenticated(url, "PUT", query, body, headers)
+        end function
+        function deleteAuthenticated(url as string, query = invalid as dynamic, headers = invalid as dynamic) as object
+            return m.executeAuthenticated(url, "DELETE", query, invalid, headers)
+        end function
+
+        function restoreSession() as object
+            globalNode = m.getGlobalNode()
+            repository = m.getSessionRepository()
+            session = repository.readUserSession()
+            if session = invalid then return { status: "NO_SESSION", session: invalid }
+            if session.expires <> invalid and CreateObject("roDateTime").AsSeconds() >= Val(session.expires.ToStr())
+                session = m.refreshSession(globalNode, repository, session)
+                if session = invalid then return { status: "EXPIRED", session: invalid }
+            else
+                RokuCore.SetAuthenticatedState(globalNode, session)
+            end if
+            return { status: "RESTORED", session: session }
+        end function
+
+        private function executeAuthenticated(url as string, method as string, query as dynamic, body as dynamic, headers as dynamic) as object
+            errors = new DataLayer.ApiResult()
+            globalNode = m.getGlobalNode()
+            repository = m.getSessionRepository()
+            if globalNode = invalid then return errors.failure("AUTHENTICATION", "Authenticated request has no runtime application state")
+            if globalNode.isUserAuthenticated <> true or globalNode.authenticationState.isGuest = true
+                return errors.failure("AUTHENTICATION", "This request requires an authenticated user")
+            end if
+
+            session = repository.readUserSession()
+            token = RokuCore.GetRuntimeAccessToken(globalNode)
+            if session = invalid or token = ""
+                return errors.failure("AUTHENTICATION", "No authenticated access token is available")
+            end if
+            if session.expires <> invalid and CreateObject("roDateTime").AsSeconds() >= Val(session.expires.ToStr())
+                session = m.refreshSession(globalNode, repository, session)
+                if session = invalid then return errors.failure("AUTHENTICATION", "The saved session expired and could not be refreshed")
+                token = RokuCore.GetRuntimeAccessToken(globalNode)
+            end if
+
+            authorizedHeaders = m.buildAuthorizationHeaders(globalNode, headers)
+            if authorizedHeaders = invalid then return errors.failure("AUTHENTICATION", "This request requires an authenticated user")
+            return m.execute(url, method, query, body, authorizedHeaders)
+        end function
+
+        function buildAuthorizationHeaders(globalNode as dynamic, headers = invalid as dynamic) as dynamic
+            token = RokuCore.GetRuntimeAccessToken(globalNode)
+            if token = "" then return invalid
+            result = {}
+            if headers <> invalid
+                for each key in headers
+                    result[key] = headers[key]
+                end for
+            end if
+            result.Authorization = "Bearer " + token
+            return result
+        end function
+
+        private function refreshSession(globalNode as dynamic, repository as dynamic, session as dynamic) as dynamic
+            if globalNode.tokenRefreshInProgress = true
+                originalToken = session.access_token
+                for attempt = 0 to 350
+                    Sleep(100)
+                    latest = repository.readUserSession()
+                    if latest <> invalid and latest.access_token <> originalToken
+                        if latest.expires = invalid or CreateObject("roDateTime").AsSeconds() < Val(latest.expires.ToStr())
+                            RokuCore.SetRefreshedSession(globalNode, latest)
+                            return latest
+                        end if
+                    end if
+                    if globalNode.tokenRefreshInProgress <> true then exit for
+                end for
+                if globalNode.tokenRefreshInProgress = true then return invalid
+                latest = repository.readUserSession()
+                if latest = invalid then return invalid
+                if latest.expires <> invalid and CreateObject("roDateTime").AsSeconds() >= Val(latest.expires.ToStr())
+                    ' The other refresh failed. This caller may make one attempt.
+                else
+                    RokuCore.SetRefreshedSession(globalNode, latest)
+                    return latest
+                end if
+            end if
+            globalNode.tokenRefreshInProgress = true
+            apiConfig = RokuCore.GetApiConfiguration()
+            resolved = globalNode.resolvedConfig
+            remote = invalid
+            if resolved <> invalid then remote = resolved.remote
+            common = invalid
+            if remote <> invalid then common = remote.common
+            authType = "inplayer"
+            if common <> invalid and common.authentication_type <> invalid and common.authentication_type.ToStr() <> ""
+                authType = LCase(common.authentication_type.ToStr())
+            end if
+            provider = "custom"
+            if Instr(1, authType, "cleeng") > 0
+                provider = "cleeng"
+            else if Instr(1, authType, "inplayer") > 0
+                provider = "inplayer"
+            end if
+
+            authBases = apiConfig.authBaseUrls
+            personalisation = apiConfig.personalisation
+            if authBases = invalid or personalisation = invalid or personalisation[provider] = invalid
+                globalNode.tokenRefreshInProgress = false
+                return invalid
+            end if
+            baseUrl = authBases[provider]
+            endpoint = personalisation[provider].refreshToken
+            if baseUrl = invalid or endpoint = invalid
+                globalNode.tokenRefreshInProgress = false
+                return invalid
+            end if
+            refreshToken = session.refresh_token
+            if refreshToken = invalid or refreshToken.ToStr() = ""
+                globalNode.tokenRefreshInProgress = false
+                return invalid
+            end if
+            url = baseUrl.ToStr() + endpoint.ToStr()
+
+            constants = globalNode.constants
+            clientId = ""
+            if constants <> invalid and constants.API <> invalid and constants.API.INPLAYER_CLIENT_ID <> invalid
+                clientId = constants.API.INPLAYER_CLIENT_ID.ToStr()
+            end if
+            request = m.buildRefreshRequest(provider, refreshToken.ToStr(), clientId)
+            refreshResult = m.post(url, request.body, invalid, request.headers)
+            if refreshResult = invalid or not refreshResult.ok
+                globalNode.tokenRefreshInProgress = false
+                return invalid
+            end if
+            updated = repository.persistRefreshedUserSession(refreshResult.data)
+            if updated = invalid
+                globalNode.tokenRefreshInProgress = false
+                return invalid
+            end if
+            RokuCore.SetRefreshedSession(globalNode, updated)
+            globalNode.tokenRefreshInProgress = false
+            return updated
+        end function
+
+        function buildRefreshRequest(provider as string, refreshToken as string, clientId as string) as object
+            if LCase(provider) = "cleeng"
+                return { body: { refreshToken: refreshToken }, headers: { "Content-Type": "application/json" } }
+            end if
+            form = m.formEncode({ token: refreshToken, client_id: clientId, grant_type: "refresh_token" })
+            return { body: form, headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+        end function
+
+        private function getGlobalNode() as dynamic
+            if m.globalNode <> invalid then return m.globalNode
+            return GetGlobalAA()
+        end function
+
+        private function getSessionRepository() as dynamic
+            if m.sessionRepository <> invalid then return m.sessionRepository
+            return new DataLayer.StartupStateRepositoryImpl()
+        end function
+
+        private function formEncode(values as object) as string
+            encoder = CreateObject("roUrlTransfer")
+            parts = []
+            for each key in values
+                parts.Push(encoder.Escape(key) + "=" + encoder.Escape(values[key].ToStr()))
+            end for
+            return parts.Join("&")
+        end function
+
         private function execute(url as string, method as string, query as dynamic, body as dynamic, headers as dynamic) as object
-            errors = new Data.ApiResult()
+            errors = new DataLayer.ApiResult()
             if url = "" then return errors.failure("CONFIGURATION", "Request URL is required")
             requestUrl = m.withQuery(url, query)
             attempts = 0
@@ -43,7 +226,7 @@ namespace Data
         end function
 
         private function executeOnce(url as string, method as string, body as dynamic, headers as dynamic, attempts as integer) as object
-            errors = new Data.ApiResult()
+            errors = new DataLayer.ApiResult()
             request = CreateObject("roUrlTransfer")
             request.SetUrl(url)
             request.SetCertificatesFile("common:/certs/ca-bundle.crt")
@@ -55,7 +238,13 @@ namespace Data
                     request.AddHeader(key, headers[key].ToStr())
                 end for
             end if
-            if body <> invalid then request.AddHeader("Content-Type", "application/json")
+            hasContentType = false
+            if headers <> invalid
+                for each headerName in headers
+                    if LCase(headerName) = "content-type" then hasContentType = true
+                end for
+            end if
+            if body <> invalid and not hasContentType then request.AddHeader("Content-Type", "application/json")
             port = CreateObject("roMessagePort")
             request.SetMessagePort(port)
             started = false
@@ -99,6 +288,7 @@ namespace Data
 
         private function serializeBody(body as dynamic) as string
             if body = invalid then return ""
+            if LCase(type(body)) = "string" or LCase(type(body)) = "rostring" then return body
             return FormatJson(body)
         end function
 

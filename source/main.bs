@@ -1,10 +1,12 @@
 import "pkg:/utils/logging/Logger.bs"
+import "pkg:/source/rokuCore/GlobalConfigurationManager.bs"
 
 sub Main()
 
     screen = CreateObject("roSGScreen")
     m.port = CreateObject("roMessagePort")
     screen.setMessagePort(m.port)
+    RokuCore.InitializeGlobalConfiguration(screen.getGlobalNode())
     scene = screen.CreateScene("RootScene")
     screen.show()
 

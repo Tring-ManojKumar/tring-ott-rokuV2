@@ -1,0 +1,52 @@
+import "pkg:/data/api/BaseApi.bs"
+import "pkg:/source/rokuCore/GlobalConfigurationManager.bs"
+
+namespace tests.dataLayer
+    @suite("Authenticated API token handling")
+    class BaseApiAuthenticationTests extends rooibos.BaseTestSuite
+        @describe("Runtime token headers")
+        @it("uses the current authenticated runtime token in the Authorization header")
+        function attachesRuntimeBearerToken()
+            globalNode = {
+                user_access_token: "current-access"
+                isUserAuthenticated: true
+                authenticationState: { isGuest: false }
+            }
+            api = new DataLayer.BaseApi(0, invalid, 30000, globalNode)
+            headers = api.buildAuthorizationHeaders(globalNode, { Accept: "application/json" })
+            m.assertEqual(headers.Authorization, "Bearer current-access")
+            m.assertEqual(headers.Accept, "application/json")
+        end function
+
+        @it("never exposes the V1 guest sentinel as an authenticated bearer token")
+        function guestHasNoAuthorizationHeader()
+            globalNode = {
+                user_access_token: "GUEST_TOKEN"
+                isUserAuthenticated: false
+                authenticationState: { isGuest: true }
+            }
+            api = new DataLayer.BaseApi(0, invalid, 30000, globalNode)
+            m.assertInvalid(api.buildAuthorizationHeaders(globalNode))
+            m.assertEqual(RokuCore.GetRuntimeAccessToken(globalNode), "")
+        end function
+
+        @describe("Provider refresh request contract")
+        @it("uses the V1 JSON refreshToken body for Cleeng")
+        function buildsCleengRefreshRequest()
+            api = new DataLayer.BaseApi(0)
+            request = api.buildRefreshRequest("cleeng", "refresh-value", "client-id")
+            m.assertEqual(request.headers["Content-Type"], "application/json")
+            m.assertEqual(request.body.refreshToken, "refresh-value")
+        end function
+
+        @it("uses the V1 urlencoded token contract for InPlayer and custom providers")
+        function buildsInPlayerRefreshRequest()
+            api = new DataLayer.BaseApi(0)
+            request = api.buildRefreshRequest("inplayer", "refresh-value", "client-id")
+            m.assertEqual(request.headers["Content-Type"], "application/x-www-form-urlencoded")
+            m.assertTrue(Instr(1, request.body, "token=refresh-value") > 0)
+            m.assertTrue(Instr(1, request.body, "client_id=client-id") > 0)
+            m.assertTrue(Instr(1, request.body, "grant_type=refresh_token") > 0)
+        end function
+    end class
+end namespace

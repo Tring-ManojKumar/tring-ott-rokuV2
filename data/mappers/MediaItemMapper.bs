@@ -1,9 +1,9 @@
 import "pkg:/domain/entities/MediaItem.bs"
 import "pkg:/data/dto/MediaItemDTO.bs"
 
-namespace Data
+namespace DataLayer
     class MediaItemMapper
-        function toDomain(dto as Data.MediaItemDTO) as object
+        function toDomain(dto as DataLayer.MediaItemDTO) as object
             return new Domain.MediaItem(
                 dto.mediaid,
                 dto.title,

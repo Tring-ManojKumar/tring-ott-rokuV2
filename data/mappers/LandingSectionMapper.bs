@@ -1,0 +1,67 @@
+import "pkg:/domain/entities/LandingSection.bs"
+import "pkg:/data/configuration/ConfigurationParser.bs"
+
+namespace DataLayer
+    class LandingSectionMapper
+        private parser as object
+
+        function new(parser = invalid as dynamic)
+            if parser = invalid then parser = new DataLayer.ConfigurationParser()
+            m.parser = parser
+        end function
+
+        function mapConfiguredSections(appConfiguration as dynamic, isAuthenticated as boolean) as object
+            result = []
+            configured = m.parser.getHomeSections(appConfiguration)
+            for each source in configured
+                sectionType = LCase(source.type.Trim())
+                if sectionType = "favorites" or sectionType = "continue_watching"
+                    ' V1 only adds these rails for an authenticated user with
+                    ' the matching feature enabled. Their providers are handled
+                    ' by the account data sources, not the playlist endpoint.
+                    if not isAuthenticated or not m.isPersonalRailEnabled(appConfiguration, sectionType) then continue for
+                    continue for
+                end if
+
+                contentId = m.stringValue(source.contentId)
+                if contentId = "" then contentId = m.stringValue(source.content_id)
+                if contentId = "" then continue for
+                title = m.stringValue(source.title)
+                railType = ""
+                if source.railType <> invalid then railType = m.stringValue(source.railType)
+                result.Push({
+                    id: contentId
+                    title: title
+                    type: sectionType
+                    featured: m.isTrue(source.featured)
+                    railType: railType
+                })
+            end for
+            return result
+        end function
+
+        function toDomainSection(section as dynamic, items as object) as object
+            return new Domain.LandingSection(section.id, section.title, section.type, section.featured, section.railType, items)
+        end function
+
+        private function isPersonalRailEnabled(appConfiguration as dynamic, sectionType as string) as boolean
+            featureKey = "favoritesList"
+            if sectionType = "continue_watching" then featureKey = "continueWatchingList"
+            features = appConfiguration.features
+            return features <> invalid and m.stringValue(features[featureKey]) <> ""
+        end function
+
+        private function isTrue(value as dynamic) as boolean
+            if value = invalid then return false
+            if LCase(type(value)) = "boolean" then return value
+            return LCase(m.stringValue(value)) = "true"
+        end function
+
+        private function stringValue(value as dynamic) as string
+            if value = invalid then return ""
+            valueType = LCase(type(value))
+            if valueType <> "string" and valueType <> "rostring" then return ""
+            return value.Trim()
+        end function
+    end class
+end namespace

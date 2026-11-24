@@ -6,7 +6,7 @@ import "pkg:/utils/logging/Logger.bs"
 ' packaged market so builds cannot accidentally share sessions across brands.
 function getRegistrySectionForKey(key as string) as dynamic
     if key = "user_token"
-        registry = new Data.RegistryDataSource()
+        registry = new DataLayer.RegistryDataSource()
         marketId = registry.getActiveMarketId()
         if not isValidString(marketId) then return invalid
         return "Market_" + marketId + "_Auth"
@@ -17,26 +17,26 @@ end function
 function readFromRegistry(key as string, defaultValue = invalid as dynamic) as dynamic
     sectionName = getRegistrySectionForKey(key)
     if not isValidString(sectionName) then return defaultValue
-    registry = new Data.RegistryDataSource()
+    registry = new DataLayer.RegistryDataSource()
     return registry.read(sectionName, key, defaultValue)
 end function
 
 function writeToRegistry(key as string, value as dynamic) as boolean
     sectionName = getRegistrySectionForKey(key)
     if not isValidString(sectionName) then return false
-    registry = new Data.RegistryDataSource()
+    registry = new DataLayer.RegistryDataSource()
     return registry.write(sectionName, key, value)
 end function
 
 function deleteFromRegistry(key as string) as boolean
     sectionName = getRegistrySectionForKey(key)
     if not isValidString(sectionName) then return false
-    registry = new Data.RegistryDataSource()
+    registry = new DataLayer.RegistryDataSource()
     return registry.remove(sectionName, key)
 end function
 
 function clearMarketAuthenticationRegistry() as boolean
-    registry = new Data.RegistryDataSource()
+    registry = new DataLayer.RegistryDataSource()
     marketId = registry.getActiveMarketId()
     if not isValidString(marketId) then return false
     return registry.clearSection("Market_" + marketId + "_Auth")

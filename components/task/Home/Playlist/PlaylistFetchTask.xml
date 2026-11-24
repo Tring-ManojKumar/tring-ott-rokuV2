@@ -4,6 +4,8 @@
 
     <interface>
         <field id="playlistUrl" type="string" />
+        <field id="appConfig" type="assocarray" />
+        <field id="isAuthenticated" type="boolean" value="false" />
         <field id="content" type="node" />
         <field id="isLoading" type="boolean" />
         <field id="errorMessage" type="string" />

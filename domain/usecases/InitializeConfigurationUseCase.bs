@@ -1,0 +1,12 @@
+namespace Domain
+    class InitializeConfigurationUseCase
+        private repository as object
+        function new(repository as object)
+            m.repository = repository
+        end function
+        function execute() as object
+            if m.repository = invalid then return invalid
+            return m.repository.initialize()
+        end function
+    end class
+end namespace

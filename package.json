@@ -6,8 +6,13 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "bsc",
-    "test:build": "bsc --project bsconfig-test.json",
-    "test:run": "rooibos --project bsconfig-test.json",
+    "build:tringplay": "bsc --market=tringplay --env=prod",
+    "build:tringplay:stage": "bsc --market=tringplay --env=stage",
+    "build:blive": "bsc --market=blive --env=prod",
+    "build:blive:stage": "bsc --market=blive --env=stage",
+    "build:blive:stage:debug": "bsc --market=blive --env=stage --debug",
+    "test:build": "bsc --project bsconfig-test.json --market=tringplay --env=prod --create-package=false",
+    "test:run": "rooibos --project bsconfig-test.json --market=tringplay --env=prod",
     "configure": "node node_modules/roku-framework/scripts/generate-config.js"
   },
   "keywords": [],

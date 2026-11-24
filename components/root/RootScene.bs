@@ -4,13 +4,19 @@ import "pkg:/source/navigation/NavigationEvents.bs"
 import "pkg:/source/navigation/AppRoutes.bs"
 import "pkg:/source/navigation/AppNavigationConfig.bs"
 import "pkg:/data/diagnostics/RegistryDiagnostic.bs"
+import "pkg:/source/rokuCore/GlobalConfigurationManager.bs"
+import "pkg:/domain/usecases/ResolveOnboardingUseCase.bs"
+import "pkg:/data/repositories/StartupStateRepositoryImpl.bs"
 
 sub init()
     AppLogInfo("RootScene", "Initialization started")
     m.sceneBackground = m.top.findNode("sceneBackground")
     m.navigationHost = m.top.findNode("navigationHost")
-    m.homeScreen = m.top.findNode("homeScreen")
     m.splashScreen = m.top.findNode("splashScreen")
+    m.configurationTask = m.top.findNode("configurationTask")
+    m.splashMinimumTimer = m.top.findNode("splashMinimumTimer")
+    m.splashMinimumElapsed = false
+    m.initialScreenReady = false
     m.registryDiagnosticBackground = m.top.findNode("registryDiagnosticBackground")
     m.registryDiagnostic = m.top.findNode("registryDiagnostic")
     m.readinessObservedScreen = invalid
@@ -18,17 +24,160 @@ sub init()
     applyTheme()
     m.framework = new RokuMvvmClean.Framework()
     m.navigationEvents = new NavigationEvents()
-    navigationConfig = AppNavigationConfig.GetConfig()
-    lifecycleDiagnostics = false
+    m.lifecycleDiagnostics = false
 #if isRegistryDiagnosticBuild
-    lifecycleDiagnostics = true
+    m.lifecycleDiagnostics = true
 #endif
-    initialized = m.framework.initialize({ root: m.navigationHost, initialRoute: navigationConfig.initialRoute, routes: navigationConfig.routes, initialScreen: m.homeScreen, theme: m.theme, lifecycleDiagnostics: lifecycleDiagnostics })
-    if not initialized then AppLogError("RootScene", "Framework navigation initialization failed: " + m.framework.getLastError())
     m.splashScreen.splashConfig = m.theme.splash
+    m.splashScreen.statusText = "Loading application configuration…"
     m.splashScreen.visible = true
-    if initialized then observeActiveScreenReadiness()
+    m.splashMinimumTimer.observeField("fire", "onSplashMinimumElapsed")
+    m.splashMinimumTimer.control = "start"
+    m.configurationTask.observeField("requestState", "onConfigurationStateChanged")
+    m.homeConfigurationTask = m.top.findNode("homeConfigurationTask")
+    m.homeConfigurationTask.observeField("requestState", "onHomeConfigurationStateChanged")
+    m.authenticationRestoreTask = m.top.findNode("authenticationRestoreTask")
+    m.authenticationRestoreTask.observeField("requestState", "onAuthenticationRestoreStateChanged")
+    m.authenticationRestoreStarted = false
+    m.homeConfigurationStarted = false
+    startConfiguration()
 end sub
+
+sub startConfiguration()
+    if m.configurationTask = invalid then return
+    state = m.configurationTask.state
+    if state = "run" then return
+    if state = "done" then m.configurationTask.control = "STOP"
+    m.splashScreen.statusText = "Loading application configuration…"
+    m.splashScreen.errorText = ""
+    m.configurationTask.control = "RUN"
+end sub
+
+sub onConfigurationStateChanged(event as object)
+    state = event.getData()
+    if state = "SUCCESS"
+        globalNode = GetGlobalAA()
+        if not RokuCore.SaveInitialConfiguration(globalNode, m.configurationTask.result)
+            RokuCore.SetConfigurationFailure(globalNode, { message: "Configuration result could not be applied." })
+            showConfigurationFailure("Application configuration could not be initialized. Press OK to retry.")
+            return
+        end if
+        beginPostConfigurationFlow()
+    else if state = "ERROR" or state = "OFFLINE"
+        message = m.configurationTask.errorMessage
+        if message = invalid or message = "" then message = "Application configuration could not be loaded. Press OK to retry."
+        RokuCore.SetConfigurationFailure(GetGlobalAA(), m.configurationTask.errorResult)
+        showConfigurationFailure(message + " Press OK to retry.")
+    end if
+end sub
+
+sub showConfigurationFailure(message as string)
+    m.splashScreen.errorText = message
+    m.splashScreen.statusText = "Startup paused"
+end sub
+
+sub beginPostConfigurationFlow()
+    globalNode = GetGlobalAA()
+    stateRepository = new DataLayer.StartupStateRepositoryImpl()
+    onboardingUseCase = new Domain.ResolveOnboardingUseCase(stateRepository)
+    decision = onboardingUseCase.execute(globalNode.resolvedConfig)
+    initialRoute = AppRoutes.AUTH_CHECK
+    initialParams = invalid
+    if decision.shouldShow
+        initialRoute = AppRoutes.ONBOARDING
+        initialParams = { slides: decision.slides, configId: decision.configId }
+    end if
+    initializeApplicationNavigation(initialRoute, initialParams)
+    if not decision.shouldShow then startAuthenticationRestore()
+end sub
+
+sub initializeApplicationNavigation(initialRoute as string, initialParams = invalid as dynamic)
+    navigationConfig = AppNavigationConfig.GetConfig()
+    initialized = m.framework.initialize({ root: m.navigationHost, initialRoute: initialRoute, initialParams: initialParams, routes: navigationConfig.routes, theme: m.theme, lifecycleDiagnostics: m.lifecycleDiagnostics })
+    if not initialized
+        AppLogError("RootScene", "Framework navigation initialization failed: " + m.framework.getLastError())
+        showConfigurationFailure("Application navigation could not be initialized. Press OK to retry.")
+        return
+    end if
+    if initialRoute = AppRoutes.HOME then m.homeScreen = m.framework.getCurrentScreen()
+    observeActiveScreenReadiness()
+end sub
+
+sub startAuthenticationRestore()
+    if m.authenticationRestoreStarted or m.authenticationRestoreTask = invalid then return
+    m.authenticationRestoreStarted = true
+    m.authenticationRestoreTask.control = "RUN"
+end sub
+
+sub onAuthenticationRestoreStateChanged(event as object)
+    state = event.getData()
+    globalNode = GetGlobalAA()
+    if state = "RESTORED"
+        RokuCore.SetAuthenticatedState(globalNode, m.authenticationRestoreTask.session)
+        startSecondAppConfiguration()
+    else if state = "NO_SESSION"
+        if not isAuthenticationEnabled(globalNode.resolvedConfig)
+            RokuCore.SetGuestAuthenticationState(globalNode)
+            startSecondAppConfiguration()
+        else
+            RokuCore.SetConfigurationStatus(globalNode, "AUTHENTICATION_REQUIRED")
+            showConfigurationFailure("A saved login was not found. V1 requires sign-in or QR activation here; the V2 auth screens are not present.")
+        end if
+    else if state = "EXPIRED"
+        RokuCore.SetConfigurationStatus(globalNode, "AUTHENTICATION_EXPIRED")
+        showConfigurationFailure("The saved login has expired. V1 refresh is provider-specific; the V2 token refresh flow is not present.")
+    end if
+end sub
+
+sub startSecondAppConfiguration()
+    if m.homeConfigurationStarted or m.homeConfigurationTask = invalid then return
+    m.homeConfigurationStarted = true
+    m.splashScreen.statusText = "Loading Home configuration..."
+    m.splashScreen.errorText = ""
+    globalNode = GetGlobalAA()
+    m.homeConfigurationTask.configId = globalNode.resolvedConfig.configId
+    m.homeConfigurationTask.control = "RUN"
+end sub
+
+sub onHomeConfigurationStateChanged(event as object)
+    state = event.getData()
+    if state = "ERROR"
+        m.homeConfigurationStarted = false
+        RokuCore.SetConfigurationStatus(GetGlobalAA(), "HOME_CONFIG_FAILED", m.homeConfigurationTask.errorMessage)
+        showConfigurationFailure(m.homeConfigurationTask.errorMessage + " Press OK to retry.")
+        return
+    end if
+    if state <> "SUCCESS" then return
+    globalNode = GetGlobalAA()
+    if not RokuCore.SaveHomeConfiguration(globalNode, m.homeConfigurationTask.result)
+        showConfigurationFailure("The Home application configuration could not be saved.")
+        return
+    end if
+    handled = m.framework.navigate(AppRoutes.HOME)
+    if not handled
+        showConfigurationFailure("Home navigation failed: " + m.framework.getLastError())
+        return
+    end if
+    m.homeScreen = m.framework.getCurrentScreen()
+    observeActiveScreenReadiness()
+end sub
+
+function isAuthenticationEnabled(resolved as dynamic) as boolean
+    if resolved = invalid then return false
+    platforms = resolved.platforms
+    authentication = resolved.authentication
+    if authentication = invalid then authentication = {}
+    if platforms <> invalid and platforms.build_version <> invalid and platforms.build_version.version <> invalid
+        version = CreateObject("roAppInfo").GetVersion()
+        if version <> invalid and Val(version.ToStr()) = Val(platforms.build_version.version.ToStr())
+            return platforms.build_version.is_authentication_enabled = true
+        end if
+    end if
+    if platforms <> invalid and platforms.is_authentication_enabled <> invalid
+        return platforms.is_authentication_enabled = true
+    end if
+    return authentication.is_authentication_enabled = true
+end function
 
 sub observeActiveScreenReadiness()
     screen = m.framework.getCurrentScreen()
@@ -56,18 +205,46 @@ end sub
 sub notifyScreenReady(screen as dynamic)
     if screen = invalid then return
     if screen.isSameNode(m.homeScreen)
-        m.splashScreen.visible = false
+        m.initialScreenReady = true
+        maybeHideSplash()
     end if
     m.framework.onActiveScreenReady(screen)
+end sub
+
+sub onSplashMinimumElapsed(event as object)
+    m.splashMinimumElapsed = true
+    maybeHideSplash()
+end sub
+
+sub maybeHideSplash()
+    if m.initialScreenReady and m.splashMinimumElapsed
+        m.splashScreen.visible = false
+    end if
 end sub
 
 sub onNavigationEventChanged(event as object)
     handled = m.framework.handleEvent(event.getData())
     if not handled then AppLogError("RootScene", "Navigation event was rejected: " + m.framework.getLastError())
-    if handled then observeActiveScreenReadiness()
+    if handled
+        observeActiveScreenReadiness()
+        currentRoute = m.framework.getCurrentRoute()
+        if currentRoute <> invalid and currentRoute.route = AppRoutes.AUTH_CHECK then startAuthenticationRestore()
+    end if
 end sub
 
 function onKeyEvent(key as string, press as boolean) as boolean
+    if press and key = "OK"
+        globalNode = GetGlobalAA()
+        if globalNode.configurationStatus = "FAILED"
+            startConfiguration()
+            return true
+        end if
+        if globalNode.configurationStatus = "HOME_CONFIG_FAILED" then startSecondAppConfiguration() : return true
+        if globalNode.configurationStatus = "READY" and not m.homeConfigurationStarted and globalNode.authenticationState.status = "GUEST"
+            startSecondAppConfiguration()
+            return true
+        end if
+    end if
     if press and key = "back"
 #if isRegistryDiagnosticBuild
         if m.registryDiagnostic <> invalid and m.registryDiagnostic.visible

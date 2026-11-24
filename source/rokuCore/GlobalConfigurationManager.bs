@@ -1,0 +1,123 @@
+' Owns the single application-wide configuration state exposed through roSGScreen's global node.
+import "pkg:/data/repositories/StartupStateRepositoryImpl.bs"
+namespace RokuCore
+    sub InitializeGlobalConfiguration(globalNode as dynamic)
+        if globalNode = invalid then return
+        globalNode.addFields({
+            constants: {}
+            remoteConfig: {}
+            appConfig: {}
+            resolvedConfig: {}
+            environment: ""
+            isConfigurationReady: false
+            configurationStatus: "IDLE"
+            configurationError: {}
+            authenticationState: { status: "UNKNOWN", isAuthenticated: false, isGuest: false }
+            appConfigRequestCount: 0
+            user_access_token: ""
+            refresh_token: ""
+            idToken: ""
+            customerId: ""
+            expires: invalid
+            tokenRefreshInProgress: false
+            isUserAuthenticated: false
+            userInfo: {}
+        })
+    end sub
+
+    sub SetConfigurationStatus(globalNode as dynamic, status as string, error = invalid as dynamic)
+        if globalNode = invalid then return
+        globalNode.configurationStatus = UCase(status)
+        if error = invalid
+            globalNode.configurationError = {}
+        else
+            globalNode.configurationError = error
+        end if
+    end sub
+
+    function SaveInitialConfiguration(globalNode as dynamic, payload as dynamic) as boolean
+        if globalNode = invalid or payload = invalid then return false
+        if payload.constants = invalid or payload.remoteConfig = invalid or payload.appConfig = invalid or payload.resolvedConfig = invalid
+            return false
+        end if
+        globalNode.constants = payload.constants
+        globalNode.remoteConfig = payload.remoteConfig
+        globalNode.appConfig = payload.appConfig
+        globalNode.resolvedConfig = payload.resolvedConfig
+        globalNode.environment = payload.environment
+        globalNode.appConfigRequestCount = 1
+        globalNode.configurationError = {}
+        globalNode.configurationStatus = "READY"
+        globalNode.isConfigurationReady = true
+        return true
+    end function
+
+    function SaveHomeConfiguration(globalNode as dynamic, appConfiguration as dynamic) as boolean
+        if globalNode = invalid or appConfiguration = invalid then return false
+        globalNode.appConfig = appConfiguration
+        globalNode.appConfigRequestCount = globalNode.appConfigRequestCount + 1
+        return true
+    end function
+
+    sub SetAuthenticatedState(globalNode as dynamic, session as dynamic)
+        if globalNode = invalid or session = invalid then return
+        if session.access_token = invalid or session.access_token = "" or session.access_token = "GUEST_TOKEN" then return
+        globalNode.authenticationState = { status: "AUTHENTICATED", isAuthenticated: true, isGuest: false }
+        globalNode.user_access_token = session.access_token
+        globalNode.refresh_token = ""
+        globalNode.idToken = ""
+        globalNode.customerId = ""
+        globalNode.expires = invalid
+        globalNode.userInfo = {}
+        if session.refresh_token <> invalid then globalNode.refresh_token = session.refresh_token
+        if session.idToken <> invalid then globalNode.idToken = session.idToken
+        if session.customerId <> invalid then globalNode.customerId = session.customerId
+        if session.expires <> invalid then globalNode.expires = session.expires
+        globalNode.isUserAuthenticated = true
+    end sub
+
+    function PersistAuthenticatedResponse(globalNode as dynamic, response as dynamic, repository = invalid as dynamic) as boolean
+        if globalNode = invalid or response = invalid then return false
+        if repository = invalid then repository = new DataLayer.StartupStateRepositoryImpl()
+        if not repository.saveUserSession(response) then return false
+        session = repository.readUserSession()
+        if session = invalid then return false
+        SetAuthenticatedState(globalNode, session)
+        return GetRuntimeAccessToken(globalNode) <> ""
+    end function
+
+    ' V1 keeps guest state in memory only; it does not write GUEST_TOKEN to Registry.
+    sub SetGuestAuthenticationState(globalNode as dynamic, repository = invalid as dynamic)
+        if globalNode = invalid then return
+        if repository = invalid then repository = new DataLayer.StartupStateRepositoryImpl()
+        ' Do not persist a guest record. Clear any previous account so the next
+        ' launch cannot restore another user's refresh token or profile.
+        repository.clearUserSession()
+        globalNode.authenticationState = { status: "GUEST", isAuthenticated: false, isGuest: true }
+        globalNode.user_access_token = "GUEST_TOKEN"
+        globalNode.refresh_token = ""
+        globalNode.idToken = ""
+        globalNode.customerId = ""
+        globalNode.expires = invalid
+        globalNode.isUserAuthenticated = false
+        globalNode.userInfo = { id: "GUEST" }
+    end sub
+
+    function GetRuntimeAccessToken(globalNode as dynamic) as string
+        if globalNode = invalid or globalNode.isUserAuthenticated <> true then return ""
+        token = globalNode.user_access_token
+        if token = invalid or token = "" or token = "GUEST_TOKEN" then return ""
+        return token.ToStr()
+    end function
+
+    sub SetRefreshedSession(globalNode as dynamic, session as dynamic)
+        SetAuthenticatedState(globalNode, session)
+    end sub
+
+    sub SetConfigurationFailure(globalNode as dynamic, failure as dynamic)
+        if globalNode = invalid then return
+        globalNode.isConfigurationReady = false
+        globalNode.configurationStatus = "FAILED"
+        globalNode.configurationError = failure
+    end sub
+end namespace

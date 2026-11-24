@@ -3,21 +3,21 @@ import "pkg:/services/ContentService.bs"
 import "pkg:/data/mappers/EpisodeMapper.bs"
 import "pkg:/data/api/ApiResult.bs"
 
-namespace Data
+namespace DataLayer
     class ContentRepositoryImpl extends Domain.ContentRepository
         private service as object
         private mapper as object
         function new(service = invalid as dynamic, mapper = invalid as dynamic)
             super()
-            if service = invalid then service = new Data.ContentService()
-            if mapper = invalid then mapper = new Data.EpisodeMapper()
+            if service = invalid then service = new DataLayer.ContentService()
+            if mapper = invalid then mapper = new DataLayer.EpisodeMapper()
             m.service = service
             m.mapper = mapper
         end function
         override function getSeasonEpisodes(seriesId as string, seasonNumber as string, pageLimit as integer, pageOffset as integer) as object
             response = m.service.getSeasonEpisodes(seriesId, seasonNumber, pageLimit, pageOffset)
             if response = invalid then
-                errors = new Data.ApiResult()
+                errors = new DataLayer.ApiResult()
                 return errors.failure("UNEXPECTED", "Content service returned no response", 0, false)
             end if
             if not response.ok then return response

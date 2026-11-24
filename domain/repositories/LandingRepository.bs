@@ -1,0 +1,7 @@
+namespace Domain
+    class LandingRepository
+        function getHomeSections(appConfiguration as dynamic, isAuthenticated as boolean) as object
+            throw "Domain.LandingRepository.getHomeSections() must be implemented by a concrete repository"
+        end function
+    end class
+end namespace

@@ -1,6 +1,6 @@
 import "pkg:/data/repositories/SettingsRepositoryImpl.bs"
 
-namespace tests.data
+namespace tests.dataLayer
 
     class FakeSettingsDataSource
         values as object
@@ -41,7 +41,7 @@ namespace tests.data
         @it("reads and saves a language in the same market Registry section")
         function readsSavesAndRestoresLanguage()
             dataSource = new FakeSettingsDataSource()
-            repository = new Data.SettingsRepositoryImpl(dataSource)
+            repository = new DataLayer.SettingsRepositoryImpl(dataSource)
             m.assertEqual(repository.get("language", ""), "")
             m.assertTrue(repository.save("language", "fr"))
             m.assertEqual(dataSource.lastSection, "Market_tringplay_Settings")

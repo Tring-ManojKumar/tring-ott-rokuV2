@@ -1,4 +1,4 @@
-namespace Data
+namespace DataLayer
     class ApiResult
         function failure(category as string, technicalMessage as string, statusCode = 0 as integer, retryable = false as boolean, attempts = 1 as integer, responseData = invalid as dynamic) as object
             userMessage = "Something went wrong. Please try again."

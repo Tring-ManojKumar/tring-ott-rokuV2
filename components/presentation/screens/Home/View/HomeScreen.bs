@@ -4,7 +4,7 @@ import "pkg:/source/navigation/AppRoutes.bs"
 
 sub init()
     AppLogInfo("HomeScreen", "Initialization started")
-    m.grid = m.top.findNode("homeGrid")
+    m.grid = m.top.findNode("homeRows")
     m.grid.focusable = true
     m.marketButton = m.top.findNode("marketButton")
     m.contentActionButton = m.top.findNode("contentActionButton")
@@ -31,8 +31,8 @@ sub init()
     m.requestController.requestTask = m.viewModel
     m.requestController.observeField("fallbackVisible", "onFallbackVisibilityChanged")
     m.requestController.observeField("retryRequested", "onRetryRequested")
-    m.grid.observeField("itemSelected", "onGridItemSelected")
-    m.grid.observeField("itemFocused", "onGridItemFocused")
+    m.grid.observeField("rowItemSelected", "onGridItemSelected")
+    m.grid.observeField("rowItemFocused", "onGridItemFocused")
     if m.marketButton <> invalid then m.marketButton.observeField("activated", "onMarketButtonActivated")
     if m.contentActionButton <> invalid
         m.contentActionButton.observeField("activated", "onContentActionButtonActivated")
@@ -41,9 +41,6 @@ sub init()
 
     m.viewModel.playlistUrl = AppConfig.GetPlaylistUrl()
     m.viewModel.callFunc("loadPlaylist")
-    ' The UI is usable while the playlist task runs; readiness is independent
-    ' of network success or response time so the splash cannot block the app.
-    m.top.isReady = true
 end sub
 
 sub updatePrimaryButton(event = invalid as dynamic)
@@ -74,43 +71,40 @@ sub onHomeFocusChanged(event as object)
 end sub
 
 sub onGridItemFocused(event as object)
-    index = event.getData()
-    if index = invalid or index < 0 or index >= m.items.count() then return
-    updateContentActionButton(m.items[index])
+    selection = event.getData()
+    if selection = invalid or selection.Count() < 2 then return
+    rowIndex = selection[0]
+    itemIndex = selection[1]
+    content = m.grid.content
+    if content = invalid or rowIndex < 0 or rowIndex >= content.getChildCount() then return
+    row = content.getChild(rowIndex)
+    if itemIndex < 0 or itemIndex >= row.getChildCount() then return
+    updateContentActionButton(row.getChild(itemIndex))
 end sub
 
 sub onContentChanged(event as object)
     content = event.getData()
     if content <> invalid
-        gridContent = CreateObject("roSGNode", "ContentNode")
+        m.grid.content = content
+        m.grid.jumpToRowItem = [0, 0]
         m.items = []
         for rowIndex = 0 to content.getChildCount() - 1
             row = content.getChild(rowIndex)
             for itemIndex = 0 to row.getChildCount() - 1
                 item = row.getChild(itemIndex)
-                gridItem = gridContent.createChild("ContentNode")
-                gridItem.title = item.title
-                gridItem.HDPosterUrl = item.HDPosterUrl
-                mediaType = ""
-                contentType = ""
-                if item.hasField("media_type") then mediaType = item.getField("media_type")
-                if item.hasField("content_type") then contentType = item.getField("content_type")
-                gridItem.AddFields({
-                    media_type: mediaType,
-                    content_type: contentType
-                })
                 m.items.push(item)
             end for
         end for
-        m.grid.content = gridContent
         if m.contentActionButton <> invalid
             if m.items.count() > 0
                 updateContentActionButtonPosition()
                 updateContentActionButton(m.items[0])
                 m.contentActionButton.visible = true
+            else
+                m.contentActionButton.visible = false
             end if
         end if
-        if m.items.count() > 0 or m.marketButton <> invalid then m.top.isReady = true
+        if m.items.count() > 0 then m.top.isReady = true
     end if
 end sub
 
@@ -134,19 +128,17 @@ end function
 sub updateContentActionButtonPosition()
     if m.grid = invalid or m.contentActionButton = invalid then return
 
-    itemSize = m.grid.itemSize
-    itemSpacing = m.grid.itemSpacing
-    columns = m.grid.numColumns
-    if itemSize = invalid or itemSpacing = invalid or columns < 1 then return
-
-    rowCount = 1
-    if m.items.count() > 0 then rowCount = int((m.items.count() + columns - 1) / columns)
-    maxRows = m.grid.numRows
-    if maxRows > 0 and rowCount > maxRows then rowCount = maxRows
-
-    gridWidth = columns * itemSize[0] + (columns - 1) * itemSpacing[0]
-    gridHeight = rowCount * itemSize[1] + (rowCount - 1) * itemSpacing[1]
-    buttonX = m.grid.translation[0] + (gridWidth - m.contentActionButton.width) / 2
+    buttonX = m.grid.translation[0]
+    rowSize = m.grid.rowItemSize
+    buttonWidth = m.contentActionButton.width
+    if rowSize <> invalid and rowSize.Count() > 0 and buttonWidth > 0
+        gridWidth = rowSize[0]
+        if gridWidth > buttonWidth
+            buttonX = m.grid.translation[0] + (gridWidth - buttonWidth) / 2
+        end if
+    end if
+    gridHeight = 0
+    if rowSize <> invalid and rowSize.Count() > 1 then gridHeight = rowSize[1]
     buttonY = m.grid.translation[1] + gridHeight + 20
     m.contentActionButton.translation = [buttonX, buttonY]
 end sub
@@ -173,13 +165,11 @@ end function
 function onKeyEvent(key as string, press as boolean) as boolean
     if not press or m.grid = invalid or m.marketButton = invalid or m.contentActionButton = invalid then return false
 
-    if key = "down" and m.grid.hasFocus() and m.items.count() > 0
-        columns = m.grid.numColumns
-        focusedIndex = m.grid.itemFocused
-        if columns > 0 and focusedIndex <> invalid and focusedIndex >= 0
-            currentRow = int(focusedIndex / columns)
-            lastRow = int((m.items.count() - 1) / columns)
-            if currentRow >= lastRow
+    if key = "down" and m.grid.hasFocus()
+        focusPosition = m.grid.rowItemFocused
+        if focusPosition <> invalid and focusPosition.Count() > 0 and m.grid.content <> invalid
+            lastRow = m.grid.content.getChildCount() - 1
+            if focusPosition[0] >= lastRow
                 if m.contentActionButton.visible
                     m.contentActionButton.setFocus(true)
                     if m.contentActionButton.hasFocus() then return true
@@ -209,7 +199,7 @@ function onKeyEvent(key as string, press as boolean) as boolean
 end function
 
 sub onFallbackVisibilityChanged(event as object)
-    if event.getData() and m.requestController.retryVisible
+    if event.getData()
         m.top.isReady = true
     end if
 end sub
@@ -230,8 +220,8 @@ sub onFrameworkCleanupRequested(event as object)
         m.requestController.unobserveField("retryRequested")
     end if
     if m.grid <> invalid
-        m.grid.unobserveField("itemSelected")
-        m.grid.unobserveField("itemFocused")
+        m.grid.unobserveField("rowItemSelected")
+        m.grid.unobserveField("rowItemFocused")
     end if
     if m.marketButton <> invalid then m.marketButton.unobserveField("activated")
     if m.contentActionButton <> invalid then m.contentActionButton.unobserveField("activated")
@@ -251,9 +241,14 @@ sub onRetryRequested(event as object)
 end sub
 
 sub onGridItemSelected(event as object)
-    index = event.getData()
-    if index = invalid or index < 0 or index >= m.items.count() then return
-    selectedItem = m.items[index]
-    m.imageGallery.images = selectedItem.images
-    m.imageGallery.visible = true
+    selection = event.getData()
+    if selection = invalid or selection.Count() < 2 then return
+    rowIndex = selection[0]
+    itemIndex = selection[1]
+    content = m.grid.content
+    if content = invalid or rowIndex < 0 or rowIndex >= content.getChildCount() then return
+    row = content.getChild(rowIndex)
+    if itemIndex < 0 or itemIndex >= row.getChildCount() then return
+    selectedItem = row.getChild(itemIndex)
+    updateContentActionButton(selectedItem)
 end sub

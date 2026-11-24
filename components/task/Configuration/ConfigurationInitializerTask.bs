@@ -1,0 +1,34 @@
+import "pkg:/domain/usecases/InitializeConfigurationUseCase.bs"
+import "pkg:/data/repositories/ConfigurationRepositoryImpl.bs"
+import "pkg:/utils/logging/Logger.bs"
+
+sub init()
+    m.top.functionName = "execute"
+end sub
+
+sub execute()
+    m.top.requestState = "LOADING"
+    m.top.result = invalid
+    m.top.errorResult = invalid
+    repository = new DataLayer.ConfigurationRepositoryImpl()
+    useCase = new Domain.InitializeConfigurationUseCase(repository)
+    result = useCase.execute()
+    if result = invalid or not result.ok
+        m.top.errorResult = result
+        m.top.errorMessage = "Unable to initialize application configuration."
+        if result <> invalid
+            m.top.errorMessage = result.userMessage
+            if result.technicalMessage <> "" then AppLogError("ConfigurationTask", result.technicalMessage)
+            if result.category = "OFFLINE"
+                m.top.requestState = "OFFLINE"
+            else
+                m.top.requestState = "ERROR"
+            end if
+        else
+            m.top.requestState = "ERROR"
+        end if
+        return
+    end if
+    m.top.result = result.data
+    m.top.requestState = "SUCCESS"
+end sub

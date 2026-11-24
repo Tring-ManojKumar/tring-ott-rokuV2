@@ -1,0 +1,107 @@
+import "pkg:/source/navigation/NavigationEvents.bs"
+import "pkg:/source/navigation/AppRoutes.bs"
+
+sub init()
+    m.image = m.top.findNode("slideImage")
+    m.title = m.top.findNode("slideTitle")
+    m.description = m.top.findNode("slideDescription")
+    m.pageNumber = m.top.findNode("pageNumber")
+    m.skipButton = m.top.findNode("skipButton")
+    m.nextButton = m.top.findNode("nextButton")
+    m.completionTask = m.top.findNode("completionTask")
+    m.slides = []
+    m.slideIndex = 0
+    m.configId = ""
+    m.completionStarted = false
+    m.skipButton.observeField("activated", "onSkipActivated")
+    m.nextButton.observeField("activated", "onNextActivated")
+    m.completionTask.observeField("requestState", "onCompletionStateChanged")
+    if m.top.navigationParams <> invalid then applyNavigationParams(m.top.navigationParams)
+end sub
+
+sub onNavigationParamsChanged(event as object)
+    applyNavigationParams(event.getData())
+end sub
+
+sub applyNavigationParams(params as dynamic)
+    if params = invalid then return
+    m.slides = params.slides
+    if m.slides = invalid then m.slides = []
+    m.configId = ""
+    if params.configId <> invalid then m.configId = params.configId.ToStr()
+    m.slideIndex = 0
+    if m.slides.Count() = 0
+        m.top.isReady = false
+        return
+    end if
+    renderCurrentSlide()
+    m.top.isReady = true
+end sub
+
+sub renderCurrentSlide()
+    if m.slides.Count() = 0 or m.slideIndex < 0 or m.slideIndex >= m.slides.Count() then return
+    slide = m.slides[m.slideIndex]
+    imageUri = m.stringValue(slide.image_uri)
+    if imageUri = "" then imageUri = m.stringValue(slide.imageUri)
+    m.image.uri = imageUri
+    m.title.text = m.stringValue(slide.page_title)
+    m.description.text = m.stringValue(slide.page_description)
+    m.pageNumber.text = (m.slideIndex + 1).ToStr() + " / " + m.slides.Count().ToStr()
+    if m.slideIndex = m.slides.Count() - 1 then m.nextButton.text = "Get Started" else m.nextButton.text = "Next"
+end sub
+
+sub onSkipActivated(event as object)
+    beginCompletion()
+end sub
+
+sub onNextActivated(event as object)
+    if m.completionStarted then return
+    if m.slideIndex < m.slides.Count() - 1
+        m.slideIndex = m.slideIndex + 1
+        renderCurrentSlide()
+    else
+        beginCompletion()
+    end if
+end sub
+
+sub beginCompletion()
+    if m.completionStarted then return
+    m.completionStarted = true
+    m.skipButton.enabled = false
+    m.nextButton.enabled = false
+    m.completionTask.configId = m.configId
+    m.completionTask.control = "RUN"
+end sub
+
+sub onCompletionStateChanged(event as object)
+    if event.getData() = "SUCCESS"
+        scene = m.top.getScene()
+        if scene <> invalid and scene.hasField("navigationEvent")
+            events = new NavigationEvents()
+            scene.navigationEvent = events.navigate(AppRoutes.AUTH_CHECK)
+        end if
+    else if event.getData() = "ERROR"
+        m.completionStarted = false
+        m.skipButton.enabled = true
+        m.nextButton.enabled = true
+    end if
+end sub
+
+function setInitialFocus() as boolean
+    m.nextButton.setFocus(true)
+    return m.nextButton.hasFocus()
+end function
+
+sub onCleanupRequested(event as object)
+    if not event.getData() then return
+    m.skipButton.unobserveField("activated")
+    m.nextButton.unobserveField("activated")
+    m.completionTask.unobserveField("requestState")
+end sub
+
+function stringValue(value as dynamic) as string
+    if value = invalid then return ""
+    valueType = LCase(type(value))
+    if valueType <> "string" and valueType <> "rostring" then return ""
+    return value
+end function

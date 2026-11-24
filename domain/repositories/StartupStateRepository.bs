@@ -1,0 +1,19 @@
+namespace Domain
+    class StartupStateRepository
+        function hasCompletedOnboarding(configId as string) as boolean
+            throw "Domain.StartupStateRepository.hasCompletedOnboarding() must be implemented"
+        end function
+        function markOnboardingCompleted(configId as string) as boolean
+            throw "Domain.StartupStateRepository.markOnboardingCompleted() must be implemented"
+        end function
+        function readUserSession() as dynamic
+            throw "Domain.StartupStateRepository.readUserSession() must be implemented"
+        end function
+        function saveUserSession(response as dynamic) as boolean
+            throw "Domain.StartupStateRepository.saveUserSession() must be implemented"
+        end function
+        function clearUserSession() as boolean
+            throw "Domain.StartupStateRepository.clearUserSession() must be implemented"
+        end function
+    end class
+end namespace

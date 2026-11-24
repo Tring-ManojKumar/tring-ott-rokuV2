@@ -2,14 +2,14 @@ import "pkg:/data/api/BaseApi.bs"
 import "pkg:/source/rokuCore/ConfigurationProvider.bs"
 import "pkg:/data/api/ApiResult.bs"
 
-namespace Data
+namespace DataLayer
     class ContentService
         private api as object
         private urls as object
         private baseUrl as string
         private headers as object
         function new(api = invalid as dynamic, maxRetries = 1 as integer, timeoutMs = 30000 as integer)
-            if api = invalid then api = new Data.BaseApi(maxRetries, invalid, timeoutMs)
+            if api = invalid then api = new DataLayer.BaseApi(maxRetries, invalid, timeoutMs)
             m.api = api
             apiConfig = RokuCore.GetApiConfiguration()
             m.urls = apiConfig
@@ -33,10 +33,10 @@ namespace Data
             return m.api.get(url, invalid, m.headers)
         end function
         function getSubscriptionDetails(url as string) as object
-            return m.api.get(url, invalid, m.headers)
+            return m.api.getAuthenticated(url, invalid, m.headers)
         end function
         function getLibraryItems(url as string, query = invalid as dynamic) as object
-            return m.api.get(url, query, m.headers)
+            return m.api.getAuthenticated(url, query, m.headers)
         end function
         function getPlaylist(url as string) as object
             if url = "" then return m.configurationError("playlist")
@@ -54,7 +54,7 @@ namespace Data
         end function
 
         private function configurationError(endpointKey as string) as object
-            errors = new Data.ApiResult()
+            errors = new DataLayer.ApiResult()
             return errors.failure("CONFIGURATION", "Missing URL configuration: " + endpointKey)
         end function
     end class

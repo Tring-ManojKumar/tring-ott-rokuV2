@@ -3,6 +3,8 @@ import "pkg:/data/datasources/JWPlayerRemoteDataSource.bs"
 import "pkg:/data/mappers/MediaItemMapper.bs"
 import "pkg:/data/repositories/PlaylistRepositoryImpl.bs"
 import "pkg:/adapters/ContentUiAdapter.bs"
+import "pkg:/domain/usecases/GetLandingSectionsUseCase.bs"
+import "pkg:/data/repositories/LandingRepositoryImpl.bs"
 
 sub init()
     m.top.functionName = "execute"
@@ -15,12 +17,17 @@ sub execute()
     m.top.requestState = "LOADING"
     m.top.content = invalid
 
-    dataSource = new Data.JWPlayerRemoteDataSource(m.top.playlistUrl, m.top.retryLimit, m.top.timeoutMs)
-    mapper = new Data.MediaItemMapper()
-    repository = new Data.PlaylistRepositoryImpl(dataSource, mapper)
-    useCase = new Domain.GetPlaylistUseCase(repository)
-
-    result = useCase.execute()
+    if m.top.appConfig <> invalid
+        repository = new DataLayer.LandingRepositoryImpl(invalid, invalid, invalid)
+        useCase = new Domain.GetLandingSectionsUseCase(repository)
+        result = useCase.execute(m.top.appConfig, m.top.isAuthenticated)
+    else
+        dataSource = new DataLayer.JWPlayerRemoteDataSource(m.top.playlistUrl, m.top.retryLimit, m.top.timeoutMs)
+        mapper = new DataLayer.MediaItemMapper()
+        repository = new DataLayer.PlaylistRepositoryImpl(dataSource, mapper)
+        useCase = new Domain.GetPlaylistUseCase(repository)
+        result = useCase.execute()
+    end if
     if result = invalid or not result.ok
         m.top.isLoading = false
         m.top.errorResult = result
@@ -47,7 +54,11 @@ sub execute()
     end if
 
     uiAdapter = new Presentation.ContentUiAdapter()
-    m.top.content = uiAdapter.playlistToContentNode(mediaItems)
+    if m.top.appConfig <> invalid
+        m.top.content = uiAdapter.landingSectionsToContentNode(mediaItems)
+    else
+        m.top.content = uiAdapter.playlistToContentNode(mediaItems)
+    end if
     m.top.isLoading = false
     m.top.requestState = "SUCCESS"
 end sub

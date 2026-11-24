@@ -4,7 +4,7 @@
 import "pkg:/data/datasources/RegistryDataSource.bs"
 
 function RunRegistryDiagnostic() as string
-    registryDataSource = new Data.RegistryDataSource()
+    registryDataSource = new DataLayer.RegistryDataSource()
     marketId = registryDataSource.getActiveMarketId()
     lines = []
 

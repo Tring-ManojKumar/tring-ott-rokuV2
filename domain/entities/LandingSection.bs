@@ -1,0 +1,19 @@
+namespace Domain
+    class LandingSection
+        public id as string
+        public title as string
+        public type as string
+        public featured as boolean
+        public railType as string
+        public items as object
+
+        function new(id as string, title as string, sectionType as string, featured as boolean, railType as string, items as object)
+            m.id = id
+            m.title = title
+            m.type = sectionType
+            m.featured = featured
+            m.railType = railType
+            m.items = items
+        end function
+    end class
+end namespace

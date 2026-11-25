@@ -1,4 +1,6 @@
 import "pkg:/data/api/BaseApi.bs"
+import "pkg:/services/AuthService.bs"
+import "pkg:/source/rokuCore/GlobalConfigurationManager.bs"
 
 sub init()
     m.top.functionName = "execute"
@@ -9,6 +11,19 @@ sub execute()
     m.top.session = invalid
     api = new DataLayer.BaseApi(1, invalid, 30000, m.global)
     restoreResult = api.restoreSession()
+    if restoreResult.status = "RESTORED"
+        authService = new DataLayer.AuthService(api, m.global)
+        profile = authService.getAccountDetails()
+        if profile <> invalid and profile.ok
+            RokuCore.SetAccountProfile(m.global, profile.data)
+        end if
+        if authService.getProvider() = "cleeng"
+            subscriptions = authService.getSubscriptions()
+            if subscriptions <> invalid and subscriptions.ok
+                RokuCore.SetSubscriptionState(m.global, subscriptions.data)
+            end if
+        end if
+    end if
     m.top.session = restoreResult.session
     m.top.requestState = restoreResult.status
 end sub

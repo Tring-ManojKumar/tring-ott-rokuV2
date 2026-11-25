@@ -25,11 +25,13 @@
         <function name="updateFocus" />
     </interface>
     <children>
-        <Rectangle id="background" width="0" height="0" color="0x00000000" />
-        <Rectangle id="borderTop" width="0" height="0" color="0x00000000" />
-        <Rectangle id="borderBottom" width="0" height="0" color="0x00000000" />
-        <Rectangle id="borderLeft" width="0" height="0" color="0x00000000" />
-        <Rectangle id="borderRight" width="0" height="0" color="0x00000000" />
+        <MaskGroup id="backgroundMask" width="0" height="0" maskUri="pkg:/assets/images/button-mask.png">
+            <Poster id="background" width="0" height="0" uri="pkg:/assets/images/button-mask.png" loadDisplayMode="scaleToFill" />
+            <Rectangle id="borderTop" width="0" height="0" color="0x00000000" />
+            <Rectangle id="borderBottom" width="0" height="0" color="0x00000000" />
+            <Rectangle id="borderLeft" width="0" height="0" color="0x00000000" />
+            <Rectangle id="borderRight" width="0" height="0" color="0x00000000" />
+        </MaskGroup>
         <Label id="buttonLabel" width="0" height="0" text="Watch Now" horizAlign="center" vertAlign="center" visible="true" />
     </children>
     <script type="text/brightscript" uri="pkg:/source/rokuCore/theme/ThemeProvider.bs" />

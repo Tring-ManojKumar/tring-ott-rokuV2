@@ -15,13 +15,13 @@ namespace DataLayer
             return errors.success(constants)
         end function
 
-        function selectRemoteConfiguration(response as dynamic, buildType as string) as object
+        function selectRemoteConfiguration(remoteConfigResponse as dynamic, buildType as string) as object
             errors = new DataLayer.ApiResult()
-            if not m.isAssociativeArray(response) or not m.isAssociativeArray(response.entries)
+            if not m.isAssociativeArray(remoteConfigResponse) or not m.isAssociativeArray(remoteConfigResponse.entries)
                 return errors.failure("PARSE", "Firebase Remote Config response has no entries map")
             end if
 
-            entries = response.entries
+            entries = remoteConfigResponse.entries
             selectedKey = "global_remote_config_dev"
             normalizedBuildType = LCase(buildType)
             if Instr(1, normalizedBuildType, "stage") > 0

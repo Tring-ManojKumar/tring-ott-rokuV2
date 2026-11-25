@@ -3,6 +3,7 @@ import "pkg:/data/api/ApiResult.bs"
 import "pkg:/source/rokuCore/GlobalConfigurationManager.bs"
 import "pkg:/source/rokuCore/ConfigurationProvider.bs"
 import "pkg:/data/repositories/StartupStateRepositoryImpl.bs"
+import "pkg:/utils/logging/Logger.bs"
 namespace DataLayer
     class BaseApi
         private maxRetries as integer
@@ -148,7 +149,7 @@ namespace DataLayer
                 globalNode.tokenRefreshInProgress = false
                 return invalid
             end if
-            baseUrl = authBases[provider]
+            baseUrl = RokuCore.ResolveEnvironmentBaseUrl(authBases[provider], m.getEnvironment(globalNode))
             endpoint = personalisation[provider].refreshToken
             if baseUrl = invalid or endpoint = invalid
                 globalNode.tokenRefreshInProgress = false
@@ -186,8 +187,19 @@ namespace DataLayer
             if LCase(provider) = "cleeng"
                 return { body: { refreshToken: refreshToken }, headers: { "Content-Type": "application/json" } }
             end if
-            form = m.formEncode({ token: refreshToken, client_id: clientId, grant_type: "refresh_token" })
+            form = m.formEncode({ refresh_token: refreshToken, client_id: clientId, grant_type: "refresh_token" })
             return { body: form, headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+        end function
+
+        function buildRefreshUrl(provider as string, globalNode as dynamic) as dynamic
+            apiConfig = RokuCore.GetApiConfiguration()
+            if apiConfig = invalid or apiConfig.authBaseUrls = invalid or apiConfig.personalisation = invalid then return invalid
+            baseSection = apiConfig.authBaseUrls[provider]
+            endpoints = apiConfig.personalisation[provider]
+            if baseSection = invalid or endpoints = invalid or endpoints.refreshToken = invalid then return invalid
+            baseUrl = RokuCore.ResolveEnvironmentBaseUrl(baseSection, m.getEnvironment(globalNode))
+            if baseUrl = invalid then return invalid
+            return baseUrl.ToStr() + endpoints.refreshToken.ToStr()
         end function
 
         private function getGlobalNode() as dynamic
@@ -198,6 +210,22 @@ namespace DataLayer
         private function getSessionRepository() as dynamic
             if m.sessionRepository <> invalid then return m.sessionRepository
             return new DataLayer.StartupStateRepositoryImpl()
+        end function
+
+        private function getEnvironment(globalNode as dynamic) as string
+            if globalNode <> invalid and globalNode.environment <> invalid
+                return globalNode.environment.ToStr()
+            end if
+            if globalNode <> invalid and globalNode.resolvedConfig <> invalid
+                if globalNode.resolvedConfig.environment <> invalid
+                    return globalNode.resolvedConfig.environment.ToStr()
+                end if
+            end if
+            runtime = RokuCore.GetRuntimeConfiguration()
+            if runtime <> invalid and runtime.environment <> invalid
+                return runtime.environment.ToStr()
+            end if
+            return "prod"
         end function
 
         private function formEncode(values as object) as string
@@ -247,6 +275,7 @@ namespace DataLayer
             if body <> invalid and not hasContentType then request.AddHeader("Content-Type", "application/json")
             port = CreateObject("roMessagePort")
             request.SetMessagePort(port)
+            m.printServerCall(url, method, body, headers)
             started = false
             if method = "GET"
                 started = request.AsyncGetToString()
@@ -304,6 +333,123 @@ namespace DataLayer
                 end if
             end for
             return url
+        end function
+
+        function buildServerCallLog(url as string, method as string, body as dynamic, headers as dynamic) as string
+            command = "curl -X " + UCase(method) + " -i"
+            loggedHeaders = { Accept: "application/json" }
+            hasContentType = false
+            if headers <> invalid
+                for each name in headers
+                    loggedHeaders[name] = m.redactRequestText(name, headers[name].ToStr())
+                    if LCase(name) = "content-type" then hasContentType = true
+                end for
+            end if
+            if body <> invalid and not hasContentType
+                loggedHeaders["Content-Type"] = "application/json"
+            end if
+            for each name in loggedHeaders
+                command = command + " -H " + Chr(34) + name + ": " + loggedHeaders[name] + Chr(34)
+            end for
+            if body <> invalid
+                command = command + " -d " + Chr(39) + m.redactRequestBody(body) + Chr(39)
+            end if
+            return command + " " + Chr(34) + m.redactSensitiveQueryParameters(url) + Chr(34)
+        end function
+
+        private function printServerCall(url as string, method as string, body as dynamic, headers as dynamic) as void
+            AppLogApi(m.buildServerCallLog(url, method, body, headers))
+        end function
+
+        private function redactRequestBody(body as dynamic) as string
+            serialized = m.serializeBody(body)
+            parsed = ParseJson(serialized)
+            if parsed <> invalid
+                return FormatJson(m.redactRequestValue(parsed, ""))
+            end if
+            if Instr(1, serialized, "=") > 0 then return m.redactFormEncodedBody(serialized)
+            return "<redacted>"
+        end function
+
+        private function redactRequestValue(value as dynamic, fieldName as string) as dynamic
+            if m.isSensitiveParameterName(fieldName) then return "<redacted>"
+            valueType = LCase(type(value))
+            if valueType = "roassociativearray" or valueType = "associativearray"
+                redacted = {}
+                for each key in value
+                    redacted[key] = m.redactRequestValue(value[key], key)
+                end for
+                return redacted
+            end if
+            if valueType = "roarray" or valueType = "array"
+                redacted = []
+                for each item in value
+                    redacted.Push(m.redactRequestValue(item, ""))
+                end for
+                return redacted
+            end if
+            return value
+        end function
+
+        private function redactFormEncodedBody(body as string) as string
+            parameters = body.Tokenize("&")
+            redactedBody = ""
+            for index = 0 to parameters.Count() - 1
+                if index > 0 then redactedBody = redactedBody + "&"
+                parameter = parameters[index]
+                separator = Instr(1, parameter, "=")
+                if separator > 0
+                    name = Left(parameter, separator - 1)
+                    if m.isSensitiveParameterName(name)
+                        parameter = name + "=<redacted>"
+                    end if
+                end if
+                redactedBody = redactedBody + parameter
+            end for
+            return redactedBody
+        end function
+
+        private function redactRequestText(name as string, value as string) as string
+            if m.isSensitiveParameterName(name) then return "<redacted>"
+            return value
+        end function
+
+        private function isSensitiveParameterName(name as string) as boolean
+            normalized = LCase(name).Replace("-", "_")
+            if normalized = "key" or normalized = "api_key" or normalized = "apikey" then return true
+            sensitiveFragments = [
+                "authorization", "auth_token", "access_token", "refresh_token", "id_token",
+                "token", "secret", "password", "passwd", "cookie", "credential", "signature",
+                "email", "username", "full_name", "phone", "mobile", "first_name", "last_name", "address", "birth",
+                "app_instance_id", "device_id", "user_id", "customer_id", "account_id", "session_id",
+                "activation_code", "verification_code", "auth_code"
+            ]
+            for each fragment in sensitiveFragments
+                if Instr(1, normalized, fragment) > 0 then return true
+            end for
+            if Right(normalized, 4) = "_key" then return true
+            return false
+        end function
+
+        function redactSensitiveQueryParameters(url as string) as string
+            queryStart = Instr(1, url, "?")
+            if queryStart = 0 then return url
+            baseUrl = Left(url, queryStart - 1)
+            parameters = Mid(url, queryStart + 1).Tokenize("&")
+            redactedQuery = ""
+            for index = 0 to parameters.Count() - 1
+                if index > 0 then redactedQuery = redactedQuery + "&"
+                separator = Instr(1, parameters[index], "=")
+                parameter = parameters[index]
+                if separator > 0
+                    name = Left(parameter, separator - 1)
+                    if m.isSensitiveParameterName(name)
+                        parameter = name + "=<redacted>"
+                    end if
+                end if
+                redactedQuery = redactedQuery + parameter
+            end for
+            return baseUrl + "?" + redactedQuery
         end function
     end class
 end namespace

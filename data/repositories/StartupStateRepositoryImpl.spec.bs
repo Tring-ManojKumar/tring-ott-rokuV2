@@ -21,6 +21,12 @@ namespace tests.dataLayer
         end function
     end class
 
+    class FailingLogoutRegistryDataSource extends FakeStartupRegistryDataSource
+        override function remove(sectionName as string, key as string) as boolean
+            return false
+        end function
+    end class
+
     @suite("V1 startup Registry persistence")
     class StartupStateRepositoryTests extends rooibos.BaseTestSuite
         @describe("Onboarding completion")
@@ -107,6 +113,7 @@ namespace tests.dataLayer
         function guestCannotInheritPriorSession()
             source = new FakeStartupRegistryDataSource()
             source.values.user_token = FormatJson({ access_token: "prior-user", refresh_token: "prior-refresh", customerId: "prior-customer" })
+            source.values.series_last_episode = FormatJson({ GUEST: { episode: "3" }, "user-1": { episode: "2" } })
             repository = new DataLayer.StartupStateRepositoryImpl(source, "test-app")
             globalNode = {
                 user_access_token: "prior-user"
@@ -117,11 +124,46 @@ namespace tests.dataLayer
             }
             RokuCore.SetGuestAuthenticationState(globalNode, repository)
             m.assertFalse(source.values.doesExist("user_token"))
+            remaining = ParseJson(source.values.series_last_episode)
+            m.assertTrue(remaining.doesExist("GUEST"))
+            m.assertEqual(remaining.GUEST.episode, "3")
+            m.assertTrue(remaining.doesExist("user-1"))
             m.assertEqual(globalNode.user_access_token, "GUEST_TOKEN")
             m.assertEqual(globalNode.refresh_token, "")
             m.assertEqual(globalNode.customerId, "")
             m.assertFalse(globalNode.isUserAuthenticated)
             m.assertEqual(RokuCore.GetRuntimeAccessToken(globalNode), "")
+        end function
+
+        @it("clears user_token, configUrl, and guest progress on logout")
+        function clearsLogoutRegistryState()
+            source = new FakeStartupRegistryDataSource()
+            source.values.user_token = FormatJson({ access_token: "prior-user", refresh_token: "prior-refresh" })
+            source.values.configUrl = "cached-config"
+            source.values.series_last_episode = FormatJson({ GUEST: { episode: "1" }, "user-1": { episode: "2" } })
+            repository = new DataLayer.StartupStateRepositoryImpl(source, "test-app")
+            m.assertTrue(repository.clearUserSession())
+            m.assertFalse(source.values.doesExist("user_token"))
+            m.assertFalse(source.values.doesExist("configUrl"))
+            m.assertTrue(repository.clearGuestProgress())
+            remaining = ParseJson(source.values.series_last_episode)
+            m.assertFalse(remaining.doesExist("GUEST"))
+            m.assertTrue(remaining.doesExist("user-1"))
+        end function
+
+        @it("reports failed logout Registry cleanup without clearing global auth")
+        function rejectsFailedLogoutCleanup()
+            source = new FailingLogoutRegistryDataSource()
+            source.values.user_token = FormatJson({ access_token: "prior-user" })
+            repository = new DataLayer.StartupStateRepositoryImpl(source, "test-app")
+            globalNode = {
+                isUserAuthenticated: true
+                user_access_token: "prior-user"
+                authenticationState: { status: "AUTHENTICATED", isAuthenticated: true, isGuest: false }
+            }
+            m.assertFalse(RokuCore.ClearAuthenticatedState(globalNode, repository))
+            m.assertTrue(globalNode.isUserAuthenticated)
+            m.assertEqual(globalNode.user_access_token, "prior-user")
         end function
     end class
 end namespace

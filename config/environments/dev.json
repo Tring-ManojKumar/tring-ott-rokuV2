@@ -1,6 +1,6 @@
 {
-    "environment":  "dev",
-    "buildFlags":  {
-                       "isRegistryDiagnosticBuild":  false
-                   }
+  "environment": "dev",
+  "buildFlags": {
+    "isRegistryDiagnosticBuild": false
+  }
 }

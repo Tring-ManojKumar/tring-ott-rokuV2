@@ -22,5 +22,6 @@
         <Label id="details" translation="[1060, 220]" width="760" height="600" wrap="true" color="0xFFFFFFFF" font="font:MediumSystemFont" text="Select an item for details." />
         <Label id="backHint" translation="[100, 950]" width="800" height="50" text="Press Back to return" color="0xB3B3B3FF" font="font:SmallSystemFont" />
         <SettingsViewModel id="viewModel" />
+        <LogoutTask id="logoutTask" />
     </children>
 </component>

@@ -107,7 +107,28 @@ namespace DataLayer
         end function
 
         override function clearUserSession() as boolean
-            return m.dataSource.remove(m.sectionName, "user_token")
+            clearedUser = m.dataSource.remove(m.sectionName, "user_token")
+            clearedConfig = m.dataSource.remove(m.sectionName, "configUrl")
+            return clearedUser and clearedConfig
+        end function
+
+        override function clearGuestProgress() as boolean
+            raw = m.dataSource.read(m.sectionName, "series_last_episode", invalid)
+            if raw = invalid or raw = "" then return true
+            parsed = ParseJson(raw)
+            if not m.isAssociativeArray(parsed) then return m.dataSource.remove(m.sectionName, "series_last_episode")
+            remaining = {}
+            changed = false
+            for each key in parsed
+                if LCase(key) = "guest"
+                    changed = true
+                else
+                    remaining[key] = parsed[key]
+                end if
+            end for
+            if not changed then return true
+            if remaining.Count() = 0 then return m.dataSource.remove(m.sectionName, "series_last_episode")
+            return m.dataSource.write(m.sectionName, "series_last_episode", FormatJson(remaining))
         end function
 
         function onboardingRegistryKey(configId as string) as string

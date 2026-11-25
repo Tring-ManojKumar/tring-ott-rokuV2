@@ -1,4 +1,5 @@
 import "pkg:/data/configuration/ConfigurationParser.bs"
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
 
 namespace tests.dataLayer
     @suite("V1 Remote Config selection rules")
@@ -35,6 +36,13 @@ namespace tests.dataLayer
             m.assertEqual(parser.selectRemoteConfiguration(response, "testers").data.key, "global_remote_config_testers")
             m.assertEqual(parser.selectRemoteConfiguration(response, "test").data.key, "global_remote_config_test")
             m.assertEqual(parser.selectRemoteConfiguration(response, "dev").data.key, "global_remote_config_dev")
+        end function
+
+        @it("reads the package build version rather than the Roku channel version")
+        function readsManifestBuildVersion()
+            manifest = "major_version=7" + Chr(10) + "minor_version=0" + Chr(10) + "build_version=31" + Chr(10)
+            m.assertEqual(RokuCore.GetBuildVersionFromManifest(manifest), "31")
+            m.assertEqual(RokuCore.GetBuildVersionFromManifest("major_version=1" + Chr(10)), "")
         end function
 
         @describe("Invalid remote configuration")

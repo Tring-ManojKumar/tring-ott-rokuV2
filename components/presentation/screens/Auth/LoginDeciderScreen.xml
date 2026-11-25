@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="LoginDeciderScreen" extends="Group">
+    <interface>
+        <field id="navigationParams" type="assocarray" onChange="onNavigationParamsChanged" />
+        <field id="isReady" type="boolean" value="false" />
+        <field id="frameworkSupportsInitialFocus" type="boolean" value="true" />
+        <field id="frameworkLifecycleEvent" type="string" value="" />
+        <field id="frameworkScreenIdentity" type="string" value="" />
+        <field id="frameworkCreated" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkInitialized" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkPresented" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkSuspended" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkResumed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkExited" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkDestroyed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkCleanupRequested" type="boolean" value="false" alwaysNotify="true" />
+        <function name="setInitialFocus" />
+    </interface>
+    <children>
+        <Poster uri="pkg:/assets/images/auth-bg.png" width="1920" height="1080" loadWidth="1920" loadHeight="1080" loadDisplayMode="scaleToFill" />
+        <Rectangle width="1920" height="1080" color="0x00000080" />
+        <Poster uri="pkg:/assets/images/app_icon.png" translation="[1500, 70]" width="280" height="90" loadWidth="280" loadHeight="90" loadDisplayMode="scaleToFit" />
+        <Label id="heading" translation="[140, 180]" width="1640" height="72" color="0xFFFFFFFF" font="font:LargeBoldSystemFont" />
+        <Label id="description" translation="[140, 260]" width="1640" height="56" color="0xFFFCFCFF" font="font:MediumSystemFont" />
+        <AppButton id="signInButton" translation="[440, 936]" width="314" height="70" text="Sign In" variant="primary" />
+        <AppButton id="signUpButton" translation="[774, 936]" width="314" height="70" text="Sign Up" variant="secondary" />
+        <AppButton id="guestButton" translation="[1108, 936]" width="314" height="70" text="Continue As Guest" variant="secondary" />
+    </children>
+    <script type="text/brightscript" uri="LoginDeciderScreen.bs" />
+</component>

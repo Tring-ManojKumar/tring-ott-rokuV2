@@ -1,0 +1,272 @@
+{
+    "LIVE": "En direct",
+    "HOME": "Accueil",
+    "SEARCH": "Rechercher",
+    "SERIES": "Séries",
+    "MY_SUBSCRIPTION": "Mes abonnements",
+    "SCHEDULED": "À venir",
+    "GEO_BLOCK_ERROR": "Aucun contenu disponible. \nNous nous excusons, mais aucun contenu n'est disponible dans votre région.",
+    "NO_DATA_AVAILABLE": "Aucune donnée disponible",
+    "NO_SUBSCRIPTIONS_AVAILABLE": "Aucun abonnement disponible",
+    "NO_ITEMS_AVAILABLE": "Mes favoris sont vides",
+    "NO_ITEMS_AVAILABLE_DESCRIPTION": "Vous devez ajouter des émissions de télé ou des films aux favoris",
+    "ALL_FILTER_BUTTON": "Tout",
+    "PLAY_LIVE_BUTTON": "Regarder en direct",
+    "STREAM_STARTS_BUTTON": "Le flux commence ",
+    "STREAM_STARTS_IN": "dans ",
+    "START_WATCHING_BUTTON": "Commencer à regarder",
+    "MORE_DETAILS_BUTTON": "Plus de détails",
+    "WATCHING_LIVE_BUTTON": "Regarder en direct",
+    "SCHEDULED_BUTTON": "À venir",
+    "OK_BUTTON": "OK",
+    "ALL_RIGHTS": "© 2025 Tringapps +. Tous droits réservés.",
+    "BUY_NOW_BUTTON": "Acheter",
+    "TRAILER_BUTTON": "Bande-annonce",
+    "REPLAY_BUTTON": "Revoir",
+    "PLAY_BUTTON": "Lecture",
+    "PAUSE_BUTTON": "Pause",
+    "FORWARD_BUTTON": "Avancer",
+    "REWIND_BUTTON": "Reculer",
+    "ADD_FAVORITE_BUTTON": "Favori",
+    "REMOVE_FAVORITE_BUTTON": "Ajouté aux favoris",
+    "RESUME_BUTTON": "Continuer le visionnement",
+    "LOGOUT_BUTTON": "Se déconnecter",
+    "CANCEL_BUTTON": "Annuler",
+    "LOGOUT_USER_MESSAGE": "Êtes-vous sûr de vouloir vous déconnecter de {title}?",
+    "RELATED_MOVIES_TITLE": "Films similaires",
+    "RELATED_PODCASTS_TITLE": "Podcasts connexes",
+    "EPG_GRID_TITLE": "",
+    "EPISODES_TITLE": "Épisodes",
+    "ALL_SEASONS": "Toutes les saisons",
+    "CURRENT_EPISODE": "Épisode actuel",
+    "CURRENT_VIDEO": "Vidéo actuelle",
+    "MORE_BUTTON": "Plus",
+    "OF": "de",
+    "ON": "Le",
+    "MIN": " mins",
+    "SEASON_SHORT": "S",
+    "CONTINUE_WATCHING": "Continuer le visionnement",
+    "FAVORITES": "Favoris",
+    "ONBOARDING_SCREEN": {
+        "PAGE_1": {
+            "TITLE": "Meilleur streaming",
+            "DESCRIPTION": "Choisissez votre qualité de streaming avec une vaste gamme d'options de qualité de 480p à 4K."
+        },
+        "PAGE_2": {
+            "TITLE": "Films et séries télé",
+            "DESCRIPTION": "Accès à plus de 10 000 films et séries avec un forfait d'abonnement standard."
+        },
+        "PAGE_3": {
+            "TITLE": "Recommandation IA",
+            "DESCRIPTION": "Vous ne savez pas quoi regarder? Nous avons la solution avec nos recommandations IA."
+        },
+        "BUTTONS": {
+            "SKIP_BUTTON": "Passer",
+            "NEXT_BUTTON": "Suivant",
+            "BACK_BUTTON": "Retour",
+            "GET_STARTED_BUTTON": "Commencer"
+        }
+    },
+    "SIGN_IN_SCREEN": {
+        "TITLE": "Veuillez vous connecter",
+        "DESCRIPTION": {
+            "EMAIL_INPUT": "Utilisez le clavier pour saisir votre adresse courriel",
+            "PASSWORD_INPUT": "Utilisez le clavier pour saisir votre mot de passe"
+        },
+        "BUTTONS": {
+            "NEXT_BUTTON": "Continuer",
+            "NEXT": "Suivant",
+            "BACK_BUTTON" : "Retour",
+            "CANCEL_BUTTON": "Associer votre appareil"
+        },
+        "KEYBOARD_HINT_TEXTS": {
+            "EMAIL_HINT": "Saisissez votre adresse courriel",
+            "PASSWORD_HINT": "Saisissez votre mot de passe"
+        },
+        "VALIDATION_ERROR_MSG": {
+            "EMAIL_ERROR": "Veuillez saisir un courriel valide",
+            "PASSWORD_ERROR": "Le mot de passe ne peut pas être vide"
+        }
+    },
+    "QRCode_SCREEN": {
+        "TITLE": "Associer votre appareil",
+        "CODE_TIMER_LABEL": "Les codes ci-dessous expirent dans",
+        "QR_CODE_TITLE": "Numérisez ce code QR avec votre téléphone",
+        "OR_DIVIDER_TEXT": "OU",
+        "CONTEN_TTITLE": "Depuis votre PC, téléphone ou tablette, allez à :",
+        "USE_THIS_CODE_LABEL": "Utilisez ce code :",
+        "DESCRIPTION": "Préférez-vous vous connecter avec une télécommande?",
+        "BUTTON": {
+            "SIGN_IN": "Se connecter",
+            "SIGN_UP": "S'inscrire",
+            "EXPLORE": "Continuer en tant qu'invité"
+        }
+    },
+    "LOGIN_DECIDER_SCREEN": {
+        "TITLE": "Veuillez vous connecter",
+        "DESCRIPTION": "Connectez-vous à votre compte pour continuer",
+        "BUTTON": {
+            "SIGN_IN": "Se connecter",
+            "SIGN_UP": "S'inscrire",
+            "GUEST": "Continuer en tant qu'invité"
+        }
+    },
+    "SIGN_UP_SCREEN": {
+        "TITLE": "Veuillez vous inscrire",
+        "DESCRIPTION": {
+            "NAME_INPUT": "Utilisez le clavier pour saisir votre prénom",
+            "LAST_NAME_INPUT": "Utilisez le clavier pour saisir votre nom de famille",
+            "EMAIL_INPUT": "Utilisez le clavier pour saisir votre adresse courriel",
+            "PASSWORD_INPUT": "Utilisez le clavier pour saisir votre mot de passe",
+            "PASSWORD_CONFIRMATION_INPUT": "Utilisez le clavier pour confirmer votre mot de passe"
+        },
+        "BUTTONS": {
+            "NEXT_BUTTON": "Suivant",
+            "BACK_BUTTON": "Retour",
+            "CANCEL_BUTTON": "Associer votre appareil"
+        },
+        "KEYBOARD_HINT_TEXTS": {
+            "NAME_HINT": "Saisissez votre nom complet",
+            "FIRSTNAME_HINT": "Saisissez votre prénom",
+            "LASTNAME_HINT": "Saisissez votre nom de famille",
+            "EMAIL_HINT": "Saisissez votre adresse courriel",
+            "PASSWORD_HINT": "Saisissez votre mot de passe",
+            "PASSWORD_CONFIRMATION_HINT": "Confirmez votre mot de passe"
+        },
+        "VALIDATION_ERROR_MSG": {
+            "NAME_ERROR": "Le nom ne peut pas être vide",
+            "NAME_SPECIAL_CHARACTER_ERROR": "Le nom ne doit contenir que des caractères alphabétiques",
+            "EMAIL_ERROR": "Veuillez saisir un courriel valide",
+            "PASSWORD_ERROR": "Le mot de passe ne peut pas être vide",
+            "PASSWORD_CONFIRMATION_ERROR": "Les mots de passe ne correspondent pas"
+        }
+    },
+    "BLOCK_SCREEN": {
+        "PAGE_TITLE": "Réessayez plus tard",
+        "PAGE_DESCRIPTION": "Une erreur s'est produite. Si le problème persiste, essayez de redémarrer l'application.",
+        "RETRY_BUTTON": "Réessayer",
+        "EXIT_BUTTON": "Quitter l'application"
+    },
+    "SUBSCRIPTION_SCREEN": {
+        "TITLE": "Forfaits disponibles",
+        "DESCRIPTION": "Veuillez choisir un forfait pour commencer à regarder ce contenu"
+    },
+    "SEARCH_SCREEN": {
+        "GRID_TITLE": "Résultats de recherche pour ",
+        "TRENDING_TITLE": "Tendances",
+        "ERROR_TEXT": "Aucun résultat trouvé...",
+        "TEXT_EMPTY_TEXT": "Rechercher quelque chose : Trouvez ce que vous cherchez facilement.",
+        "KEYBOARD_HINT": "Que recherchez-vous ?",
+        "RECENT_SEARCHES": "Recherches récentes"
+    },
+    "ACCOUNT_DETAILS": {
+        "PAGE_TITLE": "Détails du compte",
+        "ERROR_TITLE": "Bienvenue, invité!",
+        "ERROR_DESCRIPTION": "Pour accéder à toutes les fonctionnalités, veuillez vous connecter.",
+        "NAME": "Nom",
+        "EMAIL": "Courriel",
+        "DOB": "Date de naissance",
+        "BUTTONS": {
+            "DELETE_ACCOUNT": "Supprimer le compte",
+            "EXPORT_DATA": "Exporter les données",
+            "CHANGE_PASSWORD": "Changer le mot de passe",
+            "SIGNUP": "S'inscrire",
+            "SIGNIN": "Se connecter"
+        }
+    },
+    "PROFILE_SCREEN": {
+        "LEFT_MENU": {
+            "PROFILE": "Mon profil",
+            "FAVORITES": "Mes favoris",
+            "SUBSCRIPTION": "Mes abonnements",
+            "TERMS_OF_USE": "Conditions d'utilisation",
+            "PRIVACY": "Politique de confidentialité",
+            "SUPPORT": "Aide et support",
+            "LOGOUT": "Se déconnecter",
+            "SETTINGS": "Paramètres"
+        }
+    },
+    "SETTINGS_SCREEN": {
+        "TITLE": "Paramètres",
+        "DESCRIPTION": "Lecture automatique de la vidéo suivante",
+        "COLOR_CONTRAST": "Contraste des couleurs",
+        "TEXT_SIZE": "Taille du texte",
+        "TEXT_SIZE_SMALL": "Petit",
+        "TEXT_SIZE_MEDIUM": "Moyen",
+        "TEXT_SIZE_MEDIUM_DEFAULT": "Moyen (Par défaut)",
+        "TEXT_SIZE_LARGE": "Grand",
+        "TEXT_SIZE_XLARGE": "Très grand"
+    },
+    "SUPPORT_SCREEN": {
+        "TITLE": "Aide et support",
+        "DESCRIPTION": ""
+    },
+    "EXPORT_DATA_SCREEN": {
+        "TITLE": "Exporter les données",
+        "DESCRIPTION": "Exporter toutes vos données personnelles de compte vers {EMAIL} en pièce jointe.",
+        "OK_BUTTON": "OK",
+        "KEYBOARD_HINT_TEXTS": {
+            "PASSWORD_HINT": "Saisissez votre mot de passe"
+        }
+    },
+    "DELETE_ACCOUNT_SCREEN": {
+        "TITLE": "Supprimer le compte",
+        "DESCRIPTION": "Supprimer définitivement votre compte et tout votre contenu.",
+        "WARNING": "Veuillez noter que si vous choisissez de procéder à ce processus, toutes vos données personnelles seront effacées de notre système. Cela inclut toute information personnelle que vous avez fournie lors du processus d'inscription, ainsi que toute information de localisation et d'appareil que nous avons recueillie lors du processus d'authentification. De plus, toutes les autres informations personnelles stockées dans diverses parties de notre base de données seront également supprimées. Cependant, veuillez noter qu'en raison de certaines législations, nous sommes tenus de conserver certaines données personnelles dans le cadre des dossiers de transactions et d'abonnements. Une fois l'effacement terminé, tous vos accès actifs seront révoqués et toute session de connexion active, y compris celle-ci, sera terminée. Les informations de votre compte ne seront plus accessibles à notre personnel à aucun titre. Tous les abonnements actifs qui ont été achetés via un navigateur Web seront automatiquement annulés lors de l'effacement des données personnelles. Cependant, si vous avez acheté un abonnement via les applications iOS, Android, Roku ou Amazon, veuillez noter qu'il ne sera pas annulé automatiquement. Dans ce cas, vous devrez suivre les étapes habituelles d'annulation d'abonnement pour chaque plateforme respective pour annuler manuellement l'abonnement. Veuillez noter que ce processus ne peut pas être annulé, alors procédez avec prudence. Si vous avez d'autres questions ou préoccupations, n'hésitez pas à contacter notre équipe de support.",
+        "KEYBOARD_HINT_TEXTS": {
+            "PASSWORD_HINT": "Saisissez votre mot de passe"
+        }
+    },
+    "CHANGE_PASSWORD_SCREEN": {
+        "TITLE": "Changer le mot de passe",
+        "DESCRIPTION": "Utilisez le clavier pour changer votre mot de passe",
+        "KEYBOARD_HINT_TEXTS": {
+            "OLD_PASSWORD_HINT": "Saisissez votre ancien mot de passe",
+            "NEW_PASSWORD_HINT": "Saisissez votre nouveau mot de passe",
+            "PASSWORD_CONFIRMATION_HINT": "Confirmez votre mot de passe"
+        }
+    },
+    "PRIVACY_SCREEN": {
+        "TITLE": "Politique de confidentialité",
+        "UPDATE": "Last Updated: December 22, 2024"
+    },
+    "TERMS_OF_USE_SCREEN": {
+        "TITLE": "Termes et conditions",
+        "UPDATE": "Last Updated: December 22, 2024"
+    },
+    "LOGOUT_SCREEN": {
+        "TITLE": "Se déconnecter",
+        "DESCRIPTION": "Êtes-vous sûr de vouloir vous déconnecter de TFO?",
+        "BUTTON": {
+            "OK": "Se déconnecter",
+            "CANCEL": "Annuler"
+        }
+    },
+    "FAVORITES_SCREEN": {
+        "TITLE": "Mes favoris",
+        "NO_DATA": "Mes favoris sont vides",
+        "DESCRIPTION": "Émissions de télé ou films que vous devez ajouter aux favoris"
+    },
+    "ERROR_PAGE": {
+        "PAGE_CONSTRUCTION": "Page en construction",
+        "NO_DATA": "Aucune donnée disponible",
+        "SUBSCRIPTION_SCREEN_ALERT": "Alerte",
+        "SUBSCRIPTION_SCREEN": "Veuillez vous abonner à l'article sur le Web",
+        "RAF_ERROR": "Vidéo actuellement non disponible. Veuillez réessayer!",
+        "VIDEO_ERROR": "Erreur vidéo. Veuillez réessayer!",
+        "LIVE_STREAM_ENDED" : "Diffusion en direct terminée",
+        "LIVE_STREAM_CONNECTING" : "Connexion à la diffusion en direct, veuillez patienter...",
+        "GEO_BLOCK_ERROR" : "Ce contenu n'est pas disponible dans votre pays.",
+        "DRM_ERROR": "Ce contenu n'est pas disponible en raison de restrictions de droits d'auteur.",
+        "NO_NETWORK_ERROR": {
+            "TITLE": "Aucun réseau détecté",
+            "DESCRIPTION": "Votre écran n'est pas connecté à Internet. Vérifiez votre connexion.",
+            "RETRY_BUTTON_TXT": "Réessayer",
+            "EXIT_APP_BUTTON_TXT": "Quitter l'application"
+        },
+        "OTHER_ERROR": {
+            "TITLE": "Réessayez plus tard",
+            "DESCRIPTION": "Une erreur s'est produite. Si le problème persiste, essayez de redémarrer l'application."
+        }
+    }
+}

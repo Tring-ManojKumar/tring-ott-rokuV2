@@ -46,6 +46,10 @@ export class AppConfigPlugin implements IBuildPlugin {
     if (!this.marketConstantsError && this.marketConstantsPath) {
       programBuilder.options.files.push({ src: this.marketConstantsPath, dest: "assets/config/config.json" });
     }
+    const marketFlagsPath = path.resolve(context.cwd, this.resolved.assetsRoot, "config", "flags.json");
+    if (fs.existsSync(marketFlagsPath)) {
+      programBuilder.options.files.push({ src: marketFlagsPath, dest: "assets/config/flags.json" });
+    }
     programBuilder.options.files.push({ src: this.resolved.manifest, dest: "manifest" });
 
     context.log(`[Configuration] market=${this.resolved.market}, env=${this.resolved.environment}`);
@@ -85,7 +89,7 @@ export class AppConfigPlugin implements IBuildPlugin {
     // same path. No other market asset root is visited.
     const stagedAssets = path.join(cwdPath(stagingDir), "assets");
     for (const root of this.resolved.assetSources || [this.resolved.assetsRoot]) {
-      for (const category of ["fonts", "icons", "images"]) {
+      for (const category of ["fonts", "icons", "images", "localization"]) {
         const source = path.join(cwdPath(root), category);
         if (fs.existsSync(source)) fs.cpSync(source, path.join(stagedAssets, category), { recursive: true, force: true });
       }

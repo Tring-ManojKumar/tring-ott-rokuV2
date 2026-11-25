@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="SignInScreen" extends="Group">
+    <interface>
+        <field id="navigationParams" type="assocarray" onChange="onNavigationParamsChanged" />
+        <field id="isReady" type="boolean" value="true" />
+        <field id="frameworkSupportsInitialFocus" type="boolean" value="true" />
+        <field id="frameworkLifecycleEvent" type="string" value="" />
+        <field id="frameworkScreenIdentity" type="string" value="" />
+        <field id="frameworkCreated" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkInitialized" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkPresented" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkSuspended" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkResumed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkExited" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkDestroyed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkCleanupRequested" type="boolean" value="false" alwaysNotify="true" />
+        <function name="setInitialFocus" />
+    </interface>
+    <children>
+        <Poster uri="pkg:/assets/images/auth-bg.png" width="1920" height="1080" loadWidth="1920" loadHeight="1080" loadDisplayMode="scaleToFill" />
+        <Rectangle width="1920" height="1080" color="0x00000080" />
+        <Label id="pageTitle" translation="[140, 90]" width="1000" height="80" text="Please Sign In" color="0xFFFFFFFF" font="font:LargeBoldSystemFont" />
+        <Poster uri="pkg:/assets/images/app_icon.png" translation="[1500, 70]" width="280" height="90" loadWidth="280" loadHeight="90" loadDisplayMode="scaleToFit" />
+        <Label id="pageDescription" translation="[140, 190]" width="1450" height="60" text="Use the keyboard to enter email and password" color="0xFFFCFCFF" font="font:MediumSystemFont" />
+        <Label id="emailLabel" translation="[320, 280]" width="200" height="42" text="Email" color="0xFFFFFFFF" />
+        <TextEditBox id="emailBox" translation="[320, 322]" width="1280" height="72" hintText="Enter email address" />
+        <Label id="passwordLabel" translation="[320, 418]" width="200" height="42" text="Password" color="0xFFFFFFFF" />
+        <TextEditBox id="passwordBox" translation="[320, 460]" width="1280" height="72" hintText="Enter password" secureMode="true" />
+        <AppButton id="signInButton" translation="[756, 580]" width="408" height="72" text="Continue" variant="primary" />
+        <AppButton id="linkDeviceButton" translation="[756, 680]" width="408" height="72" text="Link your device" variant="secondary" visible="false" />
+        <Label id="status" translation="[320, 790]" width="1280" height="100" wrap="true" color="0xFFFFFFFF" />
+        <CredentialLoginTask id="loginTask" />
+    </children>
+    <script type="text/brightscript" uri="SignInScreen.bs" />
+</component>

@@ -1,0 +1,118 @@
+{
+  "authBaseUrls": {
+    "cleeng": {
+      "prod": "https://mediastoreapi.cleeng.com",
+      "sandBox": "https://mediastoreapi-sandbox.cleeng.com"
+    },
+    "inplayer": {
+      "prod": "https://services.inplayer.com",
+      "sandBox": "https://staging-v2.inplayer.com"
+    },
+    "custom": "https://api.users.bonneville.com"
+  },
+  "qrBaseUrls": {
+    "cleeng": {
+      "prod": "https://auth.api.prod.cleeng.com",
+      "sandBox": "https://auth.api.sandbox.cleeng.com"
+    },
+    "inplayer": {
+      "prod": "https://ddj7o2keda8fv.cloudfront.net",
+      "sandBox": "https://ddj7o2keda8fv.cloudfront.net"
+    },
+    "custom": "https://api.users.bonneville.com"
+  },
+  "subscriptionBaseUrls": {
+    "cleeng": {
+      "prod": "https://api.cleeng.com",
+      "sandBox": "https://api.sandbox.cleeng.com"
+    },
+    "inplayer": {
+      "prod": "https://services.inplayer.com",
+      "sandBox": "https://staging-v2.inplayer.com"
+    },
+    "custom": "https://api.users.bonneville.com"
+  },
+  "contentBaseUrls": {
+    "prod": "https://cdn.jwplayer.com",
+    "sandBox": "https://cdn.jwplayer.com"
+  },
+  "personalisation": {
+    "cleeng": {
+      "loginUrl": "/auths",
+      "logoutUrl": "/accounts/logout",
+      "registrationUrl": "/customers",
+      "eraseAccountUrl": "https://ac26wnvnkeryvia5de6n6s7cju0bcwny.lambda-url.us-east-1.on.aws/",
+      "getLoginCode": "/v1/codes/generate",
+      "checkLoginCodeStatus": "/v1/codes/check?",
+      "refreshToken": "/auths/refresh_token",
+      "getAccounts": "/customers/{{customer-id}}",
+      "changePasswordUrl": "https://services.inplayer.com/accounts/change-password",
+      "favoritesUrl": "/v2/accounts/media/favorites",
+      "watchHistoryUrl": "/v2/accounts/media/watch-history",
+      "allSubscription": "/3.1/offers?status=active",
+      "subscriptions": "/customers/{{customer-id}}/subscriptions",
+      "contentAccessUrl": "/entitlements/{{product-id}}",
+      "validationUrl": "/v2/external-payments/roku/validate",
+      "contentAccessFeesUrl": "/v2/items/{{product-id}}/access-fees"
+    },
+    "inplayer": {
+      "loginUrl": "/accounts/authenticate",
+      "logoutUrl": "/accounts/logout",
+      "eraseAccountUrl": "https://services.inplayer.com/accounts/erase",
+      "registrationUrl": "/v2/accounts",
+      "getLoginCode": "/api/v1/qrcode/get-qrcode",
+      "checkLoginCodeStatus": "/api/v1/qrcode/get-qrcode-status",
+      "refreshToken": "/accounts/authenticate",
+      "getAccounts": "/v2/accounts",
+      "changePasswordUrl": "https://services.inplayer.com/accounts/change-password",
+      "favoritesUrl": "/v2/accounts/media/favorites",
+      "watchHistoryUrl": "/v2/accounts/media/watch-history",
+      "allSubscription": "/subscriptions",
+      "subscriptions": "/v2/accounts/subscriptions",
+      "validationUrl": "/v2/external-payments/roku/validate",
+      "contentAccessUrl": "/items/{{product-id}}/access",
+      "contentAccessFeesUrl": "/v2/items/{{product-id}}/access-fees"
+    },
+    "custom": {
+      "loginUrl": "/accounts/authenticate",
+      "logoutUrl": "/accounts/logout",
+      "eraseAccountUrl": "https://services.inplayer.com/accounts/erase",
+      "registrationUrl": "/v2/accounts",
+      "getLoginCode": "/v2/ott/generate",
+      "checkLoginCodeStatus": "/v2/ott/check/{{code}}",
+      "refreshToken": "/v2/ott/login/01958c90-31ac-8d8d-e807-555efc1b5114",
+      "getAccounts": "/v1/profile",
+      "changePasswordUrl": "https://services.inplayer.com/accounts/change-password",
+      "favoritesUrl": "/v2/accounts/media/favorites",
+      "watchHistoryUrl": "/v2/accounts/media/watch-history",
+      "allSubscription": "/items/access/customers?status=active",
+      "subscriptions": "/v2/accounts/subscriptions",
+      "validationUrl": "/v2/external-payments/roku/validate",
+      "contentAccessUrl": "/items/{{product-id}}/access",
+      "contentAccessFeesUrl": "/v2/items/{{product-id}}/access-fees"
+    }
+  },
+  "configID": "jbeorebm",
+  "trackerUrl": "https://tracker.universalsearch.io/v1/track",
+  "configUrl": "/apps/configs/{{config-id}}.json",
+  "playListUrl": "/v2/playlists/{{content-id}}",
+  "mediaUrl": "/v2/media/{{media-id}}",
+  "seriesUrl": "/apps/series/{{series-id}}",
+  "seasonUrl": "/apps/series/{{series-id}}/seasons/{{season-no}}/episodes",
+  "watchlistUrl": "/apps/watchlists/{{watchlist-id}}?media_ids={{content-ids}}",
+  "searchUrl": "/v2/playlists/{{search-playlist-id}}?search={{search-query}}",
+  "relatedContentUrl": "/v2/playlists/{{recommended-playlist-id}}?related_media_id={{content-id}}",
+  "drmMediaUrl": "/v2/media/{{media-id}}/drm/{{drm-policy-id}}?token={{jwt-token}}",
+  "adScheduleUrl": "/v2/advertising/schedules/{{ad-schedule-id}}.json",
+  "drmTokenUrl": "/v2/items/jw-media/token?app_config_id={{app-config-id}}%26media_id={{media-id}}",
+  "videoAnalyticsEndpoint": "https://prd.jwpltx.com/v1/jwplayer6/ping.gif?",
+  "adAnalyticsEndpoint": "https://prd.jwpltx.com/v1/clienta/ping.gif?",
+  "backgroundImageUrl": "https://img.jwplayer.com/v1/media/{{media-id}}/images/background.webp?poster_fallback=1&width=1920",
+  "alternateImageUrl": "https://img.jwplayer.com/v1/media/{{media-id}}/images/{{label}}.jpg",
+  "additionalImage": "https://img.jwplayer.com/v1/media/{{media-id}}/images.json",
+  "secondAlternateImageUrl": "https://img.jwplayer.com/v1/media/{{media-id}}/images/card.webp?poster_fallback=1&width=320",
+  "alternateImageWithSize": "https://img.jwplayer.com/v1/media/{{media-id}}/images/channel_logo.webp?poster_fallback=1&width={{size}}",
+  "ssaiManifestEndpoint": "/v2/sites/{{site-id}}/media/{{media-id}}/ssai.m3u8?ad_config_id={{adconfig-id}}",
+  "ssaiSessionEndpoint": "/v2/sites/{{site-id}}/ssai_session/{{session-id}}.json",
+  "exportDataUrl": "https://services.inplayer.com/accounts/export"
+}

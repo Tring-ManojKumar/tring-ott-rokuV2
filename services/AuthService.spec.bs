@@ -1,0 +1,112 @@
+import "pkg:/services/AuthService.bs"
+
+namespace tests.services
+    class CapturingAuthApi
+        public postBody as dynamic
+        public postHeaders as dynamic
+        public postUrl as string
+        public getUrl as string
+        function post(url as string, body = invalid as dynamic, query = invalid as dynamic, headers = invalid as dynamic) as object
+            m.postUrl = url
+            m.postBody = body
+            m.postHeaders = headers
+            errors = new DataLayer.ApiResult()
+            return errors.success({ access_token: "test-access" })
+        end function
+        function get(url as string, query = invalid as dynamic, headers = invalid as dynamic) as object
+            m.getUrl = url
+            errors = new DataLayer.ApiResult()
+            return errors.success({ code: "123456" })
+        end function
+        function put(url as string, body = invalid as dynamic, query = invalid as dynamic, headers = invalid as dynamic) as object
+            errors = new DataLayer.ApiResult()
+            return errors.success({ access_token: "test-access" })
+        end function
+        function buildAuthorizationHeaders(globalNode as dynamic, headers = invalid as dynamic) as dynamic
+            return { Authorization: "Bearer test-access" }
+        end function
+    end class
+
+    @suite("Provider authentication request contracts")
+    class AuthServiceTests extends rooibos.BaseTestSuite
+        @describe("Credential and QR request contracts")
+        @it("rejects password credentials shorter than V1's minimum")
+        function rejectsShortPassword()
+            service = new DataLayer.AuthService(new CapturingAuthApi(), { constants: {}, resolvedConfig: { common: { authentication_type: "inplayer" } } })
+            result = service.signIn("user@example.com", "1234567")
+            m.assertFalse(result.ok)
+            m.assertEqual(result.category, "VALIDATION")
+        end function
+
+        @it("uses the InPlayer form credential contract")
+        function buildsInPlayerCredentialRequest()
+            api = new CapturingAuthApi()
+            globalNode = {
+                constants: { API: { INPLAYER_CLIENT_ID: "client-id" } }
+                resolvedConfig: { common: { authentication_type: "inplayer" } }
+            }
+            service = new DataLayer.AuthService(api, globalNode)
+            result = service.signIn("user@example.com", "long-password")
+            m.assertTrue(result.ok)
+            m.assertTrue(Instr(1, api.postBody, "username=user%40example.com") > 0)
+            m.assertTrue(Instr(1, api.postBody, "grant_type=password") > 0)
+            m.assertEqual(api.postHeaders["Content-Type"], "application/x-www-form-urlencoded")
+        end function
+
+        @it("identifies Cleeng and InPlayer providers from resolved configuration")
+        function selectsProvider()
+            cleeng = new DataLayer.AuthService(new CapturingAuthApi(), { resolvedConfig: { common: { authentication_type: "cleeng" } } })
+            inplayer = new DataLayer.AuthService(new CapturingAuthApi(), { resolvedConfig: { common: { authentication_type: "inplayer" } } })
+            custom = new DataLayer.AuthService(new CapturingAuthApi(), { resolvedConfig: { common: { authentication_type: "custom" } } })
+            m.assertEqual(cleeng.getProvider(), "cleeng")
+            m.assertEqual(inplayer.getProvider(), "inplayer")
+            m.assertEqual(custom.getProvider(), "custom")
+        end function
+
+        @it("uses the Cleeng QR generate and check contracts")
+        function buildsCleengQrRequests()
+            api = new CapturingAuthApi()
+            globalNode = {
+                constants: { CLEENG: { BROADCASTER_ID: "publisher-1" } }
+                resolvedConfig: { common: { authentication_type: "cleeng" } }
+            }
+            service = new DataLayer.AuthService(api, globalNode)
+            m.assertTrue(service.generateQrCode("device-1").ok)
+            m.assertTrue(service.checkQrCode("123456", "device-1").ok)
+        end function
+
+        @it("rejects malformed email addresses")
+        function rejectsMalformedEmail()
+            service = new DataLayer.AuthService(new CapturingAuthApi(), { resolvedConfig: { common: { authentication_type: "inplayer" } } })
+            m.assertFalse(service.signIn("@example.com", "long-password").ok)
+            m.assertFalse(service.signIn("userexample.com", "long-password").ok)
+            m.assertFalse(service.signIn("user@", "long-password").ok)
+        end function
+
+        @it("uses the configured prod auth URL for sign-in")
+        function resolvesServiceProdUrl()
+            api = new CapturingAuthApi()
+            globalNode = {
+                environment: "prod"
+                constants: { API: { INPLAYER_CLIENT_ID: "client-id" } }
+                resolvedConfig: { environment: "prod", common: { authentication_type: "inplayer" } }
+            }
+            service = new DataLayer.AuthService(api, globalNode)
+            m.assertTrue(service.signIn("user@example.com", "long-password").ok)
+            m.assertTrue(Instr(1, api.postUrl, "services.inplayer.com") > 0)
+        end function
+
+        @it("uses the configured sandbox auth URL for sign-in")
+        function resolvesServiceSandboxUrl()
+            api = new CapturingAuthApi()
+            globalNode = {
+                environment: "stage"
+                constants: { API: { INPLAYER_CLIENT_ID: "client-id" } }
+                resolvedConfig: { environment: "stage", common: { authentication_type: "inplayer" } }
+            }
+            service = new DataLayer.AuthService(api, globalNode)
+            m.assertTrue(service.signIn("user@example.com", "long-password").ok)
+            m.assertTrue(Instr(1, api.postUrl, "staging-v2.inplayer.com") > 0)
+        end function
+    end class
+end namespace

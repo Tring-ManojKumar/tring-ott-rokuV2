@@ -1,19 +1,25 @@
 ' Owns the single application-wide configuration state exposed through roSGScreen's global node.
 import "pkg:/data/repositories/StartupStateRepositoryImpl.bs"
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
 namespace RokuCore
     sub InitializeGlobalConfiguration(globalNode as dynamic)
         if globalNode = invalid then return
         globalNode.addFields({
             constants: {}
+            flags: {}
             remoteConfig: {}
             appConfig: {}
             resolvedConfig: {}
             environment: ""
+            buildVersion: GetAppBuildVersion()
             isConfigurationReady: false
             configurationStatus: "IDLE"
             configurationError: {}
             authenticationState: { status: "UNKNOWN", isAuthenticated: false, isGuest: false }
             appConfigRequestCount: 0
+            strings: {}
+            localeCode: ""
+            localeLanguage: ""
             user_access_token: ""
             refresh_token: ""
             idToken: ""
@@ -22,6 +28,7 @@ namespace RokuCore
             tokenRefreshInProgress: false
             isUserAuthenticated: false
             userInfo: {}
+            subscription: {}
         })
     end sub
 
@@ -103,6 +110,26 @@ namespace RokuCore
         globalNode.userInfo = { id: "GUEST" }
     end sub
 
+    function ClearAuthenticatedState(globalNode as dynamic, repository = invalid as dynamic) as boolean
+        if globalNode = invalid then return false
+        if repository = invalid then repository = new DataLayer.StartupStateRepositoryImpl()
+        clearedSession = repository.clearUserSession()
+        clearedProgress = repository.clearGuestProgress()
+        if not clearedSession or not clearedProgress
+            return false
+        end if
+        globalNode.authenticationState = { status: "GUEST", isAuthenticated: false, isGuest: true }
+        globalNode.user_access_token = "GUEST_TOKEN"
+        globalNode.refresh_token = ""
+        globalNode.idToken = ""
+        globalNode.customerId = ""
+        globalNode.expires = invalid
+        globalNode.tokenRefreshInProgress = false
+        globalNode.isUserAuthenticated = false
+        globalNode.userInfo = { id: "GUEST" }
+        return true
+    end function
+
     function GetRuntimeAccessToken(globalNode as dynamic) as string
         if globalNode = invalid or globalNode.isUserAuthenticated <> true then return ""
         token = globalNode.user_access_token
@@ -112,6 +139,61 @@ namespace RokuCore
 
     sub SetRefreshedSession(globalNode as dynamic, session as dynamic)
         SetAuthenticatedState(globalNode, session)
+    end sub
+
+    sub SetAccountProfile(globalNode as dynamic, profile as dynamic)
+        if globalNode = invalid or profile = invalid then return
+        normalized = {}
+        if profile.responseData <> invalid then profile = profile.responseData
+        if profile.profile <> invalid and profile.profile.profile <> invalid then profile = profile.profile.profile
+        if profile.firstname <> invalid or profile.full_name <> invalid
+            name = ""
+            if profile.firstname <> invalid
+                name = profile.firstname.ToStr()
+            else if profile.full_name <> invalid
+                name = profile.full_name.ToStr()
+            end if
+            if profile.lastname <> invalid
+                name = name + " " + profile.lastname.ToStr()
+            end if
+            normalized.name = name.Trim()
+        end if
+        if profile.email <> invalid then normalized.email = profile.email
+        if profile.user <> invalid and profile.user.email <> invalid then normalized.email = profile.user.email
+        if profile.uuid <> invalid then normalized.id = profile.uuid
+        if profile.username <> invalid then normalized.username = profile.username
+        globalNode.userInfo = normalized
+    end sub
+
+    sub SetSubscriptionState(globalNode as dynamic, subscriptions as dynamic)
+        if globalNode = invalid then return
+        normalized = {}
+        if subscriptions = invalid then globalNode.subscription = normalized : return
+        if subscriptions.responseData <> invalid then subscriptions = subscriptions.responseData
+        items = invalid
+        if subscriptions.items <> invalid
+            items = subscriptions.items
+        else if subscriptions.collection <> invalid
+            items = subscriptions.collection
+        end if
+        if items <> invalid
+            for each item in items
+                if item = invalid then continue for
+                key = ""
+                if item.offerId <> invalid
+                    key = item.offerId.ToStr()
+                else if item.item_id <> invalid
+                    key = item.item_id.ToStr()
+                else if item.itemId <> invalid
+                    key = item.itemId.ToStr()
+                end if
+                if key <> ""
+                    if item.status = invalid then item.status = "active"
+                    normalized[key] = item
+                end if
+            end for
+        end if
+        globalNode.subscription = normalized
     end sub
 
     sub SetConfigurationFailure(globalNode as dynamic, failure as dynamic)

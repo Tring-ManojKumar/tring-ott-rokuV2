@@ -28,6 +28,114 @@
       "group": "build"
     },
     {
+      "label": "build:waypoint:stage",
+      "command": "npm run build:waypoint:stage",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:waypoint",
+      "command": "npm run build:waypoint",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:ksl:stage",
+      "command": "npm run build:ksl:stage",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:ksl",
+      "command": "npm run build:ksl",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:checkplush:stage",
+      "command": "npm run build:checkplush:stage",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:checkplush",
+      "command": "npm run build:checkplush",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:gonoodle:stage",
+      "command": "npm run build:gonoodle:stage",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:gonoodle",
+      "command": "npm run build:gonoodle",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:healthcentral:stage",
+      "command": "npm run build:healthcentral:stage",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:healthcentral",
+      "command": "npm run build:healthcentral",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:journy:stage",
+      "command": "npm run build:journy:stage",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:journy",
+      "command": "npm run build:journy",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:mltt:stage",
+      "command": "npm run build:mltt:stage",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:mltt",
+      "command": "npm run build:mltt",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:tastylive:stage",
+      "command": "npm run build:tastylive:stage",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:tastylive",
+      "command": "npm run build:tastylive",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:tfo:stage",
+      "command": "npm run build:tfo:stage",
+      "type": "shell",
+      "group": "build"
+    },
+    {
+      "label": "build:tfo",
+      "command": "npm run build:tfo",
+      "type": "shell",
+      "group": "build"
+    },
+    {
       "label": "build:blive:stage:debug",
       "command": "npx bsc --brand=blive --env=stage --debug",
       "type": "shell",

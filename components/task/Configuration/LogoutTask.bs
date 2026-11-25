@@ -1,0 +1,31 @@
+import "pkg:/services/AuthService.bs"
+import "pkg:/source/rokuCore/GlobalConfigurationManager.bs"
+import "pkg:/data/repositories/StartupStateRepositoryImpl.bs"
+
+sub init()
+    m.top.functionName = "execute"
+end sub
+
+sub execute()
+    m.top.requestState = "LOADING"
+    m.top.errorMessage = ""
+    service = new DataLayer.AuthService(invalid, GetGlobalAA())
+    result = service.logout()
+    if result = invalid
+        m.top.errorMessage = "Logout could not be processed."
+        m.top.requestState = "ERROR"
+        return
+    end if
+    if not result.ok
+        m.top.errorMessage = result.userMessage
+        m.top.requestState = "ERROR"
+        return
+    end if
+    repository = new DataLayer.StartupStateRepositoryImpl()
+    if not RokuCore.ClearAuthenticatedState(GetGlobalAA(), repository)
+        m.top.errorMessage = "The account session could not be removed from device storage."
+        m.top.requestState = "ERROR"
+        return
+    end if
+    m.top.requestState = "SUCCESS"
+end sub

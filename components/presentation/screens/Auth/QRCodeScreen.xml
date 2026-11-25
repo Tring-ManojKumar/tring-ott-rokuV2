@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="QRCodeScreen" extends="Group">
+    <interface>
+        <field id="isReady" type="boolean" value="false" />
+        <field id="frameworkSupportsInitialFocus" type="boolean" value="true" />
+        <field id="frameworkLifecycleEvent" type="string" value="" />
+        <field id="frameworkScreenIdentity" type="string" value="" />
+        <field id="frameworkCreated" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkInitialized" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkPresented" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkSuspended" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkResumed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkExited" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkDestroyed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkCleanupRequested" type="boolean" value="false" alwaysNotify="true" onChange="onCleanupRequested" />
+        <function name="setInitialFocus" />
+    </interface>
+    <children>
+        <Rectangle width="1920" height="1080" color="0x101820FF" />
+        <AppLabel id="heading" translation="[100, 100]" width="900" height="72" text="Activate Your Device" variant="heading" />
+        <Poster id="qrImage" translation="[100, 220]" width="600" height="600" loadDisplayMode="scaleToFit" visible="false" />
+        <Label id="codeLabel" translation="[760, 260]" width="900" height="100" wrap="true" color="0xFFFFFFFF" font="font:LargeSystemFont" />
+        <Label id="status" translation="[760, 390]" width="900" height="150" wrap="true" color="0xFFFFFFFF" font="font:MediumSystemFont" />
+        <AppButton id="guestButton" translation="[760, 580]" width="420" height="72" text="Continue as Guest" variant="secondary" />
+        <QrAuthenticationTask id="qrTask" />
+    </children>
+    <script type="text/brightscript" uri="QRCodeScreen.bs" />
+</component>

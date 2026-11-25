@@ -1,14 +1,14 @@
 {
   "API": {
-    "INPLAYER_CLIENT_ID": "a0d9a424-fee0-409b-9df4-3ce76ec4aa23",
-    "CONFIG_ID": "svn0mzci"
+    "INPLAYER_CLIENT_ID": "28a08b99-b9f5-4f4f-ba7d-b6b52e6db9f8",
+    "CONFIG_ID": "ffuxvbfv"
   },
   "REMOTE_CONFIG": {
     "APP_CODE": "Asdgyr12o9snWYTssjmncs02nw",
-    "PROJECT_ID": "tastylive",
-    "APP_INSTANCE_ID": "cXx-1x6kWG6DAqHjpGDATF",
-    "APP_ID": "1:1007516415428:web:51e933792b9839332aa091",
-    "KEY": "AIzaSyCshM5gPNDveK82ey3AtlJ26WCJQCyB7CA"
+    "PROJECT_ID": "tringplay-65e37",
+    "APP_INSTANCE_ID": "c7kEqXIZFRvwknSyBcQChi",
+    "APP_ID": "1:1043373373981:web:8bb363c7cb68c74ec064f4",
+    "KEY": "AIzaSyD6kyumapPOG4OMUS9Uh7wyvWPWfPqjajM"
   },
   "LIVE_EVENT_STATES": {
     "PRE_LIVE": "PRE_LIVE",

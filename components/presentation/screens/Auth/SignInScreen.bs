@@ -1,0 +1,120 @@
+import "pkg:/source/navigation/AppRoutes.bs"
+import "pkg:/source/navigation/NavigationEvents.bs"
+import "pkg:/source/rokuCore/LocalizationProvider.bs"
+
+sub init()
+    m.emailBox = m.top.findNode("emailBox")
+    m.passwordBox = m.top.findNode("passwordBox")
+    m.pageTitle = m.top.findNode("pageTitle")
+    m.pageDescription = m.top.findNode("pageDescription")
+    m.emailLabel = m.top.findNode("emailLabel")
+    m.passwordLabel = m.top.findNode("passwordLabel")
+    m.signInButton = m.top.findNode("signInButton")
+    m.linkDeviceButton = m.top.findNode("linkDeviceButton")
+    m.status = m.top.findNode("status")
+    m.loginTask = m.top.findNode("loginTask")
+    strings = GetGlobalAA()
+    m.pageTitle.text = RokuCore.GetLocalizedString(strings, ["SIGN_IN_SCREEN", "TITLE"], "Please Sign In")
+    m.pageDescription.text = RokuCore.GetLocalizedString(strings, ["SIGN_IN_SCREEN", "DESCRIPTION", "EMAIL_INPUT"], "Use the keyboard to enter email")
+    m.emailLabel.text = RokuCore.GetLocalizedString(strings, ["SIGN_IN_SCREEN", "KEYBOARD_HINT_TEXTS", "EMAIL_HINT"], "Email")
+    m.passwordLabel.text = RokuCore.GetLocalizedString(strings, ["SIGN_IN_SCREEN", "KEYBOARD_HINT_TEXTS", "PASSWORD_HINT"], "Password")
+    m.emailBox.hintText = m.emailLabel.text
+    m.passwordBox.hintText = m.passwordLabel.text
+    m.signInButton.text = RokuCore.GetLocalizedString(strings, ["SIGN_IN_SCREEN", "BUTTONS", "NEXT_BUTTON"], "Continue")
+    m.linkDeviceButton.text = RokuCore.GetLocalizedString(strings, ["SIGN_IN_SCREEN", "BUTTONS", "CANCEL_BUTTON"], "Link your device")
+    m.signInButton.observeField("activated", "onSignIn")
+    m.linkDeviceButton.observeField("activated", "onLinkDevice")
+    m.loginTask.observeField("requestState", "onLoginState")
+end sub
+
+sub onNavigationParamsChanged(event as object)
+    params = event.getData()
+    m.linkDeviceButton.visible = false
+    if params <> invalid and params.allowQr <> invalid
+        m.linkDeviceButton.visible = params.allowQr = true
+    end if
+end sub
+
+sub onSignIn(event as object)
+    email = m.emailBox.text
+    password = m.passwordBox.text
+    if not isValidEmail(email)
+        m.status.text = RokuCore.GetLocalizedString(GetGlobalAA(), ["SIGN_IN_SCREEN", "VALIDATION_ERROR_MSG", "EMAIL_ERROR"], "Enter a valid email and password.")
+        return
+    end if
+    if Len(password) <= 7
+        m.status.text = "The password must be at least 8 characters long."
+        return
+    end if
+    m.signInButton.enabled = false
+    m.status.text = "Signing in..."
+    m.loginTask.email = email
+    m.loginTask.password = password
+    m.loginTask.control = "RUN"
+end sub
+
+sub onLinkDevice(event as object)
+    navigate(AppRoutes.QR_AUTH, {})
+end sub
+
+sub navigate(route as string, params as object)
+    scene = m.top.getScene()
+    if scene <> invalid and scene.hasField("navigationEvent")
+        events = new NavigationEvents()
+        scene.navigationEvent = events.navigate(route, params)
+    end if
+end sub
+
+function isValidEmail(email as string) as boolean
+    if email = invalid then return false
+    value = email.Trim()
+    regex = CreateObject("roRegex", "^[A-Za-z0-9](?:[A-Za-z0-9.+!%-]{1,64}|)@[A-Za-z0-9][A-Za-z0-9.-]+(?:\\.[A-Za-z]{2,}|\\.[0-9]{1,})$", "i")
+    return regex.IsMatch(value)
+end function
+
+sub onLoginState(event as object)
+    state = event.getData()
+    if state = "SUCCESS"
+        scene = m.top.getScene()
+        if scene <> invalid and scene.hasField("navigationEvent")
+            events = new NavigationEvents()
+            scene.navigationEvent = events.reset(AppRoutes.HOME)
+        end if
+    else if state = "ERROR"
+        m.signInButton.enabled = true
+        m.status.text = m.loginTask.errorMessage
+    end if
+end sub
+
+function setInitialFocus() as boolean
+    m.emailBox.setFocus(true)
+    return m.emailBox.hasFocus()
+end function
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    if not press then return false
+    if key = "down"
+        if m.emailBox.hasFocus()
+            m.passwordBox.setFocus(true)
+            return true
+        else if m.passwordBox.hasFocus()
+            m.signInButton.setFocus(true)
+            return true
+        else if m.signInButton.hasFocus() and m.linkDeviceButton.visible
+            m.linkDeviceButton.setFocus(true)
+            return true
+        end if
+    else if key = "up"
+        if m.linkDeviceButton.hasFocus()
+            m.signInButton.setFocus(true)
+            return true
+        else if m.signInButton.hasFocus()
+            m.passwordBox.setFocus(true)
+            return true
+        else if m.passwordBox.hasFocus()
+            m.emailBox.setFocus(true)
+            return true
+        end if
+    end if
+    return false
+end function

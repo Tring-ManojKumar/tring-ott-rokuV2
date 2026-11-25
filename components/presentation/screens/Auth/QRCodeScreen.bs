@@ -1,0 +1,98 @@
+import "pkg:/source/navigation/AppRoutes.bs"
+import "pkg:/source/navigation/NavigationEvents.bs"
+import "pkg:/source/rokuCore/GlobalConfigurationManager.bs"
+import "pkg:/data/repositories/StartupStateRepositoryImpl.bs"
+
+sub init()
+    m.qrTask = m.top.findNode("qrTask")
+    m.qrImage = m.top.findNode("qrImage")
+    m.codeLabel = m.top.findNode("codeLabel")
+    m.status = m.top.findNode("status")
+    m.guestButton = m.top.findNode("guestButton")
+    m.guestButton.observeField("activated", "onGuest")
+    m.qrTask.observeField("requestState", "onQrState")
+    m.qrTask.observeField("qrCode", "onQrCode")
+    m.qrTask.observeField("imageUri", "onQrImage")
+    m.qrTask.observeField("statusText", "onStatus")
+    m.top.isReady = true
+    m.qrTask.control = "RUN"
+end sub
+
+sub onCleanupRequested(event as object)
+    if not event.getData() then return
+    if m.qrTask <> invalid
+        m.qrTask.unobserveField("requestState")
+        m.qrTask.unobserveField("qrCode")
+        m.qrTask.unobserveField("imageUri")
+        m.qrTask.unobserveField("statusText")
+        m.qrTask.control = "STOP"
+    end if
+    if m.guestButton <> invalid then m.guestButton.unobserveField("activated")
+end sub
+
+sub onQrCode(event as object)
+    code = event.getData()
+    if code <> invalid and code <> "" then m.codeLabel.text = "Activation code: " + code
+end sub
+
+sub onQrImage(event as object)
+    uri = event.getData()
+    if uri = invalid or uri = "" then return
+    normalized = uri.ToStr()
+    if Left(LCase(normalized), 7) = "http://" or Left(LCase(normalized), 8) = "https://" or Left(normalized, 6) = "pkg:/"
+        m.qrImage.uri = normalized
+        m.qrImage.visible = true
+        return
+    end if
+
+    base64Image = normalized
+    if Left(LCase(normalized), 5) = "data:"
+        separator = Instr(1, normalized, ",")
+        if separator = 0
+            m.status.text = "The activation QR image was invalid."
+            return
+        end if
+        base64Image = Mid(normalized, separator + 1)
+    end if
+    bytes = CreateObject("roByteArray")
+    bytes.FromBase64String(base64Image)
+    path = "tmp:/v2-qr.png"
+    if not bytes.WriteFile(path)
+        m.status.text = "The activation QR image could not be saved."
+        return
+    end if
+    m.qrImage.uri = path
+    m.qrImage.visible = true
+end sub
+
+sub onStatus(event as object)
+    m.status.text = event.getData()
+end sub
+
+sub onQrState(event as object)
+    state = event.getData()
+    if state = "SUCCESS"
+        scene = m.top.getScene()
+        if scene <> invalid and scene.hasField("navigationEvent")
+            events = new NavigationEvents()
+            scene.navigationEvent = events.reset(AppRoutes.HOME)
+        end if
+    else if state = "ERROR" or state = "EXPIRED"
+        m.guestButton.visible = true
+    end if
+end sub
+
+sub onGuest(event as object)
+    repository = new DataLayer.StartupStateRepositoryImpl()
+    RokuCore.SetGuestAuthenticationState(GetGlobalAA(), repository)
+    scene = m.top.getScene()
+    if scene <> invalid and scene.hasField("navigationEvent")
+        events = new NavigationEvents()
+        scene.navigationEvent = events.reset(AppRoutes.HOME)
+    end if
+end sub
+
+function setInitialFocus() as boolean
+    m.guestButton.setFocus(true)
+    return m.guestButton.hasFocus()
+end function

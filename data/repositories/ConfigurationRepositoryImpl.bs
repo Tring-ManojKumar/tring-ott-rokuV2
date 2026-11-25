@@ -27,11 +27,13 @@ namespace DataLayer
             if remoteResult = invalid or not remoteResult.ok then return remoteResult
             remoteResponse = remoteResult.data
 
-            appInfo = CreateObject("roAppInfo")
-            buildType = "dev"
-            if appInfo <> invalid and appInfo.GetValue("buildType") <> invalid
-                buildType = appInfo.GetValue("buildType").ToStr()
+            runtimeConfiguration = RokuCore.GetRuntimeConfiguration()
+            buildType = invalid
+            if runtimeConfiguration <> invalid then buildType = runtimeConfiguration.environment
+            if not m.parser.isValidString(buildType)
+                return errors.failure("CONFIGURATION", "Packaged build environment is missing")
             end if
+            buildType = buildType.ToStr()
             selectedResult = m.parser.selectRemoteConfiguration(remoteResponse, buildType)
             if selectedResult = invalid or not selectedResult.ok then return selectedResult
             remoteConfiguration = selectedResult.data.selected
@@ -40,7 +42,7 @@ namespace DataLayer
             if remoteConfiguration.jwplayer <> invalid and m.parser.isValidString(remoteConfiguration.jwplayer.config_id)
                 configId = remoteConfiguration.jwplayer.config_id
             end if
-            environmentResult = m.parser.resolveEnvironment(remoteConfiguration, RokuCore.GetRuntimeConfiguration().environment)
+            environmentResult = m.parser.resolveEnvironment(remoteConfiguration, buildType)
             if environmentResult = invalid or not environmentResult.ok then return environmentResult
 
             appConfigResult = m.service.getAppConfig(configId)

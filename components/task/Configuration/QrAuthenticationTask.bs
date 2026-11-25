@@ -1,0 +1,318 @@
+import "pkg:/services/AuthService.bs"
+import "pkg:/data/repositories/StartupStateRepositoryImpl.bs"
+import "pkg:/source/rokuCore/GlobalConfigurationManager.bs"
+
+sub init()
+    m.top.functionName = "execute"
+end sub
+
+sub execute()
+    m.top.requestState = "LOADING"
+    m.top.statusText = "Generating activation code..."
+    service = new DataLayer.AuthService(invalid, GetGlobalAA())
+    deviceInfo = CreateObject("roDeviceInfo")
+    visitorId = ""
+    if deviceInfo <> invalid
+        visitorId = deviceInfo.GetChannelClientId()
+        if visitorId = invalid then visitorId = ""
+    end if
+    result = service.generateQrCode(visitorId)
+    if result = invalid or not result.ok
+        m.top.statusText = "Could not generate an activation code."
+        m.top.requestState = "ERROR"
+        return
+    end if
+    provider = service.getProvider()
+    code = extractQrCode(result.data, provider)
+    if code = ""
+        m.top.statusText = "The activation code response was invalid."
+        m.top.requestState = "ERROR"
+        return
+    end if
+    m.top.qrCode = code
+    m.top.imageUri = resolveQrImageUri(result.data)
+    intervalMs = extractPollInterval(result.data)
+    expiresAt = extractExpiresAt(result.data)
+    m.top.statusText = "Scan the QR code or enter code " + code
+    m.top.requestState = "WAITING"
+    while true
+        if m.top.state = "stop" then return
+        nowMs = CreateObject("roDateTime").AsSeconds() * 1000
+        if expiresAt > 0 and nowMs >= expiresAt
+            m.top.statusText = "The activation code expired."
+            m.top.requestState = "LOADING"
+            result = service.generateQrCode(visitorId)
+            if result = invalid or not result.ok
+                m.top.statusText = "Could not refresh the expired activation code."
+                m.top.requestState = "EXPIRED"
+                return
+            end if
+            provider = service.getProvider()
+            code = extractQrCode(result.data, provider)
+            if code = ""
+                m.top.statusText = "The refreshed activation code was invalid."
+                m.top.requestState = "EXPIRED"
+                return
+            end if
+            m.top.qrCode = code
+            m.top.imageUri = resolveQrImageUri(result.data)
+            intervalMs = extractPollInterval(result.data)
+            expiresAt = extractExpiresAt(result.data)
+            m.top.statusText = "Activation code refreshed. Scan or enter " + code
+            m.top.requestState = "WAITING"
+        end if
+        Sleep(intervalMs)
+        check = service.checkQrCode(code, visitorId)
+        if check = invalid or not check.ok
+            m.top.statusText = "Waiting for activation..."
+        else if isQrReady(check.data, provider)
+            sessionResponse = normalizeQrSession(check.data, provider)
+            if sessionResponse = invalid
+                m.top.statusText = "Activation returned an invalid session."
+                m.top.requestState = "ERROR"
+                return
+            end if
+            if provider = "custom"
+                username = extractCustomUsername(check.data)
+                answer = extractCustomAnswer(check.data)
+                if username = "" or answer = ""
+                    m.top.statusText = "Activation was ready but account details were incomplete."
+                    m.top.requestState = "ERROR"
+                    return
+                end if
+                completed = service.completeCustomQrLogin(username, answer)
+                if completed = invalid or not completed.ok
+                    m.top.statusText = "Could not complete activation."
+                    m.top.requestState = "ERROR"
+                    return
+                end if
+                sessionResponse = completed.data
+            end if
+            repository = new DataLayer.StartupStateRepositoryImpl()
+            if not RokuCore.PersistAuthenticatedResponse(GetGlobalAA(), sessionResponse, repository)
+                m.top.statusText = "Activation succeeded but no usable access token was returned."
+                m.top.requestState = "ERROR"
+                return
+            end if
+            serviceAfterAuth = new DataLayer.AuthService(invalid, GetGlobalAA())
+            profile = serviceAfterAuth.getAccountDetails()
+            if profile <> invalid and profile.ok
+                RokuCore.SetAccountProfile(GetGlobalAA(), profile.data)
+            end if
+            if profile <> invalid and profile.ok and serviceAfterAuth.getProvider() = "cleeng"
+                subscriptions = serviceAfterAuth.getSubscriptions()
+                if subscriptions <> invalid and subscriptions.ok
+                    RokuCore.SetSubscriptionState(GetGlobalAA(), subscriptions.data)
+                end if
+            end if
+            m.top.session = repository.readUserSession()
+            m.top.statusText = "Activation complete."
+            m.top.requestState = "SUCCESS"
+            return
+        end if
+    end while
+end sub
+
+function extractQrCode(payload as dynamic, provider as string) as string
+    if payload = invalid then return ""
+    candidates = []
+    candidates.Push(payload.code)
+    candidates.Push(payload.Code)
+    candidates.Push(payload.authCode)
+    candidates.Push(payload.AuthCode)
+    if payload.data <> invalid
+        candidates.Push(payload.data.code)
+        candidates.Push(payload.data.Code)
+        candidates.Push(payload.data.authCode)
+        candidates.Push(payload.data.AuthCode)
+        candidates.Push(payload.data.qr_code)
+        candidates.Push(payload.data.QrCode)
+    end if
+    if payload.responseData <> invalid
+        candidates.Push(payload.responseData.code)
+        candidates.Push(payload.responseData.Code)
+        candidates.Push(payload.responseData.authCode)
+        candidates.Push(payload.responseData.AuthCode)
+        if payload.responseData.data <> invalid
+            candidates.Push(payload.responseData.data.code)
+            candidates.Push(payload.responseData.data.authCode)
+        end if
+    end if
+    for each candidate in candidates
+        if candidate <> invalid and LCase(type(candidate)) <> "roassociativearray" and candidate.ToStr().Trim() <> ""
+            return candidate.ToStr()
+        end if
+    end for
+    return ""
+end function
+
+function extractQrImage(payload as dynamic) as string
+    if payload = invalid then return ""
+    candidates = []
+    candidates.Push(payload.qrImage)
+    candidates.Push(payload.qr_image)
+    candidates.Push(payload.qrImageUrl)
+    candidates.Push(payload.qr_image_url)
+    candidates.Push(payload.image)
+    if payload.data <> invalid
+        candidates.Push(payload.data.qrImage)
+        candidates.Push(payload.data.qr_image)
+        candidates.Push(payload.data.qrImageUrl)
+        candidates.Push(payload.data.qr_image_url)
+        candidates.Push(payload.data.image)
+    end if
+    if payload.responseData <> invalid
+        candidates.Push(payload.responseData.qrImage)
+        candidates.Push(payload.responseData.qr_image)
+        candidates.Push(payload.responseData.qrImageUrl)
+        candidates.Push(payload.responseData.qr_image_url)
+        candidates.Push(payload.responseData.image)
+        if payload.responseData.data <> invalid
+            candidates.Push(payload.responseData.data.qrImageUrl)
+            candidates.Push(payload.responseData.data.qr_image_url)
+        end if
+    end if
+    for each candidate in candidates
+        if candidate <> invalid and LCase(type(candidate)) <> "roassociativearray"
+            value = candidate.ToStr()
+            if value <> "" then return value
+        end if
+    end for
+    return ""
+end function
+
+function resolveQrImageUri(payload as dynamic) as string
+    globalNode = GetGlobalAA()
+    resolved = invalid
+    if globalNode <> invalid then resolved = globalNode.resolvedConfig
+    authentication = invalid
+    if resolved <> invalid then authentication = resolved.authentication
+    settings = invalid
+    if authentication <> invalid then settings = authentication.qr_settings
+    if settings = invalid then return ""
+    showQrImage = settings.show_qr_image
+    if showQrImage <> true
+        if showQrImage = invalid or LCase(showQrImage.ToStr()) <> "true" then return ""
+    end if
+
+    imageUri = extractQrImage(payload)
+    if imageUri <> "" then return imageUri
+    if settings.qr_image_url <> invalid then return settings.qr_image_url.ToStr()
+    return ""
+end function
+
+function extractPollInterval(payload as dynamic) as integer
+    interval = invalid
+    if payload <> invalid
+        interval = payload.pollInterval
+        if interval = invalid then interval = payload.poll_interval
+        if payload.data <> invalid
+            if interval = invalid then interval = payload.data.pollInterval
+            if interval = invalid then interval = payload.data.poll_interval
+        end if
+    end if
+    if interval = invalid or Val(interval.ToStr()) <= 0 then return 5000
+    value = Val(interval.ToStr())
+    if value < 1000 then return value * 1000
+    return value
+end function
+
+function extractExpiresAt(payload as dynamic) as longinteger
+    expiresAt = invalid
+    expiresIn = invalid
+    if payload <> invalid
+        expiresAt = payload.expiresAt
+        if expiresAt = invalid then expiresAt = payload.expires_at
+        expiresIn = payload.expiresIn
+        if expiresIn = invalid then expiresIn = payload.expires_in
+        if payload.data <> invalid
+            if expiresAt = invalid then expiresAt = payload.data.expiresAt
+            if expiresAt = invalid then expiresAt = payload.data.expires_at
+            if expiresIn = invalid then expiresIn = payload.data.expiresIn
+            if expiresIn = invalid then expiresIn = payload.data.expires_in
+        end if
+    end if
+    if expiresAt <> invalid
+        value = Val(expiresAt.ToStr())
+        if value > 1000000000000 then return value
+        if value > 1000000000 then return value * 1000
+    end if
+    if expiresIn <> invalid
+        value = Val(expiresIn.ToStr())
+        if value > 0
+            durationSeconds = value / 1000
+            return (CreateObject("roDateTime").AsSeconds() + durationSeconds) * 1000
+        end if
+    end if
+    globalNode = GetGlobalAA()
+    resolved = invalid
+    if globalNode <> invalid then resolved = globalNode.resolvedConfig
+    qrRefreshSeconds = 600
+    if resolved <> invalid
+        authentication = resolved.authentication
+        if authentication <> invalid and authentication.qr_refersh_code_time <> invalid
+            qrRefreshSeconds = Val(authentication.qr_refersh_code_time.ToStr())
+        end if
+    end if
+    if qrRefreshSeconds <= 0 then qrRefreshSeconds = 600
+    return (CreateObject("roDateTime").AsSeconds() + qrRefreshSeconds) * 1000
+end function
+
+function isQrReady(payload as dynamic, provider as string) as boolean
+    if payload = invalid then return false
+    if provider = "inplayer"
+        data = payload.data
+        if data <> invalid and data.data <> invalid
+            status = data.data.status
+            if status <> invalid then return LCase(status.ToStr()) = "authenticated"
+        end if
+        responseData = payload.responseData
+        if responseData <> invalid
+            status = responseData.status
+            if status <> invalid then return LCase(status.ToStr()) = "authenticated"
+        end if
+        return false
+    end if
+    status = payload.status
+    if status = invalid and payload.data <> invalid then status = payload.data.status
+    if status = invalid and payload.responseData <> invalid then status = payload.responseData.status
+    if status <> invalid then
+        normalized = LCase(status.ToStr())
+        return normalized = "authenticated" or normalized = "ready" or normalized = "success"
+    end if
+    if payload.responseData <> invalid
+        return payload.access_token <> invalid or payload.AccessToken <> invalid or payload.token <> invalid or payload.responseData.access_token <> invalid or payload.responseData.AccessToken <> invalid or payload.responseData.token <> invalid
+    end if
+    return payload.access_token <> invalid or payload.AccessToken <> invalid or payload.token <> invalid
+end function
+
+function normalizeQrSession(payload as dynamic, provider as string) as dynamic
+    if payload = invalid then return invalid
+    if payload.responseData <> invalid then payload = payload.responseData
+    if provider = "inplayer"
+        data = payload.data
+        if data <> invalid and data.token <> invalid
+            return { access_token: data.token.ToStr() }
+        end if
+    end if
+    if payload.data <> invalid and payload.data.access_token <> invalid
+        return payload.data
+    end if
+    return payload
+end function
+
+function extractCustomUsername(payload as dynamic) as string
+    if payload = invalid then return ""
+    if payload.username <> invalid then return payload.username.ToStr()
+    if payload.data <> invalid and payload.data.username <> invalid then return payload.data.username.ToStr()
+    if payload.responseData <> invalid and payload.responseData.username <> invalid then return payload.responseData.username.ToStr()
+    return ""
+end function
+
+function extractCustomAnswer(payload as dynamic) as string
+    if payload = invalid then return ""
+    if payload.answer <> invalid then return payload.answer.ToStr()
+    if payload.data <> invalid and payload.data.answer <> invalid then return payload.data.answer.ToStr()
+    if payload.responseData <> invalid and payload.responseData.answer <> invalid then return payload.responseData.answer.ToStr()
+    return ""
+end function

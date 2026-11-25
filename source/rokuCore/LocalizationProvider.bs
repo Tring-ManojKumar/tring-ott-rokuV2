@@ -1,0 +1,82 @@
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+import "pkg:/data/repositories/SettingsRepositoryImpl.bs"
+import "pkg:/utils/logging/Logger.bs"
+
+namespace RokuCore
+    sub InitializeLocalization(globalNode as dynamic)
+        if globalNode = invalid then return
+        configuration = GetRuntimeConfiguration()
+        languages = configuration.languages
+        if languages = invalid or languages.Count() = 0
+            AppLogWarn("LocalizationProvider", "No packaged languages are configured")
+            return
+        end if
+
+        languageCode = languages[0].code
+        repository = new DataLayer.SettingsRepositoryImpl()
+        savedLanguage = repository.get("language", "")
+        if isConfiguredLanguage(languages, savedLanguage)
+            languageCode = savedLanguage
+        end if
+        if not ApplyLocalization(globalNode, languageCode)
+            AppLogError("LocalizationProvider", "Could not load the default packaged translation")
+        end if
+    end sub
+
+    function ApplyLocalization(globalNode as dynamic, languageCode as string) as boolean
+        if globalNode = invalid then return false
+        configuration = GetRuntimeConfiguration()
+        languages = configuration.languages
+        if languages = invalid then return false
+
+        selected = invalid
+        for each language in languages
+            if language <> invalid and language.code <> invalid and LCase(language.code.ToStr()) = LCase(languageCode.Trim())
+                selected = language
+                exit for
+            end if
+        end for
+        if selected = invalid then return false
+
+        fileName = LCase(selected.name.ToStr()) + ".json"
+        raw = ReadAsciiFile("pkg:/assets/localization/" + fileName)
+        if raw = invalid or raw = ""
+            AppLogError("LocalizationProvider", "Packaged translation file is missing: " + fileName)
+            return false
+        end if
+        strings = ParseJson(raw)
+        if strings = invalid
+            AppLogError("LocalizationProvider", "Packaged translation file is invalid: " + fileName)
+            return false
+        end if
+
+        globalNode.strings = strings
+        globalNode.localeCode = LCase(selected.code.ToStr())
+        globalNode.localeLanguage = LCase(selected.name.ToStr())
+        return true
+    end function
+
+    function GetLocalizedString(globalNode as dynamic, path as object, fallback as string) as string
+        if globalNode = invalid or globalNode.strings = invalid then return fallback
+        value = globalNode.strings
+        for each key in path
+            if value = invalid then return fallback
+            value = value[key]
+        end for
+        if value = invalid then return fallback
+        valueType = LCase(type(value))
+        if valueType <> "string" and valueType <> "rostring" then return fallback
+        if value.Trim() = "" then return fallback
+        return value.ToStr()
+    end function
+
+    function isConfiguredLanguage(languages as dynamic, languageCode as dynamic) as boolean
+        if languageCode = invalid then return false
+        for each language in languages
+            if language <> invalid and language.code <> invalid and LCase(language.code.ToStr()) = LCase(languageCode.ToStr())
+                return true
+            end if
+        end for
+        return false
+    end function
+end namespace

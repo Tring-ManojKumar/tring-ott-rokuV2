@@ -2,26 +2,23 @@ import type { Config } from "../../schema";
 
 export const tringplayConfig: Config = {
     brand: "tringplay",
-    splash: { type: "video", uri: "pkg:/assets/tringplay/images/splash_1080p.mp4",
-        fallbackImage: "pkg:/assets/images/loader_red.png"
+    splash: { type: "video", uri: "pkg:/assets/tringplay/images/splash.mp4",
+        fallbackImage: "pkg:/assets/tringplay/images/splash_fhd.png"
      },
     languages: [
         { code: "en", name: "English" },
-        { code: "fr", name: "French" }
+        { code: "es", name: "Spanish" }
     ],
 
     theme: {
         colors: {
-            background: "#0B0614",
-            surface: "#21132E",
+            background: "#000000",
+            surface: "#262626",
             textPrimary: "#FFFFFF",
-            textSecondary: "#C8BFD1",
-            accent: "#FF4F81",
-            focus: "#FF4F81",
-            disabled: "#62566B"
-        },
-        gradients: {
-            accent: { colors: ["#FF4F81", "#8A3FFC"], style: "linear", angle: 90 }
+            textSecondary: "#C4C4C4",
+            accent: "#E32652",
+            focus: "#E32652",
+            disabled: "#555555"
         },
         components: {
             cards: {
@@ -57,6 +54,6 @@ export const tringplayConfig: Config = {
     assets: {
         fonts: { regular: "fonts/Regular.otf", medium: "fonts/Medium.otf", bold: "fonts/Bold.otf" },
         icons: { call: "icons/callIcon.png" },
-        images: { logo: "images/Roku.png", home: "images/home.png", splash: "images/splash_1080p.mp4", splashFallback: "images/loader_red.png" }
+        images: { logo: "images/Roku.png", home: "images/home.png", splash: "images/splash.mp4", splashFallback: "images/splash_fhd.png" }
     }
 };

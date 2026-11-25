@@ -1,4 +1,5 @@
 sub init()
+    m.backgroundMask = m.top.findNode("backgroundMask")
     m.background = m.top.findNode("background")
     m.borderTop = m.top.findNode("borderTop")
     m.borderBottom = m.top.findNode("borderBottom")
@@ -35,6 +36,9 @@ sub updateButton()
     m.background.width = m.top.width
     m.background.height = m.top.height
     m.background.visible = true
+    m.backgroundMask.width = m.top.width
+    m.backgroundMask.height = m.top.height
+    m.backgroundMask.maskSize = [m.top.width, m.top.height]
     m.borderTop.width = m.top.width
     m.borderBottom.width = m.top.width
     m.borderBottom.translation = [0, m.top.height - 2]
@@ -74,7 +78,10 @@ sub updateButton()
         if borderColor <> -1 then style.border = borderColor
     end if
     if m.top.borderWidth > 0 then style.borderWidth = m.top.borderWidth
-    m.background.color = style.background
+    backgroundBlendColor = style.background
+    backgroundType = LCase(type(backgroundBlendColor))
+    if backgroundType = "string" or backgroundType = "rostring" then backgroundBlendColor = ThemeColor(backgroundBlendColor)
+    m.background.blendColor = backgroundBlendColor
     labelColor = style.text
     labelType = LCase(type(labelColor))
     if labelType = "string" or labelType = "rostring" then labelColor = ThemeColor(labelColor)
@@ -108,11 +115,6 @@ sub updateButton()
     gradientAngle = m.top.gradientAngle
     gradientStops = m.top.gradientStops
     presetName = m.top.gradientPreset
-    if presetName = ""
-        if variant = "primary"
-            if state <> "disabled" then presetName = "accent"
-        end if
-    end if
     needsPreset = colors = invalid
     if not needsPreset then needsPreset = colors.count() < 2
     if needsPreset
@@ -131,6 +133,10 @@ sub updateButton()
     effectBorderColor = style.border
     borderType = LCase(type(effectBorderColor))
     if borderType = "string" or borderType = "rostring" then effectBorderColor = ThemeColor(effectBorderColor)
+    m.borderTop.color = effectBorderColor
+    m.borderBottom.color = effectBorderColor
+    m.borderLeft.color = effectBorderColor
+    m.borderRight.color = effectBorderColor
     if ApplyNodeEffect(m.background, radius, style.borderWidth, effectBorderColor, colors, gradientStops, gradientStyle, gradientAngle)
         m.borderTop.opacity = 0
         m.borderBottom.opacity = 0

@@ -1,0 +1,102 @@
+{
+    "API": {
+        "INPLAYER_CLIENT_ID": "9caad36a-607f-4809-8fc3-ad712c0bd4cd",
+         "CONFIG_ID": "jbeorebm"
+    },
+    "REMOTE_CONFIG": {
+        "APP_CODE": "Asdgyr12o9snWYTssjmncs02nw",
+        "PROJECT_ID": "kslplus-29569",
+        "APP_INSTANCE_ID": "c1sy932MT6J-FzHMHMXxzd",
+        "APP_ID": "1:828065653841:web:a03c9a9391c21cd4090470",
+        "KEY": "AIzaSyDBrcY7DIN4-LOuIBneC29cbc08trHtPxo"
+    },
+    "GOOGLE_ANALYTICS": {
+        "PRODUCTION": {
+            "MEASUREMENT_ID": "G-KR29TET7P7"
+        },
+        "STAGING": {
+            "MEASUREMENT_ID": "G-KR29TET7P7"
+        }
+    },
+    "ANALYTICS": {
+        "EVENTS": {
+            "BUTTON_TAPPED": "Button Tapped",
+            "VIDEO_TAPPED": "Video Tapped",
+            "TILE_TAPPED": "Tile Tapped",
+            "TAB_TAPPED": "Tab Tapped",
+            "TOGGLE_TAPPED": "Toggle Tapped",
+            "MENU_ITEM_TAPPED": "Menu Item Tapped",
+            "OPTION_TAPPED": "Option Tapped",
+            "SCROLL": "Scroll",
+            "FIELD_TAPPED": "Field Tapped",
+            "VIDEO_PLAYER_CONTROLS": "Video Player Controls",
+            "SEARCH": "Search"
+        },
+        "VIDEO": {
+            "VIDEO_PLAY": "video_play",
+            "VIDEO_PROGRESS": "video_progress",
+            "VIDEO_PAUSE": "video_pause",
+            "VIDEO_RESUME": "video_resume",
+            "VIDEO_FORWARD": "video_forward",
+            "VIDEO_REWIND": "video_rewind",
+            "VIDEO_COMPLETE": "complete"
+        },
+        "PLATFORM": "Roku",
+        "CATEGORIES": {
+            "MAIN_NAVIGATION": "Main Navigation",
+            "HOME_MARQUEE": "Home Marquee",
+            "HOME_MARQUEE_OVERLAY": "Home Marquee Overlay",
+            "RECENT_SEARCHES": "Recent Searches",
+            "VIDEO_PLAYER": "Video Player",
+            "UP_NEXT": "Up Next Section",
+            "VIDEO_INFO": "Info Side Menu",
+            "SEARCH_RESULTS": "Search Results"
+        },
+        "SCREENS": {
+            "HOME_SCREEN": "Home Screen",
+            "SEARCH_SCREEN": "Search Screen",
+            "SERIES_LISTING_SCREEN": "Series Listing Screen",
+            "SERIES_DETAIL_SCREEN": "Series Detail Screen",
+            "MY_LIST_SCREEN": "My List Screen",
+            "SETTINGS_SCREEN": "Settings Screen",
+            "HELP_SCREEN": "Help Screen",
+            "LEGAL_SCREEN": "Legal Screen",
+            "PRIVACY_POLICY_SCREEN": "Privacy Policy Screen",
+            "TERMS_OF_USE_SCREEN": "Terms of Use Screen",
+            "NO_CONNECTION_SCREEN": "No Connection Screen",
+            "AUTHENTICATION_SCREEN": "Authentication Screen",
+            "WATCH_SCREEN": "Watch Screen",
+            "VIDEO_PLAYER": "Individual Video Screen"
+        },
+        "BUCKET_LENGTHS": {
+            "SHORT": "0-15 mins",
+            "MEDIUM": "15-30 mins",
+            "LONG": "30-60 mins",
+            "VERY_LONG": "1+ hr"
+        },
+        "VALUES": {
+            "WATCH_NOW_CTA": "Watch Now",
+            "SEE_MORE_CTA": "See More",
+            "EXIT_VIDEO": "Exit Video",
+            "FASTFORWARD": "Forward",
+            "REWIND": "Rewind",
+            "PLAY": "Play",
+            "REPLAY": "Replay",
+            "CAPTION_TOGGLE": "Captions",
+            "AUTOPLAY_TOGGLE": "Autoplay",
+            "AUDIO_TRACKS": "Audio",
+            "EXIT_CTA": "Exit"
+        }
+    },
+    "LIVE_EVENT_STATES": {
+        "PRE_LIVE": "PRE_LIVE",
+        "LIVE_UNPUBLISHED": "LIVE_UNPUBLISHED",
+        "LIVE_PUBLISHED": "LIVE_PUBLISHED",
+        "INSTANT_VOD": "INSTANT_VOD",
+        "VOD_PUBLIC": "VOD_PUBLIC"
+    },
+    "RAIL_TYPES": {
+        "VERTICAL": "vertical",
+         "SQUARE" :"square"
+    }
+}

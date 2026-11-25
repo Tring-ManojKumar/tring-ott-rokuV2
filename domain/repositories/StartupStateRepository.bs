@@ -15,5 +15,8 @@ namespace Domain
         function clearUserSession() as boolean
             throw "Domain.StartupStateRepository.clearUserSession() must be implemented"
         end function
+        function clearGuestProgress() as boolean
+            throw "Domain.StartupStateRepository.clearGuestProgress() must be implemented"
+        end function
     end class
 end namespace

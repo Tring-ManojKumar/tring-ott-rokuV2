@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="QrAuthenticationTask" extends="Task">
+    <interface>
+        <field id="requestState" type="string" value="IDLE" alwaysNotify="true" />
+        <field id="qrCode" type="string" value="" />
+        <field id="imageUri" type="string" value="" />
+        <field id="statusText" type="string" value="" />
+        <field id="session" type="assocarray" />
+    </interface>
+    <script type="text/brightscript" uri="QrAuthenticationTask.bs" />
+</component>

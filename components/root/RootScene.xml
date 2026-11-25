@@ -38,7 +38,7 @@
             visible="false"
         /> -->
         <SplashScreen id="splashScreen" />
-        <Timer id="splashMinimumTimer" duration="2.0" repeat="false" />
+        <Timer id="splashMinimumTimer" duration="5.0" repeat="false" />
         <ConfigurationInitializerTask id="configurationTask" />
         <AppConfigFetchTask id="homeConfigurationTask" />
         <AuthenticationRestoreTask id="authenticationRestoreTask" />

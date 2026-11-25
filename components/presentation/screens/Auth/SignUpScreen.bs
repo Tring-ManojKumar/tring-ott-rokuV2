@@ -1,0 +1,107 @@
+import "pkg:/source/navigation/NavigationEvents.bs"
+import "pkg:/source/navigation/AppRoutes.bs"
+import "pkg:/source/rokuCore/LocalizationProvider.bs"
+
+sub init()
+    m.firstNameBox = m.top.findNode("firstNameBox")
+    m.lastNameBox = m.top.findNode("lastNameBox")
+    m.emailBox = m.top.findNode("emailBox")
+    m.passwordBox = m.top.findNode("passwordBox")
+    m.passwordConfirmationBox = m.top.findNode("passwordConfirmationBox")
+    m.submitButton = m.top.findNode("submitButton")
+    m.backButton = m.top.findNode("backButton")
+    m.status = m.top.findNode("status")
+    m.signupTask = m.top.findNode("signupTask")
+    strings = GetGlobalAA()
+    m.pageTitle = m.top.findNode("pageTitle")
+    m.pageTitle.text = RokuCore.GetLocalizedString(strings, ["SIGN_UP_SCREEN", "TITLE"], "Please Sign Up")
+    m.firstNameBox.hintText = RokuCore.GetLocalizedString(strings, ["SIGN_UP_SCREEN", "KEYBOARD_HINT_TEXTS", "FIRSTNAME_HINT"], "Enter first name")
+    m.lastNameBox.hintText = RokuCore.GetLocalizedString(strings, ["SIGN_UP_SCREEN", "KEYBOARD_HINT_TEXTS", "LASTNAME_HINT"], "Enter last name")
+    m.emailBox.hintText = RokuCore.GetLocalizedString(strings, ["SIGN_UP_SCREEN", "KEYBOARD_HINT_TEXTS", "EMAIL_HINT"], "Enter email address")
+    m.passwordBox.hintText = RokuCore.GetLocalizedString(strings, ["SIGN_UP_SCREEN", "KEYBOARD_HINT_TEXTS", "PASSWORD_HINT"], "Enter password")
+    m.passwordConfirmationBox.hintText = RokuCore.GetLocalizedString(strings, ["SIGN_UP_SCREEN", "KEYBOARD_HINT_TEXTS", "PASSWORD_CONFIRMATION_HINT"], "Confirm password")
+    m.submitButton.text = RokuCore.GetLocalizedString(strings, ["SIGN_UP_SCREEN", "BUTTONS", "NEXT_BUTTON"], "Sign Up")
+    m.backButton.text = RokuCore.GetLocalizedString(strings, ["SIGN_UP_SCREEN", "BUTTONS", "BACK_BUTTON"], "Back")
+    m.submitButton.observeField("activated", "onSubmit")
+    m.backButton.observeField("activated", "onBack")
+    m.signupTask.observeField("requestState", "onSignupStateChanged")
+    m.top.isReady = true
+end sub
+
+sub onSubmit(event as object)
+    firstName = m.firstNameBox.text.Trim()
+    lastName = m.lastNameBox.text.Trim()
+    email = m.emailBox.text.Trim()
+    password = m.passwordBox.text
+    confirmation = m.passwordConfirmationBox.text
+    if firstName = "" or lastName = ""
+        showValidationError("Enter your first and last name.")
+        return
+    end if
+    if not isValidEmail(email)
+        showValidationError(RokuCore.GetLocalizedString(GetGlobalAA(), ["SIGN_UP_SCREEN", "VALIDATION_ERROR_MSG", "EMAIL_ERROR"], "Enter a valid email address."))
+        return
+    end if
+    if Len(password) <= 7
+        showValidationError(RokuCore.GetLocalizedString(GetGlobalAA(), ["SIGN_UP_SCREEN", "VALIDATION_ERROR_MSG", "PASSWORD_ERROR"], "Password must be at least 8 characters."))
+        return
+    end if
+    if password <> confirmation
+        showValidationError(RokuCore.GetLocalizedString(GetGlobalAA(), ["SIGN_UP_SCREEN", "VALIDATION_ERROR_MSG", "PASSWORD_CONFIRMATION_ERROR"], "Passwords do not match."))
+        return
+    end if
+    m.submitButton.enabled = false
+    m.backButton.enabled = false
+    m.status.text = "Creating account..."
+    m.signupTask.firstName = firstName
+    m.signupTask.lastName = lastName
+    m.signupTask.email = email
+    m.signupTask.password = password
+    m.signupTask.passwordConfirmation = confirmation
+    m.signupTask.control = "RUN"
+end sub
+
+sub onBack(event as object)
+    scene = m.top.getScene()
+    if scene <> invalid and scene.hasField("navigationEvent")
+        events = new NavigationEvents()
+        scene.navigationEvent = events.back()
+    end if
+end sub
+
+sub onSignupStateChanged(event as object)
+    state = event.getData()
+    if state = "SUCCESS"
+        scene = m.top.getScene()
+        if scene <> invalid and scene.hasField("navigationEvent")
+            events = new NavigationEvents()
+            scene.navigationEvent = events.reset(AppRoutes.HOME)
+        end if
+    else if state = "ERROR"
+        m.submitButton.enabled = true
+        m.backButton.enabled = true
+        m.status.text = m.signupTask.errorMessage
+    end if
+end sub
+
+sub showValidationError(message as string)
+    m.status.text = message
+end sub
+
+function isValidEmail(email as string) as boolean
+    if email = "" then return false
+    regex = CreateObject("roRegex", "^[A-Za-z0-9](?:[A-Za-z0-9.+!%-]{1,64}|)@[A-Za-z0-9][A-Za-z0-9.-]+(?:\\.[A-Za-z]{2,}|\\.[0-9]{1,})$", "i")
+    return regex.IsMatch(email)
+end function
+
+function setInitialFocus() as boolean
+    m.firstNameBox.setFocus(true)
+    return m.firstNameBox.hasFocus()
+end function
+
+sub onCleanupRequested(event as object)
+    if not event.getData() then return
+    m.submitButton.unobserveField("activated")
+    m.backButton.unobserveField("activated")
+    m.signupTask.unobserveField("requestState")
+end sub

@@ -70,7 +70,7 @@ function loadPlaylist() as boolean
         m.fetchTask.appConfig = globalNode.appConfig
         m.fetchTask.isAuthenticated = false
         if globalNode.authenticationState <> invalid
-            m.fetchTask.isAuthenticated = globalNode.authenticationState.isAuthenticated = true
+            m.fetchTask.isAuthenticated = globalNode.authenticationState.isAuthenticated
         end if
     end if
     requestPlaylistTaskRun()

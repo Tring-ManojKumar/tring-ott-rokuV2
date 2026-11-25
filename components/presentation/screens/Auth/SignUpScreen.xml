@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<component name="SignUpScreen" extends="Group">
+    <interface>
+        <field id="navigationParams" type="assocarray" />
+        <field id="isReady" type="boolean" value="false" />
+        <field id="frameworkSupportsInitialFocus" type="boolean" value="true" />
+        <field id="frameworkLifecycleEvent" type="string" value="" />
+        <field id="frameworkScreenIdentity" type="string" value="" />
+        <field id="frameworkCreated" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkInitialized" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkPresented" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkSuspended" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkResumed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkExited" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkDestroyed" type="boolean" value="false" alwaysNotify="true" />
+        <field id="frameworkCleanupRequested" type="boolean" value="false" alwaysNotify="true" onChange="onCleanupRequested" />
+        <function name="setInitialFocus" />
+    </interface>
+    <children>
+        <Poster uri="pkg:/assets/images/auth-bg.png" width="1920" height="1080" loadWidth="1920" loadHeight="1080" loadDisplayMode="scaleToFill" />
+        <Rectangle width="1920" height="1080" color="0x00000080" />
+        <AppLabel id="pageTitle" translation="[140, 55]" width="1400" height="72" variant="heading" />
+        <TextEditBox id="firstNameBox" translation="[320, 165]" width="1280" height="64" />
+        <TextEditBox id="lastNameBox" translation="[320, 255]" width="1280" height="64" />
+        <TextEditBox id="emailBox" translation="[320, 345]" width="1280" height="64" />
+        <TextEditBox id="passwordBox" translation="[320, 435]" width="1280" height="64" secureMode="true" />
+        <TextEditBox id="passwordConfirmationBox" translation="[320, 525]" width="1280" height="64" secureMode="true" />
+        <AppButton id="submitButton" translation="[756, 640]" width="408" height="72" text="Sign Up" variant="primary" />
+        <AppButton id="backButton" translation="[756, 735]" width="408" height="72" text="Back" variant="secondary" />
+        <Label id="status" translation="[320, 835]" width="1280" height="100" wrap="true" color="0xFFFFFFFF" />
+        <CredentialSignupTask id="signupTask" />
+    </children>
+    <script type="text/brightscript" uri="SignUpScreen.bs" />
+</component>

@@ -2,6 +2,10 @@
 ' retain warnings and errors so routine diagnostics do not clutter device logs.
 function AppLog(level as string, tag as string, message as string)
     normalizedLevel = LCase(level)
+    if normalizedLevel = "api"
+        print "[API] " + message
+        return invalid
+    end if
 #if isDebugBuild
     shouldLog = normalizedLevel = "debug" or normalizedLevel = "info" or normalizedLevel = "warn" or normalizedLevel = "error"
 #else
@@ -26,4 +30,8 @@ end function
 
 function AppLogError(tag as string, message as string)
     AppLog("error", tag, message)
+end function
+
+function AppLogApi(message as string)
+    AppLog("api", "", message)
 end function

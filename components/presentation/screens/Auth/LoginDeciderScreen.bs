@@ -1,0 +1,103 @@
+import "pkg:/source/navigation/AppRoutes.bs"
+import "pkg:/source/navigation/NavigationEvents.bs"
+import "pkg:/source/rokuCore/GlobalConfigurationManager.bs"
+import "pkg:/source/rokuCore/LocalizationProvider.bs"
+import "pkg:/data/repositories/StartupStateRepositoryImpl.bs"
+
+sub init()
+    m.heading = m.top.findNode("heading")
+    m.description = m.top.findNode("description")
+    m.signInButton = m.top.findNode("signInButton")
+    m.signUpButton = m.top.findNode("signUpButton")
+    m.guestButton = m.top.findNode("guestButton")
+    m.signInButton.observeField("activated", "onSignIn")
+    m.signUpButton.observeField("activated", "onSignUp")
+    m.guestButton.observeField("activated", "onGuest")
+    strings = GetGlobalAA()
+    m.heading.text = RokuCore.GetLocalizedString(strings, ["LOGIN_DECIDER_SCREEN", "TITLE"], "Please Sign In")
+    m.description.text = RokuCore.GetLocalizedString(strings, ["LOGIN_DECIDER_SCREEN", "DESCRIPTION"], "Sign in to your account to continue")
+    m.signInButton.text = RokuCore.GetLocalizedString(strings, ["LOGIN_DECIDER_SCREEN", "BUTTON", "SIGN_IN"], "Sign In")
+    m.signUpButton.text = RokuCore.GetLocalizedString(strings, ["LOGIN_DECIDER_SCREEN", "BUTTON", "SIGN_UP"], "Sign Up")
+    m.guestButton.text = RokuCore.GetLocalizedString(strings, ["LOGIN_DECIDER_SCREEN", "BUTTON", "GUEST"], "Continue As Guest")
+    m.allowQr = false
+    m.choiceButtons = []
+    refreshChoiceButtons()
+    if m.top.navigationParams <> invalid then applyParams(m.top.navigationParams)
+    m.top.isReady = true
+end sub
+
+sub onNavigationParamsChanged(event as object)
+    applyParams(event.getData())
+end sub
+
+sub applyParams(params as dynamic)
+    if params = invalid then return
+    m.allowQr = params.allowQr = true
+    m.guestButton.visible = params.allowGuest = true
+    m.signUpButton.visible = params.allowSignUp = true
+    m.signInButton.visible = params.allowSignIn = true
+    refreshChoiceButtons()
+end sub
+
+sub refreshChoiceButtons()
+    m.choiceButtons = []
+    if m.signInButton.visible then m.choiceButtons.Push(m.signInButton)
+    if m.signUpButton.visible then m.choiceButtons.Push(m.signUpButton)
+    if m.guestButton.visible then m.choiceButtons.Push(m.guestButton)
+    m.focusIndex = 0
+end sub
+
+sub onSignIn(event as object)
+    navigate(AppRoutes.SIGN_IN, { allowQr: m.allowQr })
+end sub
+
+sub onSignUp(event as object)
+    navigate(AppRoutes.SIGN_UP, {})
+end sub
+
+sub onGuest(event as object)
+    repository = new DataLayer.StartupStateRepositoryImpl()
+    RokuCore.SetGuestAuthenticationState(GetGlobalAA(), repository)
+    scene = m.top.getScene()
+    if scene <> invalid and scene.hasField("navigationEvent")
+        events = new NavigationEvents()
+        scene.navigationEvent = events.reset(AppRoutes.HOME)
+    end if
+end sub
+
+sub navigate(route as string, params as object)
+    scene = m.top.getScene()
+    if scene <> invalid and scene.hasField("navigationEvent")
+        events = new NavigationEvents()
+        scene.navigationEvent = events.navigate(route, params)
+    end if
+end sub
+
+function setInitialFocus() as boolean
+    if m.choiceButtons.Count() = 0 then return false
+    m.choiceButtons[0].setFocus(true)
+    return m.choiceButtons[0].hasFocus()
+end function
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    if not press or (key <> "left" and key <> "right") then return false
+    if m.choiceButtons.Count() = 0 then return false
+
+    focusedIndex = m.focusIndex
+    for index = 0 to m.choiceButtons.Count() - 1
+        if m.choiceButtons[index].hasFocus()
+            focusedIndex = index
+            exit for
+        end if
+    end for
+
+    if key = "left" and focusedIndex > 0
+        m.focusIndex = focusedIndex - 1
+    else if key = "right" and focusedIndex < m.choiceButtons.Count() - 1
+        m.focusIndex = focusedIndex + 1
+    else
+        return true
+    end if
+    m.choiceButtons[m.focusIndex].setFocus(true)
+    return true
+end function

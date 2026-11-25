@@ -44,9 +44,67 @@ namespace tests.dataLayer
             api = new DataLayer.BaseApi(0)
             request = api.buildRefreshRequest("inplayer", "refresh-value", "client-id")
             m.assertEqual(request.headers["Content-Type"], "application/x-www-form-urlencoded")
-            m.assertTrue(Instr(1, request.body, "token=refresh-value") > 0)
+            m.assertTrue(Instr(1, request.body, "refresh_token=refresh-value") > 0)
             m.assertTrue(Instr(1, request.body, "client_id=client-id") > 0)
             m.assertTrue(Instr(1, request.body, "grant_type=refresh_token") > 0)
+        end function
+
+        @it("resolves prod and sandbox environment base URL maps")
+        function resolvesEnvironmentBaseUrls()
+            section = { prod: "https://prod.example", sandBox: "https://sandbox.example" }
+            m.assertEqual(RokuCore.ResolveEnvironmentBaseUrl(section, "prod"), "https://prod.example")
+            m.assertEqual(RokuCore.ResolveEnvironmentBaseUrl(section, "production"), "https://prod.example")
+            m.assertEqual(RokuCore.ResolveEnvironmentBaseUrl(section, "stage"), "https://sandbox.example")
+            m.assertEqual(RokuCore.ResolveEnvironmentBaseUrl(section, "sandbox"), "https://sandbox.example")
+        end function
+
+        @it("redacts Firebase API keys while preserving the logged request URL")
+        function redactsSensitiveUrlParameters()
+            api = new DataLayer.BaseApi(0)
+            url = "https://firebaseremoteconfig.googleapis.com/v1/projects/project/namespaces/firebase:fetch?key=private-value&source=roku"
+            loggedUrl = api.redactSensitiveQueryParameters(url)
+            m.assertTrue(Instr(1, loggedUrl, "key=<redacted>") > 0)
+            m.assertTrue(Instr(1, loggedUrl, "source=roku") > 0)
+            m.assertFalse(Instr(1, loggedUrl, "private-value") > 0)
+        end function
+
+        @it("prints V1-style cURL details while redacting sensitive values")
+        function buildsSafeServerCallLog()
+            api = new DataLayer.BaseApi(0)
+            url = "https://api.example.test/login?api_key=private-key&mode=roku"
+            body = {
+                email: "private@example.test"
+                password: "private-password"
+                language_code: "en-GB"
+            }
+            headers = {
+                Authorization: "Bearer private-token"
+                "Content-Type": "application/json"
+            }
+            command = api.buildServerCallLog(url, "POST", body, headers)
+            m.assertTrue(Instr(1, command, "curl -X POST -i") > 0)
+            m.assertTrue(Instr(1, command, "language_code") > 0)
+            m.assertTrue(Instr(1, command, "en-GB") > 0)
+            m.assertTrue(Instr(1, command, "mode=roku") > 0)
+            m.assertTrue(Instr(1, command, "Authorization: <redacted>") > 0)
+            m.assertTrue(Instr(1, command, "password") > 0)
+            m.assertFalse(Instr(1, command, "private-key") > 0)
+            m.assertFalse(Instr(1, command, "private-password") > 0)
+            m.assertFalse(Instr(1, command, "private-token") > 0)
+            m.assertFalse(Instr(1, command, "private@example.test") > 0)
+        end function
+
+        @it("keeps provider refresh URLs configuration-aware")
+        function resolvesProviderRefreshUrl()
+            api = new DataLayer.BaseApi(0)
+            prodNode = { environment: "prod" }
+            sandboxNode = { environment: "stage" }
+            cleengProd = api.buildRefreshUrl("cleeng", prodNode)
+            cleengSandbox = api.buildRefreshUrl("cleeng", sandboxNode)
+            m.assertTrue(cleengProd <> invalid)
+            m.assertTrue(cleengSandbox <> invalid)
+            m.assertTrue(Instr(1, cleengProd, "mediastoreapi") > 0)
+            m.assertTrue(Instr(1, cleengSandbox, "sandbox") > 0)
         end function
     end class
 end namespace

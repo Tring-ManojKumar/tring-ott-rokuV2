@@ -66,5 +66,52 @@ namespace tests.domain
             })
             m.assertTrue(otherMarket.shouldShow)
         end function
+
+        @describe("V1 Tring Play fallback")
+        @it("uses the packaged slides when Firebase does not provide Roku slides")
+        function tringPlayFallbackSlides()
+            repository = new FakeStartupStateRepositoryForOnboarding()
+            useCase = new Domain.ResolveOnboardingUseCase(repository)
+            decision = useCase.execute({
+                configId: "ffuxvbfv"
+                featureFlags: { is_onboarding_screen_enabled: true }
+                platforms: {}
+                rokuConfig: {}
+            })
+            m.assertTrue(decision.shouldShow)
+            m.assertEqual(decision.slides.Count(), 3)
+            m.assertEqual(decision.slides[0].image_uri, "pkg:/assets/images/onboarding-page-1.png")
+        end function
+
+        @describe("KSL market flags fallback")
+        @it("uses the three V1 KSL landing slides and skips completed onboarding")
+        function kslFlagsFallbackAndCompletion()
+            repository = new FakeStartupStateRepositoryForOnboarding()
+            useCase = new Domain.ResolveOnboardingUseCase(repository)
+            flags = {
+                images: {
+                    onBording1: "https://example.test/landing1.png"
+                    onBording2: "https://example.test/landing2.png"
+                    onBording3: "https://example.test/landing3.png"
+                }
+            }
+            resolved = {
+                configId: "jbeorebm"
+                featureFlags: { is_onboarding_screen_enabled: true }
+                platforms: {}
+                rokuConfig: {}
+            }
+
+            firstLaunch = useCase.execute(resolved, flags)
+            m.assertTrue(firstLaunch.shouldShow)
+            m.assertEqual(firstLaunch.slides.Count(), 3)
+            m.assertEqual(firstLaunch.slides[0].image_uri, flags.images.onBording1)
+            m.assertEqual(firstLaunch.slides[2].localizationKey, "PAGE_3")
+
+            repository.completed = true
+            subsequentLaunch = useCase.execute(resolved, flags)
+            m.assertTrue(subsequentLaunch.completed)
+            m.assertFalse(subsequentLaunch.shouldShow)
+        end function
     end class
 end namespace

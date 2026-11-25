@@ -1,10 +1,39 @@
+import "pkg:/utils/logging/Logger.bs"
+
 namespace RokuCore
+    function GetMarketFlags() as object
+        raw = ReadAsciiFile("pkg:/assets/config/flags.json")
+        if raw = invalid or raw = "" then return {}
+        flags = ParseJson(raw)
+        if flags = invalid or not IsConfigurationAssociativeArray(flags)
+            AppLogError("ConfigurationProvider", "Packaged market flags are invalid")
+            return {}
+        end if
+        return flags
+    end function
+
     function GetRuntimeConfiguration() as object
         raw = ReadAsciiFile("pkg:/config/config.json")
         if raw = invalid or raw = "" then return {}
         configuration = ParseJson(raw)
         if configuration = invalid or not IsConfigurationAssociativeArray(configuration) then return {}
         return configuration
+    end function
+
+    function GetAppBuildVersion() as string
+        return GetBuildVersionFromManifest(ReadAsciiFile("pkg:/manifest"))
+    end function
+
+    function GetBuildVersionFromManifest(manifestText as dynamic) as string
+        if manifestText = invalid then return ""
+        prefix = "build_version="
+        for each line in manifestText.ToStr().Tokenize(Chr(10))
+            line = line.Trim()
+            if LCase(Left(line, prefix.Len())) = prefix
+                return Mid(line, prefix.Len() + 1).Trim()
+            end if
+        end for
+        return ""
     end function
 
     function GetApiConfiguration() as object
@@ -29,6 +58,24 @@ namespace RokuCore
             return invalid
         end if
         return api.baseUrls[name]
+    end function
+
+    function ResolveEnvironmentBaseUrl(section as dynamic, environment as string) as dynamic
+        if section = invalid then return invalid
+        valueType = LCase(type(section))
+        if valueType = "string" or valueType = "rostring" then return section
+        if not IsConfigurationAssociativeArray(section) then return invalid
+        normalized = LCase(environment.Trim())
+        key = "sandBox"
+        if normalized = "prod" or normalized = "production" then key = "prod"
+        selected = section.lookup(key)
+        if selected = invalid
+            if key = "prod" then selected = section.lookup("sandBox") else selected = section.lookup("prod")
+        end if
+        if selected = invalid then return invalid
+        valueType = LCase(type(selected))
+        if valueType = "string" or valueType = "rostring" then return selected
+        return invalid
     end function
 
     function GetApiRoute(routeName as string) as dynamic

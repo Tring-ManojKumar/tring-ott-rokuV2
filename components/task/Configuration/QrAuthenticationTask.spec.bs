@@ -1,0 +1,56 @@
+import "pkg:/components/task/Configuration/QrAuthenticationTask.bs"
+
+namespace tests.components
+    @suite("QR authentication response parsing")
+    class QrAuthenticationTaskTests extends rooibos.BaseTestSuite
+        @describe("KSL QR response fields")
+        @it("accepts KSL authCode and qrImageUrl response fields")
+        function parsesKslQrResponse()
+            payload = {
+                authCode: "KSL123"
+                qrImageUrl: "data:image/png;base64,ZmFrZQ=="
+            }
+            m.assertEqual(extractQrCode(payload, "custom"), "KSL123")
+            m.assertEqual(extractQrImage(payload), payload.qrImageUrl)
+        end function
+
+        @describe("Nested QR response fields")
+        @it("accepts nested QR response fields")
+        function parsesNestedQrResponse()
+            payload = {
+                data: {
+                    authCode: "KSL456"
+                    qr_image_url: "data:image/png;base64,ZmFrZQ=="
+                }
+            }
+            m.assertEqual(extractQrCode(payload, "custom"), "KSL456")
+            m.assertEqual(extractQrImage(payload), payload.data.qr_image_url)
+        end function
+
+        @describe("Wrapped KSL QR response fields")
+        @it("reads responseData-wrapped auth codes and images")
+        function parsesWrappedKslQrResponse()
+            payload = {
+                responseData: {
+                    authCode: "KSL789"
+                    qrImageUrl: "https://example.test/qr.png"
+                }
+            }
+            m.assertEqual(extractQrCode(payload, "custom"), "KSL789")
+            m.assertEqual(extractQrImage(payload), payload.responseData.qrImageUrl)
+        end function
+
+        @describe("Configured QR image fallback")
+        @it("uses the configured image only when image display is enabled")
+        function usesConfiguredQrImageFallback()
+            globalNode = GetGlobalAA()
+            previousConfig = globalNode.resolvedConfig
+            image = "data:image/png;base64,ZmFrZQ=="
+            globalNode.resolvedConfig = { authentication: { qr_settings: { show_qr_image: true, qr_image_url: image } } }
+            m.assertEqual(resolveQrImageUri({}), image)
+            globalNode.resolvedConfig.authentication.qr_settings.show_qr_image = false
+            m.assertEqual(resolveQrImageUri({}), "")
+            globalNode.resolvedConfig = previousConfig
+        end function
+    end class
+end namespace

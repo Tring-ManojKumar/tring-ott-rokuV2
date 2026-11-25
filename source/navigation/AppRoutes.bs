@@ -5,4 +5,8 @@ namespace AppRoutes
     const AUTH_CHECK = "authCheck"
     const SETTINGS = "settings"
     const NETWORK_CHECK = "networkCheck"
+    const LOGIN_DECIDER = "loginDecider"
+    const SIGN_IN = "signIn"
+    const SIGN_UP = "signUp"
+    const QR_AUTH = "qrAuth"
 end namespace

@@ -1,0 +1,243 @@
+{
+    "LIVE": "En vivo",
+    "HOME": "Inicio",
+    "SEARCH": "Buscar",
+    "SERIES": "Series",
+    "MY_SUBSCRIPTION": "Mi suscripción",
+    "SCHEDULED": "Próximamente",
+    "GEO_BLOCK_ERROR": "No hay contenido disponible.\nLo sentimos, pero no hay contenido disponible en tu región.",
+    "NO_DATA_AVAILABLE": "No hay datos disponibles",
+    "NO_SUBSCRIPTIONS_AVAILABLE": "No hay suscripción disponible",
+    "NO_ITEMS_AVAILABLE": " No hay contenido disponible",
+    "NO_ITEMS_AVAILABLE_DESCRIPTION": "Programas de televisión o películas que necesitas agregar como favoritos",
+    "ALL_FILTER_BUTTON": "Todo",
+    "PLAY_LIVE_BUTTON": "Ver En Vivo",
+    "STREAM_STARTS_BUTTON": "La transmisión comienza",
+    "WATCHING_LIVE_BUTTON": "Ver en vivo",
+    "MORE_DETAILS_BUTTON": "Más detalles",
+    "SCHEDULED_BUTTON": "Programado",
+    "REPLAY_BUTTON": "Repetición",
+    "CANCEL_BUTTON": "Cancelar",
+    "START_WATCHING_BUTTON": "Ver ahora",
+    "BUY_NOW_BUTTON": "Comprar",
+    "ALL_RIGHTS": "© 2025 Tringapps +. All Rights Reserved.",
+    "TRAILER_BUTTON": "Trailer",
+    "ADD_FAVORITE_BUTTON": "Favorito",
+    "REMOVE_FAVORITE_BUTTON": "Mis favoritos",
+    "RESUME_BUTTON": "Continuar viendo",
+    "LOGOUT_BUTTON": "Salir",
+    "LOGOUT_USER_MESSAGE": "¿Estás segura, quieres cerrar sesión en el {title}?",
+    "RELATED_MOVIES_TITLE": "Películas relacionadas",
+    "RELATED_PODCASTS_TITLE": "Podcasts relacionados",
+    "EPG_GRID_TITLE": "Guía",
+    "EPISODES_TITLE": "Episodios",
+    "ALL_SEASONS": "Todas las temporadas",
+    "CURRENT_EPISODE": "Episodio Actual",
+    "CURRENT_VIDEO": "Video Actual",
+    "MORE_BUTTON": "más",
+    "OK_BUTTON": "Ok",
+    "OF": "de",
+    "ON": "en",
+    "MIN": " minuto",
+    "SEASON_SHORT": "T",
+    "CONTINUE_WATCHING": "Continuar viendo",
+    "FAVORITES": "Favoritos",
+    "ONBOARDING_SCREEN": {
+        "PAGE_1": {
+            "TITLE": "Mejor streaming",
+            "DESCRIPTION": "Elige tu calidad de streaming con una amplia gama de opciones de calidad, desde 480p hasta 4k."
+        },
+        "PAGE_2": {
+            "TITLE": "Películas y series de televisión",
+            "DESCRIPTION": "Acceso a 10000 películas y series en un plan de suscripción estándar."
+        },
+        "PAGE_3": {
+            "TITLE": "Recomendación de IA",
+            "DESCRIPTION": "Si te confundes qué ver, te lo explicamos con la recomendación de la IA."
+        },
+        "BUTTONS": {
+            "SKIP_BUTTON": "Saltar",
+            "NEXT_BUTTON": "Siguiente",
+            "BACK_BUTTON": "Atrás",
+            "GET_STARTED_BUTTON": "Comenzar"
+        }
+    },
+    "SIGN_IN_SCREEN": {
+        "TITLE": "inicie sesión por favor",
+        "DESCRIPTION": {
+            "EMAIL_INPUT": "Usa el teclado para ingresar el correo electronico",
+            "PASSWORD_INPUT": "Usa el teclado para ingresar tu contraseña"
+        },
+        "BUTTONS": {
+            "NEXT_BUTTON": "Siguiente",
+            "NEXT": "Siguiente",
+            "BACK_BUTTON" : "Atrás",
+            "CANCEL_BUTTON": "Vincula tu dispositivo"
+        },
+        "KEYBOARD_HINT_TEXTS": {
+            "EMAIL_HINT": "Ingresa tu correo electrónico",
+            "PASSWORD_HINT": "Ingresa tu contraseña"
+        },
+        "VALIDATION_ERROR_MSG": {
+            "EMAIL_ERROR": "Por favor ingresa un correo electrónico válido",
+            "PASSWORD_ERROR": "La contraseña no puede estar vacía"
+        }
+    },
+    "QRCode_SCREEN": {
+        "TITLE": "inicie sesión por favor",
+        "CODE_TIMER_LABEL": "Los siguientes códigos expiran en",
+        "QR_CODE_TITLE": "Escanee este código QR con su teléfono",
+        "OR_DIVIDER_TEXT": "O",
+        "CONTEN_TTITLE": "Desde tu PC, teléfono o tableta, ve a:",
+        "USE_THIS_CODE_LABEL": "Utilice este código:",
+        "DESCRIPTION": "Ingresa en tu cuenta para continuar",
+        "BUTTON": {
+            "SIGN_IN": "Ingresa",
+            "SIGN_UP": "Regístrate",
+            "EXPLORE": "Continuar como invitado"
+        }
+    },
+    "LOGIN_DECIDER_SCREEN": {
+        "TITLE": "inicie sesión por favor",
+        "DESCRIPTION": "Ingresa en tu cuenta para continuar",
+        "BUTTON": {
+            "SIGN_IN": "Ingresa",
+            "SIGN_UP": "Regístrate",
+            "EXPLORE": "Explorar",
+            "GUEST": "Continuar como invitado"
+        }
+    },
+    "SIGN_UP_SCREEN": {
+        "TITLE": "Por favor, regístrate",
+        "DESCRIPTION": {
+            "NAME_INPUT": "Utilice el teclado para ingresar su nombre",
+            "LAST_NAME_INPUT": "Utilice el teclado para ingresar su apellido",
+            "EMAIL_INPUT": "Usa el teclado para ingresar el correo electronico",
+            "PASSWORD_INPUT": "Usa el teclado para ingresar tu contraseña",
+            "PASSWORD_CONFIRMATION_INPUT": "Usa el teclado para confirmar tu contraseña"
+        },
+        "BUTTONS": {
+            "NEXT_BUTTON": "Siguiente",
+            "BACK_BUTTON": "Atrás",
+            "CANCEL_BUTTON": "Vincula tu dispositivo"
+        },
+        "KEYBOARD_HINT_TEXTS": {
+            "NAME_HINT": "Ingresa tu nombre completo",
+            "FIRSTNAME_HINT": "Ingresa tu nombre",
+            "LASTNAME_HINT": "Ingresa tu apellido",
+            "EMAIL_HINT": "Ingresa tu correo electrónico",
+            "PASSWORD_HINT": "Ingresa tu contraseña",
+            "PASSWORD_CONFIRMATION_HINT": "Confirmar contraseña"
+        },
+        "VALIDATION_ERROR_MSG": {
+            "NAME_ERROR": "El nombre no puede estar vacío",
+            "NAME_SPECIAL_CHARACTER_ERROR" : "El nombre debe contener únicamente caracteres alfabéticos",
+            "EMAIL_ERROR": "Por favor ingresa un correo electrónico válido",
+            "PASSWORD_ERROR": "La contraseña no puede estar vacía",
+            "PASSWORD_CONFIRMATION_ERROR": "Las contraseñas no coinciden"
+        }
+    },
+    "BLOCK_SCREEN": {
+        "PAGE_TITLE": "Inténtalo de nuevo más tarde.",
+        "PAGE_DESCRIPTION": "Ups! Parece que hay un error. Si continúa así prueba a reiniciar la app.",
+        "RETRY_BUTTON": "Reintentar",
+        "EXIT_BUTTON": "Salir del app"
+    },
+    "SUBSCRIPTION_SCREEN": {
+        "TITLE": "Planes disponibles",
+        "DESCRIPTION": "Elige tu plan para empezar a disfrutar del contenido"
+    },
+    "SEARCH_SCREEN": {
+        "GRID_TITLE": "Buscar resultados",
+        "ERROR_TEXT": "No se encontraron resultados",
+        "TEXT_EMPTY_TEXT": "Buscar algo: Encuentra lo que estás buscando con facilidad."
+    },
+    "ACCOUNT_DETAILS": {
+        "PAGE_TITLE": "Detalles de tu cuenta",
+        "ERROR_TITLE": "¡Hola!",
+        "ERROR_DESCRIPTION": "Para acceder a todo, por favor regístrate o ingresa a tu cuenta.",
+        "NAME": "Nombre",
+        "EMAIL": "Correo electrónico",
+        "DOB": "D.O.B",
+        "BUTTONS": {
+            "DELETE_ACCOUNT": "Eliminar cuenta",
+            "EXPORT_DATA": "Exportar datos",
+            "CHANGE_PASSWORD": "Cambiar Contraseña",
+            "SIGNUP": "Regístrate",
+            "SIGNIN": "Ingresa"
+        }
+    },
+    "PROFILE_SCREEN": {
+        "LEFT_MENU": {
+            "PROFILE": "Mi perfil",
+            "FAVORITES": "Mis favoritos",
+            "SUBSCRIPTION": "Mi suscripción",
+            "PRIVACY": "Política de privacidad",
+            "LOGOUT": "Salir",
+            "TERMS_OF_USE": "Condiciones de uso"
+        }
+    },
+    "EXPORT_DATA_SCREEN": {
+        "TITLE": "Exportar los datos de la cuenta",
+        "DESCRIPTION": "Exportar todos los datos personales de mi cuenta a",
+        "OK_BUTTON": "Ok",
+        "KEYBOARD_HINT_TEXTS": {
+            "PASSWORD_HINT": "Ingresa tu contraseña"
+        }
+    },
+    "DELETE_ACCOUNT_SCREEN": {
+        "TITLE": "Eliminar cuenta",
+        "DESCRIPTION": "Elimine permanentemente su cuenta y todo su contenido.",
+        "WARNING": "Tenga en cuenta que si elige continuar con este proceso, todos sus datos personales se borrarán de nuestro sistema. Esto incluye cualquier información personal que haya proporcionado durante el proceso de registro, así como cualquier información de ubicación y dispositivo que hayamos recopilado durante el proceso de autenticación. Además, también se eliminará toda otra información personal almacenada en varias partes de nuestra base de datos. Sin embargo, tenga en cuenta que, debido a algunas legislaciones, estamos obligados a mantener ciertos datos personales como parte de los registros de transacciones y suscripciones. Una vez que se complete el borrado, se revocarán todos sus accesos activos y se cancelarán todas las sesiones de inicio de sesión activas, incluida esta. La información de su cuenta ya no será accesible para nuestro personal de ninguna manera. Todas las suscripciones activas que se compraron a través de un navegador web se cancelarán automáticamente al borrar los datos personales. Sin embargo, si compró una suscripción a través de las aplicaciones iOS, Android, Roku o Amazon, tenga en cuenta que no se cancelará automáticamente. En este caso, deberá seguir los pasos habituales de cancelación de suscripción para cada plataforma respectiva para cancelar manualmente la suscripción. Tenga en cuenta que este proceso no se puede deshacer, así que proceda con precaución. Si tiene más preguntas o inquietudes, no dude en ponerse en contacto con nuestro equipo de soporte.",
+        "KEYBOARD_HINT_TEXTS": {
+            "PASSWORD_HINT": "Ingresa tu contraseña"
+        }
+    },
+    "CHANGE_PASSWORD_SCREEN": {
+        "TITLE": "Cambiar Contraseña",
+        "DESCRIPTION": "Usa el teclado para ingresar tu contraseña",
+        "KEYBOARD_HINT_TEXTS": {
+            "OLD_PASSWORD_HINT": "Ingrese la contraseña anterior",
+            "NEW_PASSWORD_HINT": "Ingrese la nueva contraseña",
+            "PASSWORD_CONFIRMATION_HINT": "Confirmar contraseña"
+        }
+    },
+   "PRIVACY_SCREEN": {
+        "TITLE": "Política de privacidad",
+        "UPDATE": ""
+    },
+    "TERMS_OF_USE_SCREEN": {
+        "TITLE": "Condiciones de uso",
+        "UPDATE": ""
+    },
+    "LOGOUT_SCREEN": {
+        "TITLE": "Sign Out",
+        "DESCRIPTION": "Are you sure, do you want to sign out the Tringplay?",
+        "BUTTON": {
+            "OK": "Sign Out",
+            "CANCEL": "Cancel"
+        }
+    },
+    "ERROR_PAGE": {
+        "PAGE_CONSTRUCTION": "Página en construcción",
+        "NO_DATA": "No hay datos disponibles",
+        "SUBSCRIPTION_SCREEN": "Este contenido no se puede comprar ahora mismo. ¡Inténtalo de nuevo más tarde!",
+        "RAF_ERROR": "Video actualmente no disponible. Por favor, inténtelo de nuevo!",
+        "VIDEO_ERROR": "Error de vídeo. Inténtelo de nuevo!",
+        "LIVE_STREAM_ENDED" : "Transmisión en vivo finalizada",
+        "LIVE_STREAM_CONNECTING" : "Conectando a la transmisión en vivo, por favor espere...",
+        "GEO_BLOCK_ERROR" : "Este contenido no está disponible en tu país.",
+        "DRM_ERROR": "Este contenido no está disponible debido a restricciones de derechos de autor.",
+        "SUBSCRIPTION_SCREEN_ALERT": "Alerta",
+        "NO_NETWORK_ERROR": {
+            "TITLE": "No se ha detectado red",
+            "DESCRIPTION": "Tu pantalla no está conectada a Internet. Verifica tu conexión.",
+            "RETRY_BUTTON_TXT": "Reintentar",
+            "EXIT_APP_BUTTON_TXT": "Salir de la aplicación"
+        },
+        "OTHER_ERROR": {
+            "TITLE": "Inténtalo de nuevo más tarde",
+            "DESCRIPTION": "Hubo un error. Si el problema persiste, prueba reiniciar la aplicación."
+        }
+    }
+}

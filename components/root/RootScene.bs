@@ -5,6 +5,8 @@ import "pkg:/source/navigation/AppRoutes.bs"
 import "pkg:/source/navigation/AppNavigationConfig.bs"
 import "pkg:/data/diagnostics/RegistryDiagnostic.bs"
 import "pkg:/source/rokuCore/GlobalConfigurationManager.bs"
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+import "pkg:/source/rokuCore/LocalizationProvider.bs"
 import "pkg:/domain/usecases/ResolveOnboardingUseCase.bs"
 import "pkg:/data/repositories/StartupStateRepositoryImpl.bs"
 
@@ -21,6 +23,9 @@ sub init()
     m.registryDiagnostic = m.top.findNode("registryDiagnostic")
     m.readinessObservedScreen = invalid
     m.theme = GetTheme()
+    globalNode = GetGlobalAA()
+    globalNode.flags = RokuCore.GetMarketFlags()
+    RokuCore.InitializeLocalization(globalNode)
     applyTheme()
     m.framework = new RokuMvvmClean.Framework()
     m.navigationEvents = new NavigationEvents()
@@ -29,7 +34,7 @@ sub init()
     m.lifecycleDiagnostics = true
 #endif
     m.splashScreen.splashConfig = m.theme.splash
-    m.splashScreen.statusText = "Loading application configuration…"
+    ' m.splashScreen.statusText = "Loading application configuration…"
     m.splashScreen.visible = true
     m.splashMinimumTimer.observeField("fire", "onSplashMinimumElapsed")
     m.splashMinimumTimer.control = "start"
@@ -39,6 +44,7 @@ sub init()
     m.authenticationRestoreTask = m.top.findNode("authenticationRestoreTask")
     m.authenticationRestoreTask.observeField("requestState", "onAuthenticationRestoreStateChanged")
     m.authenticationRestoreStarted = false
+    m.authenticationRestoreCompleted = false
     m.homeConfigurationStarted = false
     startConfiguration()
 end sub
@@ -48,7 +54,7 @@ sub startConfiguration()
     state = m.configurationTask.state
     if state = "run" then return
     if state = "done" then m.configurationTask.control = "STOP"
-    m.splashScreen.statusText = "Loading application configuration…"
+    ' m.splashScreen.statusText = "Loading application configuration…"
     m.splashScreen.errorText = ""
     m.configurationTask.control = "RUN"
 end sub
@@ -77,18 +83,8 @@ sub showConfigurationFailure(message as string)
 end sub
 
 sub beginPostConfigurationFlow()
-    globalNode = GetGlobalAA()
-    stateRepository = new DataLayer.StartupStateRepositoryImpl()
-    onboardingUseCase = new Domain.ResolveOnboardingUseCase(stateRepository)
-    decision = onboardingUseCase.execute(globalNode.resolvedConfig)
-    initialRoute = AppRoutes.AUTH_CHECK
-    initialParams = invalid
-    if decision.shouldShow
-        initialRoute = AppRoutes.ONBOARDING
-        initialParams = { slides: decision.slides, configId: decision.configId }
-    end if
-    initializeApplicationNavigation(initialRoute, initialParams)
-    if not decision.shouldShow then startAuthenticationRestore()
+    initializeApplicationNavigation(AppRoutes.AUTH_CHECK)
+    startAuthenticationRestore()
 end sub
 
 sub initializeApplicationNavigation(initialRoute as string, initialParams = invalid as dynamic)
@@ -113,28 +109,42 @@ sub onAuthenticationRestoreStateChanged(event as object)
     state = event.getData()
     globalNode = GetGlobalAA()
     if state = "RESTORED"
+        m.authenticationRestoreCompleted = true
         RokuCore.SetAuthenticatedState(globalNode, m.authenticationRestoreTask.session)
         startSecondAppConfiguration()
     else if state = "NO_SESSION"
-        if not isAuthenticationEnabled(globalNode.resolvedConfig)
-            RokuCore.SetGuestAuthenticationState(globalNode)
-            startSecondAppConfiguration()
-        else
-            RokuCore.SetConfigurationStatus(globalNode, "AUTHENTICATION_REQUIRED")
-            showConfigurationFailure("A saved login was not found. V1 requires sign-in or QR activation here; the V2 auth screens are not present.")
-        end if
+        m.authenticationRestoreCompleted = true
+        routeUnpersistedAuthentication(globalNode)
     else if state = "EXPIRED"
+        m.authenticationRestoreCompleted = true
         RokuCore.SetConfigurationStatus(globalNode, "AUTHENTICATION_EXPIRED")
-        showConfigurationFailure("The saved login has expired. V1 refresh is provider-specific; the V2 token refresh flow is not present.")
+        routeUnpersistedAuthentication(globalNode)
     end if
 end sub
 
 sub startSecondAppConfiguration()
-    if m.homeConfigurationStarted or m.homeConfigurationTask = invalid then return
-    m.homeConfigurationStarted = true
-    m.splashScreen.statusText = "Loading Home configuration..."
-    m.splashScreen.errorText = ""
     globalNode = GetGlobalAA()
+    if m.homeConfigurationStarted then return
+    if globalNode.appConfig <> invalid
+        m.homeConfigurationStarted = true
+        currentRoute = m.framework.getCurrentRoute()
+        if currentRoute <> invalid and currentRoute.route = AppRoutes.HOME
+            m.homeScreen = m.framework.getCurrentScreen()
+            return
+        end if
+        handled = m.framework.navigate(AppRoutes.HOME)
+        if not handled
+            showConfigurationFailure("Home navigation failed: " + m.framework.getLastError())
+            return
+        end if
+        m.homeScreen = m.framework.getCurrentScreen()
+        observeActiveScreenReadiness()
+        return
+    end if
+    if m.homeConfigurationTask = invalid then return
+    m.homeConfigurationStarted = true
+    ' m.splashScreen.statusText = "Loading Home configuration..."
+    m.splashScreen.errorText = ""
     m.homeConfigurationTask.configId = globalNode.resolvedConfig.configId
     m.homeConfigurationTask.control = "RUN"
 end sub
@@ -168,8 +178,8 @@ function isAuthenticationEnabled(resolved as dynamic) as boolean
     authentication = resolved.authentication
     if authentication = invalid then authentication = {}
     if platforms <> invalid and platforms.build_version <> invalid and platforms.build_version.version <> invalid
-        version = CreateObject("roAppInfo").GetVersion()
-        if version <> invalid and Val(version.ToStr()) = Val(platforms.build_version.version.ToStr())
+        version = RokuCore.GetAppBuildVersion()
+        if version <> "" and Val(version) = Val(platforms.build_version.version.ToStr())
             return platforms.build_version.is_authentication_enabled = true
         end if
     end if
@@ -177,6 +187,110 @@ function isAuthenticationEnabled(resolved as dynamic) as boolean
         return platforms.is_authentication_enabled = true
     end if
     return authentication.is_authentication_enabled = true
+end function
+
+sub routeUnpersistedAuthentication(resolvedNode as dynamic)
+    stateRepository = new DataLayer.StartupStateRepositoryImpl()
+    onboardingUseCase = new Domain.ResolveOnboardingUseCase(stateRepository)
+    decision = onboardingUseCase.execute(resolvedNode.resolvedConfig, resolvedNode.flags)
+    enabledText = "false"
+    if decision.enabled then enabledText = "true"
+    completedText = "false"
+    if decision.completed then completedText = "true"
+    showText = "false"
+    if decision.shouldShow then showText = "true"
+    projectId = ""
+    if resolvedNode.constants <> invalid and resolvedNode.constants.REMOTE_CONFIG <> invalid and resolvedNode.constants.REMOTE_CONFIG.PROJECT_ID <> invalid
+        projectId = resolvedNode.constants.REMOTE_CONFIG.PROJECT_ID.ToStr()
+    end if
+    AppLogInfo("RootScene", "Onboarding decision configId=" + decision.configId + " firebaseProject=" + projectId + " enabled=" + enabledText + " completed=" + completedText + " slideCount=" + decision.slides.Count().ToStr() + " show=" + showText)
+
+    if decision.shouldShow
+        handled = m.framework.navigate(AppRoutes.ONBOARDING, { slides: decision.slides, configId: decision.configId })
+        if handled
+            observeActiveScreenReadiness()
+        else
+            showConfigurationFailure("Onboarding navigation could not be initialized.")
+        end if
+        return
+    end if
+
+    if not isAuthenticationEnabled(resolvedNode.resolvedConfig)
+        RokuCore.SetGuestAuthenticationState(resolvedNode)
+        startSecondAppConfiguration()
+        return
+    end if
+
+    allowQr = isQrAuthenticationEnabled(resolvedNode.resolvedConfig)
+    allowGuest = isGuestModeEnabled(resolvedNode.resolvedConfig)
+    allowSignIn = true
+    allowSignUp = canShowSignUpButton(resolvedNode.resolvedConfig)
+    RokuCore.SetConfigurationStatus(resolvedNode, "AUTHENTICATION_REQUIRED")
+    handled = m.framework.navigate(AppRoutes.LOGIN_DECIDER, {
+        allowQr: allowQr
+        allowGuest: allowGuest
+        allowSignIn: allowSignIn
+        allowSignUp: allowSignUp
+    })
+    if handled
+        observeActiveScreenReadiness()
+    else
+        showConfigurationFailure("Authentication navigation could not be initialized.")
+    end if
+end sub
+
+function canShowSignUpButton(resolved as dynamic) as boolean
+    if resolved = invalid then return false
+    platforms = resolved.platforms
+    if platforms <> invalid and platforms.build_version <> invalid
+        configuredVersion = platforms.build_version.version
+        localVersion = RokuCore.GetAppBuildVersion()
+        if configuredVersion <> invalid and localVersion <> "" and Val(configuredVersion.ToStr()) = Val(localVersion)
+            if platforms.build_version.can_show_signup_button <> invalid
+                return platforms.build_version.can_show_signup_button = true
+            end if
+        end if
+    end if
+    if platforms <> invalid and platforms.can_show_signup_button <> invalid
+        return platforms.can_show_signup_button = true
+    end if
+    authentication = resolved.authentication
+    return authentication <> invalid and authentication.can_show_signup_button = true
+end function
+
+function isQrAuthenticationEnabled(resolved as dynamic) as boolean
+    if resolved = invalid then return false
+    authentication = resolved.authentication
+    platforms = resolved.platforms
+    if platforms <> invalid and platforms.build_version <> invalid
+        buildVersion = platforms.build_version
+        if buildVersion.is_qr_authentication_enabled <> invalid
+            version = RokuCore.GetAppBuildVersion()
+            if version <> "" and buildVersion.version <> invalid and Val(version) = Val(buildVersion.version.ToStr())
+                return buildVersion.is_qr_authentication_enabled = true
+            end if
+        end if
+    end if
+    if platforms <> invalid and platforms.is_qr_authentication_enabled <> invalid
+        return platforms.is_qr_authentication_enabled = true
+    end if
+    if authentication <> invalid and authentication.is_qr_authentication_enabled <> invalid
+        return authentication.is_qr_authentication_enabled = true
+    end if
+    return false
+end function
+
+function isGuestModeEnabled(resolved as dynamic) as boolean
+    if resolved = invalid then return false
+    authentication = resolved.authentication
+    platforms = resolved.platforms
+    if platforms <> invalid and platforms.is_guest_mode_enabled <> invalid
+        return platforms.is_guest_mode_enabled = true
+    end if
+    if authentication <> invalid and authentication.is_guest_mode_enabled <> invalid
+        return authentication.is_guest_mode_enabled = true
+    end if
+    return false
 end function
 
 sub observeActiveScreenReadiness()
@@ -204,12 +318,20 @@ end sub
 
 sub notifyScreenReady(screen as dynamic)
     if screen = invalid then return
-    if screen.isSameNode(m.homeScreen)
+    if not m.initialScreenReady and (screen.isSameNode(m.homeScreen) or isSplashDismissalRoute())
         m.initialScreenReady = true
+        AppLogInfo("RootScene", "Initial user-facing route is ready; allowing splash to dismiss")
         maybeHideSplash()
     end if
     m.framework.onActiveScreenReady(screen)
 end sub
+
+function isSplashDismissalRoute() as boolean
+    currentRoute = m.framework.getCurrentRoute()
+    if currentRoute = invalid or currentRoute.route = invalid then return false
+    route = currentRoute.route
+    return route = AppRoutes.ONBOARDING or route = AppRoutes.LOGIN_DECIDER or route = AppRoutes.SIGN_IN or route = AppRoutes.QR_AUTH or route = AppRoutes.HOME
+end function
 
 sub onSplashMinimumElapsed(event as object)
     m.splashMinimumElapsed = true
@@ -228,7 +350,16 @@ sub onNavigationEventChanged(event as object)
     if handled
         observeActiveScreenReadiness()
         currentRoute = m.framework.getCurrentRoute()
-        if currentRoute <> invalid and currentRoute.route = AppRoutes.AUTH_CHECK then startAuthenticationRestore()
+        if currentRoute <> invalid and currentRoute.route = AppRoutes.AUTH_CHECK
+            if m.authenticationRestoreCompleted
+                routeUnpersistedAuthentication(GetGlobalAA())
+            else
+                startAuthenticationRestore()
+            end if
+        end if
+        if currentRoute <> invalid and currentRoute.route = AppRoutes.HOME
+            if not m.homeConfigurationStarted then startSecondAppConfiguration()
+        end if
     end if
 end sub
 

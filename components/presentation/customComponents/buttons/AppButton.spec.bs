@@ -18,6 +18,11 @@ namespace tests.components
             label = m.top.findNode("buttonLabel")
             m.assertEqual(label.text, "Continue")
             m.assertFalse(m.top.focusable)
+            mask = m.top.findNode("backgroundMask")
+            background = m.top.findNode("background")
+            m.assertEqual(mask.maskUri, "pkg:/assets/images/button-mask.png")
+            m.assertEqual(background.uri, "pkg:/assets/images/button-mask.png")
+            m.assertTrue(background.blendColor <> -1)
         end function
 
         @it("resolves the confirmed audio mapping")

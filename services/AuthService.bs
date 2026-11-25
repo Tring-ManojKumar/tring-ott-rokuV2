@@ -1,0 +1,362 @@
+import "pkg:/data/api/BaseApi.bs"
+import "pkg:/data/api/ApiResult.bs"
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+
+namespace DataLayer
+class AuthService
+    private api as object
+    private globalNode as dynamic
+
+    function new(api = invalid as dynamic, globalNode = invalid as dynamic)
+        if api = invalid then api = new DataLayer.BaseApi()
+        m.api = api
+        m.globalNode = globalNode
+    end function
+
+    function getProvider() as string
+        resolved = m.getResolvedConfiguration()
+        common = invalid
+        if resolved <> invalid then common = resolved.common
+        if common <> invalid and common.authentication_type <> invalid
+            authType = LCase(common.authentication_type.ToStr())
+            if Instr(1, authType, "cleeng") > 0 then return "cleeng"
+            if Instr(1, authType, "inplayer") > 0 then return "inplayer"
+        end if
+        return "custom"
+    end function
+
+    function signIn(email as string, password as string) as object
+        if not m.isValidEmail(email) or Len(password) <= 7
+            return m.failure("VALIDATION", "Email and password are required; password must be longer than 7 characters")
+        end if
+        provider = m.getProvider()
+        endpoints = m.getEndpoints(provider)
+        bases = m.getAuthBases()
+        if endpoints = invalid or bases = invalid or bases[provider] = invalid
+            return m.failure("CONFIGURATION", "Authentication endpoints are unavailable")
+        end if
+        baseUrl = RokuCore.ResolveEnvironmentBaseUrl(bases[provider], m.getEnvironment())
+        if baseUrl = invalid then return m.failure("CONFIGURATION", "Authentication base URL is unavailable")
+        url = baseUrl.ToStr() + endpoints.loginUrl.ToStr()
+        if provider = "cleeng"
+            constants = m.getGlobalConstants()
+            publisherId = ""
+            if constants <> invalid and constants.PUBLISHER_ID <> invalid then publisherId = constants.PUBLISHER_ID.ToStr()
+            body = { email: email, password: password, publisherId: publisherId }
+            return m.api.post(url, body, invalid, { "Content-Type": "application/json" })
+        end if
+        body = m.formEncode({ username: email, password: password, client_id: m.getInPlayerClientId(), grant_type: "password" })
+        return m.api.post(url, body, invalid, { "Content-Type": "application/x-www-form-urlencoded" })
+    end function
+
+    function signUp(firstName as string, lastName as string, email as string, password as string, passwordConfirmation as string) as object
+        if firstName.Trim() = "" or lastName.Trim() = "" or not m.isValidEmail(email) or Len(password) <= 7 or password <> passwordConfirmation
+            return m.failure("VALIDATION", "Enter your name, a valid email, and matching passwords of at least 8 characters")
+        end if
+        provider = m.getProvider()
+        endpoints = m.getEndpoints(provider)
+        bases = m.getAuthBases()
+        if endpoints = invalid or endpoints.registrationUrl = invalid or bases = invalid or bases[provider] = invalid
+            return m.failure("CONFIGURATION", "Registration endpoint is unavailable")
+        end if
+        baseUrl = RokuCore.ResolveEnvironmentBaseUrl(bases[provider], m.getEnvironment())
+        if baseUrl = invalid then return m.failure("CONFIGURATION", "Authentication base URL is unavailable")
+        url = baseUrl.ToStr() + endpoints.registrationUrl.ToStr()
+        if provider = "cleeng"
+            constants = m.getGlobalConstants()
+            publisherId = ""
+            if constants <> invalid and constants.PUBLISHER_ID <> invalid then publisherId = constants.PUBLISHER_ID.ToStr()
+            if constants <> invalid and constants.CLEENG <> invalid and constants.CLEENG.id <> invalid
+                publisherId = constants.CLEENG.id.ToStr()
+            end if
+            body = {
+                email: email
+                password: password
+                publisherId: publisherId
+                currency: "USD"
+                locale: "en_US"
+                country: "US"
+                firstName: firstName
+                lastName: lastName
+            }
+            return m.api.post(url, body, invalid, { "Content-Type": "application/json" })
+        end if
+        body = m.formEncode({
+            full_name: firstName.Trim() + " " + lastName.Trim()
+            username: email
+            password: password
+            password_confirmation: passwordConfirmation
+            client_id: m.getInPlayerClientId()
+            grant_type: "password"
+            type: "consumer"
+        })
+        return m.api.post(url, body, invalid, { "Content-Type": "application/x-www-form-urlencoded" })
+    end function
+
+    function generateQrCode(visitorId as string) as object
+        provider = m.getProvider()
+        endpoints = m.getEndpoints(provider)
+        bases = m.getQrBases()
+        if endpoints = invalid or bases = invalid or bases[provider] = invalid
+            return m.failure("CONFIGURATION", "QR authentication endpoints are unavailable")
+        end if
+        baseUrl = RokuCore.ResolveEnvironmentBaseUrl(bases[provider], m.getEnvironment())
+        if baseUrl = invalid then return m.failure("CONFIGURATION", "QR base URL is unavailable")
+        url = baseUrl.ToStr() + endpoints.getLoginCode.ToStr()
+        if provider = "cleeng"
+            constants = m.getGlobalConstants()
+            broadcasterId = ""
+            if constants <> invalid and constants.CLEENG <> invalid and constants.CLEENG.BROADCASTER_ID <> invalid
+                broadcasterId = constants.CLEENG.BROADCASTER_ID.ToStr()
+            end if
+            body = { deviceId: visitorId, deviceName: "roku", broadcasterId: broadcasterId }
+            return m.api.post(url, body, invalid, { "Content-Type": "application/json" })
+        else if provider = "inplayer"
+            body = { deviceType: "roku", deviceId: visitorId }
+            return m.api.post(url, body, invalid, { "Content-Type": "application/json" })
+        end if
+        return m.api.get(url)
+    end function
+
+    function checkQrCode(code as string, visitorId as string) as object
+        provider = m.getProvider()
+        endpoints = m.getEndpoints(provider)
+        bases = m.getQrBases()
+        if endpoints = invalid or bases = invalid or bases[provider] = invalid
+            return m.failure("CONFIGURATION", "QR authentication endpoints are unavailable")
+        end if
+        baseUrl = RokuCore.ResolveEnvironmentBaseUrl(bases[provider], m.getEnvironment())
+        if baseUrl = invalid then return m.failure("CONFIGURATION", "QR base URL is unavailable")
+        endpoint = endpoints.checkLoginCodeStatus.ToStr()
+        if provider = "cleeng"
+            constants = m.getGlobalConstants()
+            broadcasterId = ""
+            if constants <> invalid and constants.CLEENG <> invalid and constants.CLEENG.BROADCASTER_ID <> invalid
+                broadcasterId = constants.CLEENG.BROADCASTER_ID.ToStr()
+            end if
+            url = baseUrl.ToStr() + endpoint
+            return m.api.get(url, { deviceId: visitorId, code: code, broadcasterId: broadcasterId })
+        else if provider = "inplayer"
+            url = baseUrl.ToStr() + endpoint
+            return m.api.post(url, { QrCode: code }, invalid, { "Content-Type": "application/json" })
+        end if
+        url = baseUrl.ToStr() + endpoint.Replace("{{code}}", code)
+        return m.api.get(url)
+    end function
+
+    function completeCustomQrLogin(username as string, answer as string) as object
+        if m.getProvider() <> "custom" then return m.failure("AUTHENTICATION", "Custom QR login is not applicable")
+        endpoints = m.getEndpoints("custom")
+        bases = m.getAuthBases()
+        if endpoints = invalid or bases = invalid or bases.custom = invalid
+            return m.failure("CONFIGURATION", "Custom QR login endpoints are unavailable")
+        end if
+        baseUrl = RokuCore.ResolveEnvironmentBaseUrl(bases.custom, m.getEnvironment())
+        if baseUrl = invalid then return m.failure("CONFIGURATION", "Custom auth base URL is unavailable")
+        url = baseUrl.ToStr() + endpoints.refreshToken.ToStr()
+        body = m.formEncode({ username: username, answer: answer })
+        return m.api.put(url, body, invalid, { "Content-Type": "application/x-www-form-urlencoded" })
+    end function
+
+    function logout() as object
+        provider = m.getProvider()
+        endpoints = m.getEndpoints(provider)
+        bases = m.getAuthBases()
+        if provider = "cleeng" then return m.success({})
+        if endpoints = invalid or bases = invalid or bases[provider] = invalid
+            return m.failure("CONFIGURATION", "Logout endpoint is unavailable")
+        end if
+        resolved = m.getResolvedConfiguration()
+        platforms = invalid
+        featureFlags = invalid
+        if resolved <> invalid then platforms = resolved.platforms
+        if resolved <> invalid then featureFlags = resolved.featureFlags
+        if platforms <> invalid and platforms.IS_SIGN_OUT_API_ENABLED <> invalid
+            if platforms.IS_SIGN_OUT_API_ENABLED = false then return m.success({})
+        end if
+        if featureFlags <> invalid and featureFlags.IS_SIGN_OUT_API_ENABLED <> invalid
+            if featureFlags.IS_SIGN_OUT_API_ENABLED = false then return m.success({})
+        end if
+        headers = m.api.buildAuthorizationHeaders(m.getGlobalNode())
+        if headers = invalid then return m.success({})
+        baseUrl = RokuCore.ResolveEnvironmentBaseUrl(bases[provider], m.getEnvironment())
+        if baseUrl = invalid then return m.failure("CONFIGURATION", "Logout base URL is unavailable")
+        url = baseUrl.ToStr() + endpoints.logoutUrl.ToStr()
+        return m.api.get(url, invalid, headers)
+    end function
+
+    function getAccountDetails() as object
+        provider = m.getProvider()
+        endpoints = m.getEndpoints(provider)
+        bases = m.getAuthBases()
+        if endpoints = invalid or bases = invalid or bases[provider] = invalid
+            return m.failure("CONFIGURATION", "Account profile endpoints are unavailable")
+        end if
+        endpoint = endpoints.getAccounts
+        if endpoint = invalid or endpoint.ToStr() = ""
+            return m.failure("CONFIGURATION", "Account profile endpoint is unavailable")
+        end if
+        baseUrl = RokuCore.ResolveEnvironmentBaseUrl(bases[provider], m.getEnvironment())
+        if baseUrl = invalid then return m.failure("CONFIGURATION", "Account base URL is unavailable")
+        url = baseUrl.ToStr() + endpoint.ToStr()
+        if provider = "cleeng"
+            customerId = m.getGlobalCustomerId()
+            if customerId = "" then return m.failure("AUTHENTICATION", "Cleeng customer ID is unavailable")
+            url = url.Replace("{{customer-id}}", customerId)
+        end if
+        token = m.getProfileBearerToken()
+        if token = "" then return m.failure("AUTHENTICATION", "No authenticated bearer token is available")
+        return m.api.get(url, invalid, { Authorization: "Bearer " + token })
+    end function
+
+    function getSubscriptions() as object
+        provider = m.getProvider()
+        endpoints = m.getEndpoints(provider)
+        subscriptionBases = RokuCore.GetApiConfiguration().subscriptionBaseUrls
+        authBases = m.getAuthBases()
+        if endpoints = invalid then return m.failure("CONFIGURATION", "Subscription endpoints are unavailable")
+        endpoint = endpoints.subscriptions
+        if endpoint = invalid or endpoint.ToStr() = ""
+            return m.failure("CONFIGURATION", "Subscription endpoint is unavailable")
+        end if
+        baseUrl = invalid
+        if subscriptionBases <> invalid and subscriptionBases[provider] <> invalid
+            baseUrl = RokuCore.ResolveEnvironmentBaseUrl(subscriptionBases[provider], m.getEnvironment())
+        else if authBases <> invalid
+            baseUrl = RokuCore.ResolveEnvironmentBaseUrl(authBases[provider], m.getEnvironment())
+        end if
+        if baseUrl = invalid then return m.failure("CONFIGURATION", "Subscription base URL is unavailable")
+        url = baseUrl.ToStr() + endpoint.ToStr()
+        if provider = "cleeng"
+            customerId = m.getGlobalCustomerId()
+            if customerId = "" then return m.failure("AUTHENTICATION", "Cleeng customer ID is unavailable")
+            url = url.Replace("{{customer-id}}", customerId)
+        end if
+        token = RokuCore.GetRuntimeAccessToken(m.getGlobalNode())
+        if token = "" then return m.failure("AUTHENTICATION", "No authenticated bearer token is available")
+        return m.api.get(url, invalid, { Authorization: "Bearer " + token, Accept: "application/json" })
+    end function
+
+    function getActiveAccess() as object
+        provider = m.getProvider()
+        if provider = "cleeng" then return m.getSubscriptions()
+        endpoints = m.getEndpoints(provider)
+        subscriptionBases = RokuCore.GetApiConfiguration().subscriptionBaseUrls
+        authBases = m.getAuthBases()
+        if endpoints = invalid then return m.failure("CONFIGURATION", "Active access endpoints are unavailable")
+        endpoint = endpoints.activeAccessUrl
+        if endpoint = invalid or endpoint.ToStr() = ""
+            endpoint = endpoints.allSubscription
+        end if
+        if endpoint = invalid or endpoint.ToStr() = "" then return m.failure("CONFIGURATION", "Active access endpoint is unavailable")
+        baseUrl = invalid
+        if subscriptionBases <> invalid and subscriptionBases[provider] <> invalid
+            baseUrl = RokuCore.ResolveEnvironmentBaseUrl(subscriptionBases[provider], m.getEnvironment())
+        else if authBases <> invalid
+            baseUrl = RokuCore.ResolveEnvironmentBaseUrl(authBases[provider], m.getEnvironment())
+        end if
+        if baseUrl = invalid then return m.failure("CONFIGURATION", "Active access base URL is unavailable")
+        token = RokuCore.GetRuntimeAccessToken(m.getGlobalNode())
+        if token = "" then return m.failure("AUTHENTICATION", "No authenticated bearer token is available")
+        return m.api.get(baseUrl.ToStr() + endpoint.ToStr(), invalid, { Authorization: "Bearer " + token, Accept: "application/json" })
+    end function
+
+    private function getResolvedConfiguration() as dynamic
+        globalNode = m.getGlobalNode()
+        if globalNode <> invalid and globalNode.resolvedConfig <> invalid then return globalNode.resolvedConfig
+        return invalid
+    end function
+
+    private function getGlobalConstants() as dynamic
+        globalNode = m.getGlobalNode()
+        if globalNode <> invalid then return globalNode.constants
+        return RokuCore.GetRuntimeConfiguration()
+    end function
+
+    private function getGlobalNode() as dynamic
+        if m.globalNode <> invalid then return m.globalNode
+        return GetGlobalAA()
+    end function
+
+    private function getAuthBases() as dynamic
+        return RokuCore.GetApiConfiguration().authBaseUrls
+    end function
+
+    private function getQrBases() as dynamic
+        return RokuCore.GetApiConfiguration().qrBaseUrls
+    end function
+
+    private function getEndpoints(provider as string) as dynamic
+        configuration = RokuCore.GetApiConfiguration()
+        if configuration.personalisation = invalid then return invalid
+        return configuration.personalisation[provider]
+    end function
+
+    private function getInPlayerClientId() as string
+        constants = m.getGlobalConstants()
+        if constants <> invalid and constants.API <> invalid and constants.API.INPLAYER_CLIENT_ID <> invalid
+            return constants.API.INPLAYER_CLIENT_ID.ToStr()
+        end if
+        return ""
+    end function
+
+    private function getEnvironment() as string
+        globalNode = m.getGlobalNode()
+        if globalNode <> invalid and globalNode.environment <> invalid
+            return globalNode.environment.ToStr()
+        end if
+        resolved = m.getResolvedConfiguration()
+        if resolved <> invalid and resolved.environment <> invalid
+            return resolved.environment.ToStr()
+        end if
+        runtime = RokuCore.GetRuntimeConfiguration()
+        if runtime <> invalid and runtime.environment <> invalid
+            return runtime.environment.ToStr()
+        end if
+        return "prod"
+    end function
+
+    private function isValidEmail(email as string) as boolean
+        if email = invalid then return false
+        value = email.Trim()
+        regex = CreateObject("roRegex", "^[A-Za-z0-9](?:[A-Za-z0-9.+!%-]{1,64}|)@[A-Za-z0-9][A-Za-z0-9.-]+(?:\\.[A-Za-z]{2,}|\\.[0-9]{1,})$", "i")
+        return regex.IsMatch(value)
+    end function
+
+    private function getGlobalCustomerId() as string
+        globalNode = m.getGlobalNode()
+        if globalNode <> invalid and globalNode.customerId <> invalid
+            return globalNode.customerId.ToStr()
+        end if
+        return ""
+    end function
+
+    private function getProfileBearerToken() as string
+        globalNode = m.getGlobalNode()
+        if globalNode <> invalid and globalNode.idToken <> invalid
+            idToken = globalNode.idToken.ToStr()
+            if idToken <> "" then return idToken
+        end if
+        return RokuCore.GetRuntimeAccessToken(globalNode)
+    end function
+
+    private function formEncode(values as object) as string
+        encoder = CreateObject("roUrlTransfer")
+        parts = []
+        for each key in values
+            parts.Push(encoder.Escape(key) + "=" + encoder.Escape(values[key].ToStr()))
+        end for
+        return parts.Join("&")
+    end function
+
+    private function failure(category as string, message as string) as object
+        errors = new DataLayer.ApiResult()
+        return errors.failure(category, message)
+    end function
+
+    private function success(payload as dynamic) as object
+        errors = new DataLayer.ApiResult()
+        return errors.success(payload)
+    end function
+end class
+end namespace

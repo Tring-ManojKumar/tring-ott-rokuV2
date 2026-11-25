@@ -1,3 +1,5 @@
+import "pkg:/source/rokuCore/ConfigurationProvider.bs"
+
 namespace Domain
     class ResolveOnboardingUseCase
         private repository as object
@@ -6,7 +8,7 @@ namespace Domain
             m.repository = repository
         end function
 
-        function execute(resolvedConfiguration as dynamic) as object
+        function execute(resolvedConfiguration as dynamic, marketFlags = invalid as dynamic) as object
             if resolvedConfiguration = invalid then return { enabled: false, completed: false, shouldShow: false, slides: [] }
             platforms = resolvedConfiguration.platforms
             flags = resolvedConfiguration.featureFlags
@@ -15,7 +17,7 @@ namespace Domain
 
             if platforms <> invalid and platforms.build_version <> invalid
                 buildVersion = platforms.build_version.version
-                if m.isVersionMatched(buildVersion)
+                if m.isVersionMatched(buildVersion) and platforms.build_version.is_onboarding_screen_enabled <> invalid
                     enabled = m.toBoolean(platforms.build_version.is_onboarding_screen_enabled)
                 else if platforms.is_onboarding_screen_enabled <> invalid
                     enabled = m.toBoolean(platforms.is_onboarding_screen_enabled)
@@ -23,6 +25,9 @@ namespace Domain
             else if platforms <> invalid and platforms.is_onboarding_screen_enabled <> invalid
                 enabled = m.toBoolean(platforms.is_onboarding_screen_enabled)
             end if
+
+            configId = ""
+            if resolvedConfiguration.configId <> invalid then configId = resolvedConfiguration.configId.ToStr()
 
             slides = []
             rokuConfig = resolvedConfiguration.rokuConfig
@@ -32,19 +37,68 @@ namespace Domain
                 slides = platforms.onBoarding
             end if
 
-            configId = ""
-            if resolvedConfiguration.configId <> invalid then configId = resolvedConfiguration.configId.ToStr()
+            if slides.Count() = 0 then slides = m.slidesFromMarketFlags(marketFlags)
+
+            if slides.Count() = 0 and configId = "ffuxvbfv"
+                slides = m.defaultTringPlaySlides()
+            end if
+
             completed = false
             if configId <> "" then completed = m.repository.hasCompletedOnboarding(configId)
             return { enabled: enabled, completed: completed, shouldShow: enabled and not completed and slides.Count() > 0, slides: slides, configId: configId }
         end function
 
+        private function slidesFromMarketFlags(marketFlags as dynamic) as object
+            slides = []
+            if marketFlags = invalid or marketFlags.images = invalid then return slides
+            images = marketFlags.images
+            imageUris = [images.onBording1, images.onBording2, images.onBording3]
+            titles = ["Live Streaming", "The Latest", "On-Demand"]
+            descriptions = [
+                "Stream news, weather, live sports, & more for free 24/7.",
+                "Local news, weather & sports from KSL TV.",
+                "The best of KSL, when it fits your schedule."
+            ]
+            for index = 0 to imageUris.Count() - 1
+                if imageUris[index] = invalid or imageUris[index].ToStr().Trim() = "" then return []
+                slides.Push({
+                    localizationKey: "PAGE_" + (index + 1).ToStr()
+                    image_uri: imageUris[index].ToStr()
+                    page_title: titles[index]
+                    page_description: descriptions[index]
+                })
+            end for
+            return slides
+        end function
+
+        private function defaultTringPlaySlides() as object
+            return [
+                {
+                    localizationKey: "PAGE_1"
+                    image_uri: "pkg:/assets/images/onboarding-page-1.png"
+                    page_title: "Better Streaming"
+                    page_description: "Choose your streaming quality with a wide range of quality options from 480p to 4k."
+                },
+                {
+                    localizationKey: "PAGE_2"
+                    image_uri: "pkg:/assets/images/onboarding-page-2.png"
+                    page_title: "Movies & TV Series"
+                    page_description: "Access to 10000+ movies & series in a standard subscription plan."
+                },
+                {
+                    localizationKey: "PAGE_3"
+                    image_uri: "pkg:/assets/images/onboarding-page-3.png"
+                    page_title: "AI Recommendation"
+                    page_description: "Getting confused what to watch, we got you on that with AI recommendation."
+                }
+            ]
+        end function
+
         private function isVersionMatched(remoteVersion as dynamic) as boolean
             if remoteVersion = invalid then return false
-            appInfo = CreateObject("roAppInfo")
-            localVersion = appInfo.GetVersion()
-            if localVersion = invalid then return false
-            return Val(localVersion.ToStr()) = Val(remoteVersion.ToStr())
+            localVersion = RokuCore.GetAppBuildVersion()
+            if localVersion = "" then return false
+            return Val(localVersion) = Val(remoteVersion.ToStr())
         end function
 
         private function isArray(value as dynamic) as boolean
@@ -55,9 +109,10 @@ namespace Domain
 
         private function toBoolean(value as dynamic) as boolean
             if value = invalid then return false
-            if LCase(type(value)) = "boolean" then return value
-            if LCase(type(value)) = "integer" or LCase(type(value)) = "roint" then return value <> 0
-            if LCase(type(value)) = "string" or LCase(type(value)) = "rostring"
+            valueType = LCase(type(value))
+            if valueType = "boolean" or valueType = "roboolean" then return value
+            if valueType = "integer" or valueType = "roint" then return value <> 0
+            if valueType = "string" or valueType = "rostring"
                 return LCase(value.Trim()) = "true"
             end if
             return false

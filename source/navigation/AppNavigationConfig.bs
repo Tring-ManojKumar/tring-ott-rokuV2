@@ -10,6 +10,10 @@ namespace AppNavigationConfig
         routes[AppRoutes.AUTH_CHECK] = "AuthCheckScreen"
         routes[AppRoutes.SETTINGS] = "SettingsScreen"
         routes[AppRoutes.NETWORK_CHECK] = "NetworkCheckScreen"
+        routes[AppRoutes.LOGIN_DECIDER] = "LoginDeciderScreen"
+        routes[AppRoutes.SIGN_IN] = "SignInScreen"
+        routes[AppRoutes.SIGN_UP] = "SignUpScreen"
+        routes[AppRoutes.QR_AUTH] = "QRCodeScreen"
 
         return {
             initialRoute: AppRoutes.AUTH_CHECK

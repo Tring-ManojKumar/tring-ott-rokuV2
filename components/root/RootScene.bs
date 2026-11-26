@@ -200,13 +200,14 @@ sub routeUnpersistedAuthentication(resolvedNode as dynamic)
     showText = "false"
     if decision.shouldShow then showText = "true"
     projectId = ""
+    AppLogInfo("Rootscene", FormatJson(resolvedNode.constants))
     if resolvedNode.constants <> invalid and resolvedNode.constants.REMOTE_CONFIG <> invalid and resolvedNode.constants.REMOTE_CONFIG.PROJECT_ID <> invalid
         projectId = resolvedNode.constants.REMOTE_CONFIG.PROJECT_ID.ToStr()
     end if
     AppLogInfo("RootScene", "Onboarding decision configId=" + decision.configId + " firebaseProject=" + projectId + " enabled=" + enabledText + " completed=" + completedText + " slideCount=" + decision.slides.Count().ToStr() + " show=" + showText)
 
     if decision.shouldShow
-        handled = m.framework.navigate(AppRoutes.ONBOARDING, { slides: decision.slides, configId: decision.configId })
+        handled = m.framework.navigate(AppRoutes.ONBOARDING, { slides: decision.slides, media: decision.media, configId: decision.configId, onboardingConfig: resolvedNode.constants.ONBOARDING_SCREEN })
         if handled
             observeActiveScreenReadiness()
         else

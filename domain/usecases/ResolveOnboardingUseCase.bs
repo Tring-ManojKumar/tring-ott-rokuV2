@@ -43,9 +43,105 @@ namespace Domain
                 slides = m.defaultTringPlaySlides()
             end if
 
+            media = m.resolveMedia(resolvedConfiguration, marketFlags, slides)
             completed = false
             if configId <> "" then completed = m.repository.hasCompletedOnboarding(configId)
-            return { enabled: enabled, completed: completed, shouldShow: enabled and not completed and slides.Count() > 0, slides: slides, configId: configId }
+            hasOnboardingContent = slides.Count() > 0 or media.uri <> ""
+            return { enabled: enabled, completed: completed, shouldShow: enabled and not completed and hasOnboardingContent, slides: slides, media: media, configId: configId }
+        end function
+
+        private function resolveMedia(resolvedConfiguration as dynamic, marketFlags as dynamic, slides as object) as object
+            rokuConfig = resolvedConfiguration.rokuConfig
+            platforms = resolvedConfiguration.platforms
+            remote = resolvedConfiguration.remote
+
+            onboardingVideo = ""
+            if rokuConfig <> invalid then onboardingVideo = m.stringValue(rokuConfig.onboarding_video)
+            if onboardingVideo = "" and platforms <> invalid then onboardingVideo = m.stringValue(platforms.onboarding_video)
+            if onboardingVideo = "" and remote <> invalid then onboardingVideo = m.stringValue(remote.onboarding_video)
+            if onboardingVideo = "" then onboardingVideo = m.stringValue(resolvedConfiguration.onboarding_video)
+
+            fallbackImage = m.onboardingImage(marketFlags, slides)
+            if onboardingVideo <> ""
+                return { type: "video", uri: onboardingVideo, fallbackImage: fallbackImage }
+            end if
+
+            splashVideo = m.splashVideo(marketFlags)
+            if splashVideo <> ""
+                return { type: "video", uri: splashVideo, fallbackImage: fallbackImage }
+            end if
+
+            return { type: "image", uri: fallbackImage, fallbackImage: "" }
+        end function
+
+        private function splashVideo(marketFlags as dynamic) as string
+            flagsAssets = invalid
+            if marketFlags <> invalid then flagsAssets = marketFlags.assets
+            video = ""
+            if flagsAssets <> invalid then video = m.stringValue(flagsAssets.splash_video)
+            if video = "" and flagsAssets <> invalid and flagsAssets.images <> invalid
+                video = m.stringValue(flagsAssets.images.splash_video)
+            end if
+
+            runtime = RokuCore.GetRuntimeConfiguration()
+            runtimeAssets = invalid
+            if runtime <> invalid then runtimeAssets = runtime.assets
+            if video = "" and runtimeAssets <> invalid then video = m.stringValue(runtimeAssets.splash_video)
+            if video = "" and runtimeAssets <> invalid and runtimeAssets.images <> invalid
+                video = m.stringValue(runtimeAssets.images.splash_video)
+            end if
+            if video = "" then video = m.stringValue(RokuCore.GetAssetPath("images", "splash_video"))
+            return video
+        end function
+
+        private function onboardingImage(marketFlags as dynamic, slides as object) as string
+            image = ""
+            if marketFlags <> invalid
+                image = m.firstArrayValue(marketFlags.onboardingImage)
+                if image = "" and marketFlags.images <> invalid
+                    image = m.firstArrayValue(marketFlags.images.onboardingImage)
+                end if
+                if image = "" and marketFlags.assets <> invalid
+                    image = m.firstArrayValue(marketFlags.assets.onboardingImage)
+                end if
+                if image = "" and marketFlags.assets <> invalid
+                    if marketFlags.assets.images <> invalid
+                        image = m.firstArrayValue(marketFlags.assets.images.onboardingImage)
+                    end if
+                end if
+            end if
+
+            runtime = RokuCore.GetRuntimeConfiguration()
+            if image = "" and runtime <> invalid and runtime.assets <> invalid
+                image = m.firstArrayValue(runtime.assets.onboardingImage)
+                if image = "" and runtime.assets.images <> invalid
+                    image = m.firstArrayValue(runtime.assets.images.onboardingImage)
+                end if
+            end if
+            if image = "" then image = m.stringValue(RokuCore.GetAssetPath("images", "onboardingImage"))
+            if image = "" and slides.Count() > 0
+                image = m.stringValue(slides[0].image_uri)
+                if image = "" then image = m.stringValue(slides[0].imageUri)
+            end if
+            if image = "" and marketFlags <> invalid and marketFlags.images <> invalid
+                image = m.stringValue(marketFlags.images.onBording1)
+            end if
+            return image
+        end function
+
+        private function firstArrayValue(value as dynamic) as string
+            if m.isArray(value)
+                if value.Count() > 0 then return m.stringValue(value[0])
+                return ""
+            end if
+            return m.stringValue(value)
+        end function
+
+        private function stringValue(value as dynamic) as string
+            if value = invalid then return ""
+            valueType = LCase(type(value))
+            if valueType <> "string" and valueType <> "rostring" then return ""
+            return value.Trim()
         end function
 
         private function slidesFromMarketFlags(marketFlags as dynamic) as object
@@ -76,20 +172,20 @@ namespace Domain
                 {
                     localizationKey: "PAGE_1"
                     image_uri: "pkg:/assets/images/onboarding-page-1.png"
-                    page_title: "Better Streaming"
-                    page_description: "Choose your streaming quality with a wide range of quality options from 480p to 4k."
+                    page_title: "Instant access without waiting"
+                    page_description: "Start watching immediately with no delays."
                 },
                 {
                     localizationKey: "PAGE_2"
                     image_uri: "pkg:/assets/images/onboarding-page-2.png"
-                    page_title: "Movies & TV Series"
-                    page_description: "Access to 10000+ movies & series in a standard subscription plan."
+                    page_title: "Live TV channel streaming"
+                    page_description: "Watch real-time broadcasts on demand anytime."
                 },
                 {
                     localizationKey: "PAGE_3"
                     image_uri: "pkg:/assets/images/onboarding-page-3.png"
-                    page_title: "AI Recommendation"
-                    page_description: "Getting confused what to watch, we got you on that with AI recommendation."
+                    page_title: "Ultra HD video quality"
+                    page_description: "Experience stunning high resolution visual content."
                 }
             ]
         end function

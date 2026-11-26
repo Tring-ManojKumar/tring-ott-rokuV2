@@ -81,6 +81,9 @@ namespace tests.domain
             m.assertTrue(decision.shouldShow)
             m.assertEqual(decision.slides.Count(), 3)
             m.assertEqual(decision.slides[0].image_uri, "pkg:/assets/images/onboarding-page-1.png")
+            m.assertEqual(decision.slides[0].page_title, "Instant access without waiting")
+            m.assertEqual(decision.slides[1].page_title, "Live TV channel streaming")
+            m.assertEqual(decision.slides[2].page_title, "Ultra HD video quality")
         end function
 
         @describe("KSL market flags fallback")
@@ -112,6 +115,61 @@ namespace tests.domain
             subsequentLaunch = useCase.execute(resolved, flags)
             m.assertTrue(subsequentLaunch.completed)
             m.assertFalse(subsequentLaunch.shouldShow)
+        end function
+
+        @describe("Onboarding media selection")
+        @it("prefers the API onboarding video over the asset video")
+        function apiVideoHasPriority()
+            useCase = new Domain.ResolveOnboardingUseCase(new FakeStartupStateRepositoryForOnboarding())
+            decision = useCase.execute({
+                configId: "market-config"
+                featureFlags: { is_onboarding_screen_enabled: true }
+                platforms: {}
+                rokuConfig: { onboarding_video: "https://cdn.example.test/onboarding.mp4" }
+            }, {
+                assets: { splash_video: "pkg:/assets/splash.mp4" }
+                onboardingImage: ["pkg:/assets/onboarding.png"]
+            })
+
+            m.assertTrue(decision.shouldShow)
+            m.assertEqual(decision.media.type, "video")
+            m.assertEqual(decision.media.uri, "https://cdn.example.test/onboarding.mp4")
+            m.assertEqual(decision.media.fallbackImage, "pkg:/assets/onboarding.png")
+        end function
+
+        @it("uses the asset splash video when the API video is empty")
+        function assetVideoFallback()
+            useCase = new Domain.ResolveOnboardingUseCase(new FakeStartupStateRepositoryForOnboarding())
+            decision = useCase.execute({
+                configId: "market-config"
+                featureFlags: { is_onboarding_screen_enabled: true }
+                platforms: {}
+                rokuConfig: { onboarding_video: " " }
+            }, {
+                assets: { splash_video: "pkg:/assets/splash.mp4" }
+                onboardingImage: ["pkg:/assets/onboarding.png"]
+            })
+
+            m.assertEqual(decision.media.type, "video")
+            m.assertEqual(decision.media.uri, "pkg:/assets/splash.mp4")
+            m.assertEqual(decision.media.fallbackImage, "pkg:/assets/onboarding.png")
+        end function
+
+        @it("uses the first onboarding image when both video sources are empty")
+        function onboardingImageFallback()
+            useCase = new Domain.ResolveOnboardingUseCase(new FakeStartupStateRepositoryForOnboarding())
+            decision = useCase.execute({
+                configId: "market-config"
+                featureFlags: { is_onboarding_screen_enabled: true }
+                platforms: {}
+                rokuConfig: { onboarding_video: "" }
+            }, {
+                assets: { splash_video: "" }
+                onboardingImage: ["https://cdn.example.test/onboarding.png", "https://cdn.example.test/other.png"]
+            })
+
+            m.assertEqual(decision.media.type, "image")
+            m.assertEqual(decision.media.uri, "https://cdn.example.test/onboarding.png")
         end function
     end class
 end namespace

@@ -3,20 +3,30 @@ import "pkg:/source/navigation/AppRoutes.bs"
 import "pkg:/source/rokuCore/LocalizationProvider.bs"
 
 sub init()
-    m.image = m.top.findNode("slideImage")
-    m.title = m.top.findNode("slideTitle")
-    m.description = m.top.findNode("slideDescription")
-    m.pageNumber = m.top.findNode("pageNumber")
-    m.skipButton = m.top.findNode("skipButton")
-    m.nextButton = m.top.findNode("nextButton")
+    m.image = m.top.findNode("mediaImage")
+    m.video = m.top.findNode("featureVideo")
+    m.title = m.top.findNode("screenTitle")
+    m.subtitle = m.top.findNode("screenSubtitle")
+    m.getStartedButton = m.top.findNode("getStartedButton")
+    m.featureTitles = [
+        m.top.findNode("featureTitle1")
+        m.top.findNode("featureTitle2")
+        m.top.findNode("featureTitle3")
+    ]
+    m.featureDescriptions = [
+        m.top.findNode("featureDescription1")
+        m.top.findNode("featureDescription2")
+        m.top.findNode("featureDescription3")
+    ]
     m.completionTask = m.top.findNode("completionTask")
     m.slides = []
-    m.slideIndex = 0
+    m.media = { type: "image", uri: "", fallbackImage: "" }
     m.configId = ""
+    m.onboardingConfig = {}
     m.completionStarted = false
-    m.skipButton.observeField("activated", "onSkipActivated")
-    m.nextButton.observeField("activated", "onNextActivated")
+    m.getStartedButton.observeField("activated", "onGetStartedActivated")
     m.completionTask.observeField("requestState", "onCompletionStateChanged")
+    m.video.observeField("state", "onVideoStateChanged")
     if m.top.navigationParams <> invalid then applyNavigationParams(m.top.navigationParams)
 end sub
 
@@ -28,62 +38,90 @@ sub applyNavigationParams(params as dynamic)
     if params = invalid then return
     m.slides = params.slides
     if m.slides = invalid then m.slides = []
+    m.media = params.media
+    if m.media = invalid then m.media = { type: "image", uri: "", fallbackImage: "" }
     m.configId = ""
     if params.configId <> invalid then m.configId = params.configId.ToStr()
-    m.slideIndex = 0
-    if m.slides.Count() = 0
-        m.top.isReady = false
-        return
-    end if
-    renderCurrentSlide()
-    m.top.isReady = true
+    m.onboardingConfig = params.onboardingConfig
+    if m.onboardingConfig = invalid then m.onboardingConfig = {}
+    m.completionStarted = false
+    renderOnboarding()
+    m.top.isReady = m.slides.Count() > 0 or stringValue(m.media.uri) <> ""
 end sub
 
-sub renderCurrentSlide()
-    if m.slides.Count() = 0 or m.slideIndex < 0 or m.slideIndex >= m.slides.Count() then return
-    slide = m.slides[m.slideIndex]
-    imageUri = stringValue(slide.image_uri)
-    if imageUri = "" then imageUri = stringValue(slide.imageUri)
-    m.image.uri = imageUri
-    title = stringValue(slide.page_title)
-    description = stringValue(slide.page_description)
-    localizationKey = stringValue(slide.localizationKey)
-    if localizationKey <> ""
-        strings = GetGlobalAA()
-        title = RokuCore.GetLocalizedString(strings, ["ONBOARDING_SCREEN", localizationKey, "TITLE"], title)
-        description = RokuCore.GetLocalizedString(strings, ["ONBOARDING_SCREEN", localizationKey, "DESCRIPTION"], description)
-    end if
-    m.title.text = title
-    m.description.text = description
-    m.pageNumber.text = (m.slideIndex + 1).ToStr() + " / " + m.slides.Count().ToStr()
-    m.skipButton.visible = m.slideIndex < m.slides.Count() - 1
-    if m.slideIndex = m.slides.Count() - 1
-        m.nextButton.text = RokuCore.GetLocalizedString(GetGlobalAA(), ["ONBOARDING_SCREEN", "BUTTONS", "GET_STARTED_BUTTON"], "Get Started")
+sub renderOnboarding()
+    m.title.text = "Your daily Entertainment"
+    m.subtitle.text = "Enjoy endless stories and exclusives."
+    for index = 0 to 2
+        suffix = (index + 1).ToStr()
+        title = stringValue(m.onboardingConfig["OB_TITLE" + suffix])
+        description = stringValue(m.onboardingConfig["OB_DESCRIPTION" + suffix])
+        m.featureTitles[index].text = title
+        m.featureTitles[index].visible = title <> ""
+        m.featureDescriptions[index].text = description
+        m.featureDescriptions[index].visible = description <> ""
+    end for
+    m.getStartedButton.text = RokuCore.GetLocalizedString(GetGlobalAA(), ["ONBOARDING_SCREEN", "BUTTONS", "GET_STARTED_BUTTON"], "Get Started")
+    renderMedia()
+end sub
+
+sub renderMedia()
+    m.video.control = "stop"
+    m.video.visible = false
+    m.image.visible = false
+    uri = stringValue(m.media.uri)
+    if uri = "" then return
+
+    mediaType = LCase(stringValue(m.media.type))
+    if mediaType = "video"
+        content = CreateObject("roSGNode", "ContentNode")
+        content.url = uri
+        content.streamFormat = streamFormatForUri(uri)
+        m.video.content = content
+        m.video.visible = true
+        m.video.control = "play"
     else
-        m.nextButton.text = RokuCore.GetLocalizedString(GetGlobalAA(), ["ONBOARDING_SCREEN", "BUTTONS", "NEXT_BUTTON"], "Next")
+        m.image.uri = uri
+        m.image.visible = true
     end if
-    m.skipButton.text = RokuCore.GetLocalizedString(GetGlobalAA(), ["ONBOARDING_SCREEN", "BUTTONS", "SKIP_BUTTON"], "Skip")
 end sub
 
-sub onSkipActivated(event as object)
+function streamFormatForUri(uri as string) as string
+    cleanUri = LCase(uri)
+    queryIndex = Instr(1, cleanUri, "?")
+    if queryIndex > 0 then cleanUri = Left(cleanUri, queryIndex - 1)
+    if Right(cleanUri, 5) = ".m3u8" then return "hls"
+    if Right(cleanUri, 4) = ".mpd" then return "dash"
+    return "mp4"
+end function
+
+sub onVideoStateChanged(event as object)
+    state = event.getData()
+    if state = "error"
+        fallbackImage = stringValue(m.media.fallbackImage)
+        if fallbackImage <> ""
+            m.video.control = "stop"
+            m.video.visible = false
+            m.image.uri = fallbackImage
+            m.image.visible = true
+        else
+            m.video.visible = false
+        end if
+    else if state = "finished" and not m.completionStarted
+        m.video.seek = 0
+        m.video.control = "play"
+    end if
+end sub
+
+sub onGetStartedActivated(event as object)
     beginCompletion()
-end sub
-
-sub onNextActivated(event as object)
-    if m.completionStarted then return
-    if m.slideIndex < m.slides.Count() - 1
-        m.slideIndex = m.slideIndex + 1
-        renderCurrentSlide()
-    else
-        beginCompletion()
-    end if
 end sub
 
 sub beginCompletion()
     if m.completionStarted then return
     m.completionStarted = true
-    m.skipButton.enabled = false
-    m.nextButton.enabled = false
+    m.getStartedButton.enabled = false
+    m.video.control = "stop"
     m.completionTask.configId = m.configId
     m.completionTask.control = "RUN"
 end sub
@@ -97,21 +135,22 @@ sub onCompletionStateChanged(event as object)
         end if
     else if event.getData() = "ERROR"
         m.completionStarted = false
-        m.skipButton.enabled = true
-        m.nextButton.enabled = true
+        m.getStartedButton.enabled = true
+        if LCase(stringValue(m.media.type)) = "video" then m.video.control = "play"
     end if
 end sub
 
 function setInitialFocus() as boolean
-    m.nextButton.setFocus(true)
-    return m.nextButton.hasFocus()
+    m.getStartedButton.setFocus(true)
+    return m.getStartedButton.hasFocus()
 end function
 
 sub onCleanupRequested(event as object)
     if not event.getData() then return
-    m.skipButton.unobserveField("activated")
-    m.nextButton.unobserveField("activated")
+    m.getStartedButton.unobserveField("activated")
     m.completionTask.unobserveField("requestState")
+    m.video.unobserveField("state")
+    m.video.control = "stop"
 end sub
 
 function stringValue(value as dynamic) as string
@@ -120,3 +159,24 @@ function stringValue(value as dynamic) as string
     if valueType <> "string" and valueType <> "rostring" then return ""
     return value
 end function
+
+' Legacy three-slide interaction retained for reference:
+' sub renderCurrentSlide()
+'     if m.slides.Count() = 0 or m.slideIndex < 0 or m.slideIndex >= m.slides.Count() then return
+'     slide = m.slides[m.slideIndex]
+'     m.image.uri = stringValue(slide.image_uri)
+'     m.title.text = stringValue(slide.page_title)
+'     m.description.text = stringValue(slide.page_description)
+'     m.pageNumber.text = (m.slideIndex + 1).ToStr() + " / " + m.slides.Count().ToStr()
+'     m.skipButton.visible = m.slideIndex < m.slides.Count() - 1
+'     m.nextButton.text = "Next"
+' end sub
+'
+' sub onNextActivated(event as object)
+'     if m.slideIndex < m.slides.Count() - 1
+'         m.slideIndex = m.slideIndex + 1
+'         renderCurrentSlide()
+'     else
+'         beginCompletion()
+'     end if
+' end sub

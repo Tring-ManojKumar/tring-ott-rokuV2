@@ -6,26 +6,35 @@ sub init()
     m.borderLeft = m.top.findNode("borderLeft")
     m.borderRight = m.top.findNode("borderRight")
     m.label = m.top.findNode("buttonLabel")
+    m.effectBackground = m.top.findNode("effectBackground")
+    m.icon = m.top.findNode("icon")
     m.pressed = false
     m.top.focusable = true
     m.top.observeField("focusedChild", "updateButton")
     m.top.observeField("text", "updateButton")
     m.top.observeField("variant", "updateButton")
     m.top.observeField("enabled", "updateButton")
+    if m.global <> invalid then m.global.observeField("localeCode", "onLocaleChanged")
+    updateButton()
+end sub
+
+sub onLocaleChanged(event as object)
     updateButton()
 end sub
 
 sub updateButton()
     if m.background = invalid then return
     theme = GetTheme()
+    w = m.top.width
+    h = m.top.height
+
     variant = m.top.variant
     if type(variant) <> "String" then variant = "primary"
     enabled = m.top.enabled
     if type(enabled) <> "Boolean" then enabled = true
     focusEnabled = m.top.focusEnabled
     if type(focusEnabled) <> "Boolean" then focusEnabled = true
-    radius = m.top.cornerRadius
-    if radius < 0 then radius = theme.radii.md
+
     canFocus = false
     if enabled
         if focusEnabled
@@ -33,91 +42,49 @@ sub updateButton()
         end if
     end if
     m.top.focusable = canFocus
-    m.background.width = m.top.width
-    m.background.height = m.top.height
-    m.background.visible = true
-    m.backgroundMask.width = m.top.width
-    m.backgroundMask.height = m.top.height
-    m.backgroundMask.maskSize = [m.top.width, m.top.height]
-    m.borderTop.width = m.top.width
-    m.borderBottom.width = m.top.width
-    m.borderBottom.translation = [0, m.top.height - 2]
-    m.borderLeft.height = m.top.height
-    m.borderRight.height = m.top.height
-    m.borderRight.translation = [m.top.width - 2, 0]
-    m.label.width = m.top.width
-    m.label.height = m.top.height
-    m.label.visible = true
-    buttonText = m.top.text
-    if buttonText = invalid then buttonText = ""
-    if buttonText.Trim() = ""
-        buttonText = getButtonText(m.top.mediaType, m.top.contentType)
-    end if
-    m.label.text = buttonText
 
+    ' ---- state ----
     state = "normal"
     if not enabled or variant = "disabled" then state = "disabled"
     if canFocus
-        focusState = m.top.hasFocus()
-        if type(focusState) = "Boolean"
-            if focusState then state = "focused"
-        end if
+        if m.top.hasFocus() then state = "focused"
     end if
     if m.pressed and enabled then state = "pressed"
-    style = GetButtonTheme(theme, variant, state)
-    backgroundColor = m.top.backgroundColor
-    if backgroundColor <> invalid
-        if backgroundColor <> -1 then style.background = backgroundColor
-    end if
-    textColor = m.top.textColor
-    if textColor <> invalid
-        if textColor <> -1 then style.text = textColor
-    end if
-    borderColor = m.top.borderColor
-    if borderColor <> invalid
-        if borderColor <> -1 then style.border = borderColor
-    end if
-    if m.top.borderWidth > 0 then style.borderWidth = m.top.borderWidth
-    backgroundBlendColor = style.background
-    backgroundType = LCase(type(backgroundBlendColor))
-    if backgroundType = "string" or backgroundType = "rostring" then backgroundBlendColor = ThemeColor(backgroundBlendColor)
-    m.background.blendColor = backgroundBlendColor
-    labelColor = style.text
-    labelType = LCase(type(labelColor))
-    if labelType = "string" or labelType = "rostring" then labelColor = ThemeColor(labelColor)
-    m.label.color = labelColor
-    edge = style.borderWidth
-    if edge < 1 then edge = 1
-    if edge > m.top.height / 2 then edge = m.top.height / 2
-    m.borderTop.height = edge
-    m.borderBottom.height = edge
-    m.borderBottom.translation = [0, m.top.height - edge]
-    m.borderLeft.width = edge
-    m.borderRight.width = edge
-    m.borderRight.translation = [m.top.width - edge, 0]
-    m.borderTop.color = style.border
-    m.borderBottom.color = style.border
-    m.borderLeft.color = style.border
-    m.borderRight.color = style.border
-    m.borderTop.opacity = 1
-    if style.borderWidth <= 0 then m.borderTop.opacity = 0
-    m.borderBottom.opacity = m.borderTop.opacity
-    m.borderLeft.opacity = m.borderTop.opacity
-    m.borderRight.opacity = m.borderTop.opacity
 
-    textSize = m.top.fontSize
-    if textSize <= 0 then textSize = theme.typography.sizes.button
-    fontUri = theme.typography.fonts.medium
-    m.label.font = CreateThemeFont(fontUri, textSize)
+    ' ---- style: theme, then per-instance overrides, then focus overrides ----
+    style = GetButtonTheme(theme, variant, state)
+    if m.top.backgroundColor <> -1 then style.background = m.top.backgroundColor
+    if m.top.textColor <> -1 then style.text = m.top.textColor
+    if m.top.borderColor <> -1 then style.border = m.top.borderColor
+    if m.top.borderWidth > 0 then style.borderWidth = m.top.borderWidth
+
+    radius = m.top.cornerRadius
+    if radius < 0 then radius = theme.radii.md
 
     colors = m.top.gradientColors
     gradientStyle = m.top.gradientStyle
     gradientAngle = m.top.gradientAngle
     gradientStops = m.top.gradientStops
-    presetName = m.top.gradientPreset
+
+    if state = "focused"
+        if m.top.focusedBackgroundColor <> -1 then style.background = m.top.focusedBackgroundColor
+        if m.top.focusedTextColor <> -1 then style.text = m.top.focusedTextColor
+        if m.top.focusedBorderColor <> -1 then style.border = m.top.focusedBorderColor
+        if m.top.focusedBorderWidth >= 0 then style.borderWidth = m.top.focusedBorderWidth
+        if m.top.focusedCornerRadius >= 0 then radius = m.top.focusedCornerRadius
+        focusedColors = m.top.focusedGradientColors
+        if focusedColors <> invalid
+            if focusedColors.count() >= 2 then colors = focusedColors
+        end if
+    end if
+
+    ' ---- gradient preset (only when no colors were supplied) ----
+    maxRadius = h / 2
+    if radius > maxRadius then radius = maxRadius
     needsPreset = colors = invalid
     if not needsPreset then needsPreset = colors.count() < 2
     if needsPreset
+        presetName = m.top.gradientPreset
         if presetName <> ""
             if theme.gradients <> invalid
                 preset = theme.gradients[presetName]
@@ -130,20 +97,130 @@ sub updateButton()
             end if
         end if
     end if
-    effectBorderColor = style.border
-    borderType = LCase(type(effectBorderColor))
-    if borderType = "string" or borderType = "rostring" then effectBorderColor = ThemeColor(effectBorderColor)
-    m.borderTop.color = effectBorderColor
-    m.borderBottom.color = effectBorderColor
-    m.borderLeft.color = effectBorderColor
-    m.borderRight.color = effectBorderColor
-    if ApplyNodeEffect(m.background, radius, style.borderWidth, effectBorderColor, colors, gradientStops, gradientStyle, gradientAngle)
-        m.borderTop.opacity = 0
-        m.borderBottom.opacity = 0
-        m.borderLeft.opacity = 0
-        m.borderRight.opacity = 0
+
+    hasGradient = false
+    if colors <> invalid
+        if colors.count() >= 2 then hasGradient = true
     end if
+    if gradientStyle = invalid then gradientStyle = "none"
+    if gradientAngle = invalid then gradientAngle = 0
+    ' Colors supplied but style left at "none" -> assume linear
+    if hasGradient
+        if gradientStyle = "none" or gradientStyle = "" then gradientStyle = "linear"
+    end if
+
+    bgColor = resolveColor(style.background)
+    textCol = resolveColor(style.text)
+    borderCol = resolveColor(style.border)
+    borderW = style.borderWidth
+    if borderW = invalid then borderW = 0
+
+    ' ---- background ----
+    m.effectBackground.width = w
+    m.effectBackground.height = h
+    ' White base so the gradient isn't multiplied by a tint
+    if hasGradient then m.effectBackground.color = &hFFFFFFFF else m.effectBackground.color = bgColor
+
+    effectApplied = ApplyNodeEffect(m.effectBackground, radius, borderW, borderCol, colors, gradientStops, gradientStyle, gradientAngle)
+    m.effectBackground.visible = effectApplied
+    m.backgroundMask.visible = not effectApplied
+
+    if not effectApplied
+        ' OS < 16 fallback: masked poster, solid color (first gradient stop if any)
+        fallbackColor = bgColor
+        if hasGradient then fallbackColor = resolveColor(colors[0])
+        layoutFallback(w, h, fallbackColor, borderCol, borderW)
+    end if
+
+    ' ---- label + optional icon ----
+    textSize = m.top.fontSize
+    if textSize <= 0 then textSize = theme.typography.sizes.button
+    m.label.font = CreateThemeFont(theme.typography.fonts.medium, textSize)
+    m.label.color = textCol
+    buttonText = m.top.text
+    if buttonText = invalid then buttonText = ""
+    if buttonText.Trim() = ""
+        buttonText = getButtonText(m.top.mediaType, m.top.contentType)
+    end if
+    m.label.text = buttonText
+
+    iconW = m.top.iconWidth
+    iconH = m.top.iconHeight
+    gap = m.top.iconGap
+    hasIcon = false
+    if m.top.iconUri <> ""
+        if iconW > 0
+            if iconH > 0 then hasIcon = true
+        end if
+    end if
+
+    iconSpace = 0
+    if hasIcon then iconSpace = iconW + gap
+     m.label.width = 0
+    m.label.height = 0
+    textWidth = m.label.boundingRect().width + 1
+    maxText = w - 32 - iconSpace
+    if maxText < 0 then maxText = 0
+    if textWidth > maxText then textWidth = maxText
+
+    startX = (w - (textWidth + iconSpace)) / 2
+    if startX < 0 then startX = 0
+
+    labelX = startX
+    if hasIcon
+        iconX = startX
+        if LCase(m.top.iconPosition) = "right"
+            iconX = startX + textWidth + gap
+        else
+            labelX = startX + iconSpace
+        end if
+        m.icon.uri = m.top.iconUri
+        m.icon.width = iconW
+        m.icon.height = iconH
+        m.icon.translation = [iconX, (h - iconH) / 2]
+        if m.top.tintIcon then m.icon.blendColor = textCol else m.icon.blendColor = &hFFFFFFFF
+        m.icon.visible = true
+    else
+        m.icon.visible = false
+    end if
+
+    m.label.width = textWidth
+    m.label.height = h
+    m.label.translation = [labelX, 0]
+    m.label.visible = true
 end sub
+
+sub layoutFallback(w as float, h as float, bg as integer, border as integer, borderW as float)
+    m.backgroundMask.width = w
+    m.backgroundMask.height = h
+    m.backgroundMask.maskSize = [w, h]
+    m.background.width = w
+    m.background.height = h
+    m.background.blendColor = bg
+
+    edge = borderW
+    if edge < 1 then edge = 1
+    if edge > h / 2 then edge = h / 2
+    m.borderTop.width = w : m.borderTop.height = edge
+    m.borderBottom.width = w : m.borderBottom.height = edge
+    m.borderBottom.translation = [0, h - edge]
+    m.borderLeft.width = edge : m.borderLeft.height = h
+    m.borderRight.width = edge : m.borderRight.height = h
+    m.borderRight.translation = [w - edge, 0]
+    opacity = 1
+    if borderW <= 0 then opacity = 0
+    for each b in [m.borderTop, m.borderBottom, m.borderLeft, m.borderRight]
+        b.color = border
+        b.opacity = opacity
+    end for
+end sub
+
+function resolveColor(value as dynamic) as integer
+    t = LCase(type(value))
+    if t = "string" or t = "rostring" then return ThemeColor(value)
+    if value = invalid then return &hFFFFFFFF
+    return value
+end function
 
 function updateFocus() as boolean
     updateButton()
@@ -174,15 +251,21 @@ end function
 function getButtonText(mediaType as dynamic, contentType as dynamic) as string
     normalizedMediaType = normalizeButtonType(mediaType)
     normalizedContentType = normalizeButtonType(contentType)
+    localizationKey = "WATCH_NOW"
     mappings = [
-        { mediaType: "audio", contentType: "*", text: "Listen Now" }
+        { mediaType: "audio", contentType: "*", key: "LISTEN_NOW" }
     ]
     for each mapping in mappings
         mediaMatches = mapping.mediaType = "*" or mapping.mediaType = normalizedMediaType
         contentMatches = mapping.contentType = "*" or mapping.contentType = normalizedContentType
-        if mediaMatches and contentMatches then return mapping.text
+        if mediaMatches and contentMatches
+            localizationKey = mapping.key
+            exit for
+        end if
     end for
-    return "Watch Now"
+    strings = m.top.localizationStrings
+    if strings <> invalid then return RokuCore.GetLocalizedString({ strings: strings }, [localizationKey], "")
+    return RokuCore.GetLocalizedString(GetGlobalAA(), [localizationKey], "")
 end function
 
 function normalizeButtonType(value as dynamic) as string

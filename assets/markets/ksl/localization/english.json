@@ -1,4 +1,6 @@
 {
+    "WATCH_NOW": "Watch Now",
+    "LISTEN_NOW": "Listen Now",
     "LIVE": "LIVE",
     "HOME": "Home",
     "SEARCH": "Search",
@@ -39,6 +41,14 @@
     "CONTINUE_WATCHING": "Continue Watching",
     "FAVORITES": "My Favorites",
     "ONBOARDING_SCREEN": {
+        "OB_HEADERTITLE": "Your daily Entertainment",
+        "OB_HEADERDESCRIPTION": "Enjoy endless stories and exclusives.",
+        "OB_TITLE1": "Instant access without waiting",
+        "OB_TITLE2": "Live TV channel streaming",
+        "OB_TITLE3": "Ultra HD video quality",
+        "OB_DESCRIPTION1": "Start watching without no delays.",
+        "OB_DESCRIPTION2": "Watch real-time broadcasts on demand anytime.",
+        "OB_DESCRIPTION3": "Experience stunning high resolution visual content.",
         "PAGE_1": {
             "TITLE": "Live Streaming",
             "DESCRIPTION": "Stream news, weather, live sports, & more for free 24/7."

@@ -1,4 +1,6 @@
 {
+    "WATCH_NOW": "Ver ahora",
+    "LISTEN_NOW": "Escuchar ahora",
     "LIVE": "En vivo",
     "HOME": "Inicio",
     "SEARCH": "Buscar",
@@ -43,6 +45,13 @@
     "CONTINUE_WATCHING": "Continuar viendo",
     "FAVORITES": "Favoritos",
     "ONBOARDING_SCREEN": {
+        "OB_HEADERTITLE": "Tu entretenimiento diario",
+        "OB_DESCRIPTION1": "Empieza a ver contenido sin demoras.",
+        "OB_TITLE3": "Calidad de vídeo Ultra HD",
+        "OB_HEADERDESCRIPTION": "Historias y contenido exclusivo sin fin.",
+        "OB_DESCRIPTION3": "Disfruta de una calidad visual de alta resolución.",
+        "OB_DESCRIPTION2": "Disfruta de transmisiones en directo y contenido a pedido en cualquier momento.",
+        "OB_TITLE2": "Transmisión de canales de TV en directo",
         "PAGE_1": {
             "TITLE": "Mejor streaming",
             "DESCRIPTION": "Elige tu calidad de streaming con una amplia gama de opciones de calidad, desde 480p hasta 4k."

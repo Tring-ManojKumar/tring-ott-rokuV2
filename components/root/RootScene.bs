@@ -207,7 +207,14 @@ sub routeUnpersistedAuthentication(resolvedNode as dynamic)
     AppLogInfo("RootScene", "Onboarding decision configId=" + decision.configId + " firebaseProject=" + projectId + " enabled=" + enabledText + " completed=" + completedText + " slideCount=" + decision.slides.Count().ToStr() + " show=" + showText)
 
     if decision.shouldShow
-        handled = m.framework.navigate(AppRoutes.ONBOARDING, { slides: decision.slides, media: decision.media, configId: decision.configId, onboardingConfig: resolvedNode.constants.ONBOARDING_SCREEN })
+        firebaseTheme = {}
+        remoteTheme = invalid
+        if resolvedNode.resolvedConfig <> invalid then remoteTheme = resolvedNode.resolvedConfig.remote
+        if remoteTheme <> invalid
+            if remoteTheme.theme_gradients <> invalid then firebaseTheme.gradients = remoteTheme.theme_gradients
+            if remoteTheme.gradients <> invalid then firebaseTheme.gradients = remoteTheme.gradients
+        end if
+        handled = m.framework.navigate(AppRoutes.ONBOARDING, { slides: decision.slides, media: decision.media, configId: decision.configId, firebaseTheme: firebaseTheme, localizationStrings: GetGlobalAA().strings })
         if handled
             observeActiveScreenReadiness()
         else

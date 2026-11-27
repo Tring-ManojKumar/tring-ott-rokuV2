@@ -17,30 +17,53 @@
         <function name="setInitialFocus" />
     </interface>
     <children>
-        <Rectangle width="1920" height="1080" color="0x0C111BFF" />
-        <!-- Legacy three-slide presentation retained for later reuse.
-        <Poster id="slideImage" translation="[100, 70]" width="1720" height="610" loadDisplayMode="scaleToFit" />
-        <AppLabel id="slideTitle" translation="[100, 710]" width="1720" height="70" variant="heading" />
-        <Label id="slideDescription" translation="[100, 790]" width="1720" height="100" wrap="true" color="0xFFFFFFFF" font="font:MediumSystemFont" />
-        <Label id="pageNumber" translation="[100, 930]" width="300" height="55" color="0xFFFFFFFF" font="font:SmallSystemFont" />
-        <AppButton id="skipButton" translation="[1290, 920]" width="220" height="72" text="Skip" variant="secondary" />
-        <AppButton id="nextButton" translation="[1530, 920]" width="290" height="72" text="Next" variant="primary" />
-        -->
-        <Poster id="mediaImage" translation="[0, 0]" width="1980" height="1080" loadDisplayMode="scaleToFill" />
-        <Video id="featureVideo" translation="[0, 0]" width="1980" height="1080" visible="false" enableUI="false" />
-        <AppLabel id="screenTitle" translation="[100, 250]" width="700" height="76" variant="heading" />
-        <Label id="screenSubtitle" translation="[100, 328]" width="700" height="50" wrap="true" color="0xA7AAB3FF" font="font:MediumSystemFont" />
-        <Rectangle translation="[100, 448]" width="4" height="64" color="0xFF0054FF" />
-        <Label id="featureTitle1" translation="[126, 444]" width="650" height="40" color="0xFFFFFFFF" font="font:MediumSystemFont" />
-        <Label id="featureDescription1" translation="[126, 486]" width="650" height="42" color="0xA7AAB3FF" font="font:SmallSystemFont" wrap="true" />
-        <Rectangle translation="[100, 580]" width="4" height="64" color="0xFF0054FF" />
-        <Label id="featureTitle2" translation="[126, 576]" width="650" height="40" color="0xFFFFFFFF" font="font:MediumSystemFont" />
-        <Label id="featureDescription2" translation="[126, 618]" width="650" height="42" color="0xA7AAB3FF" font="font:SmallSystemFont" wrap="true" />
-        <Rectangle translation="[100, 712]" width="4" height="64" color="0xFF0054FF" />
-        <Label id="featureTitle3" translation="[126, 708]" width="650" height="40" color="0xFFFFFFFF" font="font:MediumSystemFont" />
-        <Label id="featureDescription3" translation="[126, 750]" width="650" height="42" color="0xA7AAB3FF" font="font:SmallSystemFont" wrap="true" />
-        <AppButton id="getStartedButton" translation="[100, 875]" width="330" height="76" text="Get Started" variant="primary" />
-        <OnboardingCompletionTask id="completionTask" />
-    </children>
+    <Rectangle width="1920" height="1080" color="0x0C111BFF" />
+    <Poster id="mediaImage" translation="[0, 0]" width="1920" height="1080" loadDisplayMode="scaleToFill" />
+    <Video id="featureVideo" translation="[0, 0]" width="1920" height="1080" visible="false" enableUI="false" />
+    <Poster id="gradientOverlay" translation="[0, 0]" width="1920" height="1080" uri="pkg:/assets/images/hero-gradient-option2.png" />
+    <LayoutGroup id="contentColumn" translation="[100, 100]" layoutDirection="vert" horizAlignment="left" vertAlignment="top" itemSpacings="[64]">
+
+        <LayoutGroup id="headerGroup" layoutDirection="vert" horizAlignment="left" vertAlignment="top" itemSpacings="[40]">
+            <Poster id="appLogo" width="81" height="90" uri="pkg:/assets/images/app_logo.png" loadDisplayMode="scaleToFit" />
+
+            <LayoutGroup id="titleGroup" layoutDirection="vert" horizAlignment="left" vertAlignment="top" itemSpacings="[20]">
+                <Label id="screenTitle" width="756" height="65" color="0xFFFFFFFF" horizAlign="left" vertAlign="center" />
+                <Label id="screenSubtitle" width="756" height="40" color="0xFFFFFF99" horizAlign="left" vertAlign="center" />
+            </LayoutGroup>
+        </LayoutGroup>
+
+        <LayoutGroup id="featuresGroup" layoutDirection="vert" horizAlignment="left" vertAlignment="top" itemSpacings="[40]">
+
+            <LayoutGroup id="featureRow1" layoutDirection="horiz" horizAlignment="left" vertAlignment="center" itemSpacings="[32]">
+                <Poster id="featureIcon1" width="40" height="40" loadDisplayMode="scaleToFit" />
+                <LayoutGroup id="featureText1" layoutDirection="vert" horizAlignment="left" vertAlignment="top" itemSpacings="[8]">
+                    <Label id="featureTitle1" width="684" height="54" color="0xFFFFFFFF" horizAlign="left" vertAlign="center" />
+                    <Label id="featureDescription1" width="684" height="36" color="0xFFFFFF99" horizAlign="left" vertAlign="center" />
+                </LayoutGroup>
+            </LayoutGroup>
+
+            <LayoutGroup id="featureRow2" layoutDirection="horiz" horizAlignment="left" vertAlignment="center" itemSpacings="[32]">
+                <Poster id="featureIcon2" width="40" height="40" loadDisplayMode="scaleToFit" />
+                <LayoutGroup id="featureText2" layoutDirection="vert" horizAlignment="left" vertAlignment="top" itemSpacings="[8]">
+                    <Label id="featureTitle2" width="684" height="54" color="0xFFFFFFFF" horizAlign="left" vertAlign="center" />
+                    <Label id="featureDescription2" width="684" height="36" color="0xFFFFFF99" horizAlign="left" vertAlign="center" />
+                </LayoutGroup>
+            </LayoutGroup>
+
+            <LayoutGroup id="featureRow3" layoutDirection="horiz" horizAlignment="left" vertAlignment="center" itemSpacings="[32]">
+                <Poster id="featureIcon3" width="40" height="40" loadDisplayMode="scaleToFit" />
+                <LayoutGroup id="featureText3" layoutDirection="vert" horizAlignment="left" vertAlignment="top" itemSpacings="[8]">
+                    <Label id="featureTitle3" width="684" height="54" color="0xFFFFFFFF" horizAlign="left" vertAlign="center" />
+                    <Label id="featureDescription3" width="684" height="36" color="0xFFFFFF99" horizAlign="left" vertAlign="center" />
+                </LayoutGroup>
+            </LayoutGroup>
+        </LayoutGroup>
+    </LayoutGroup>
+    <AppButton id="getStartedButton" translation="[100, 908]" width="320" height="72" variant="primary" gradientPreset="primary"
+    cornerRadius="36" borderWidth="0" focusedBorderWidth="0" fontSize="24"
+    iconUri="pkg:/assets/images/right_chevron.png" iconWidth="24" iconHeight="24" iconGap="8" iconPosition="right" />
+    
+    <OnboardingCompletionTask id="completionTask" />
+</children>
     <script type="text/brightscript" uri="OnboardingScreen.bs" />
 </component>

@@ -2,6 +2,13 @@ import "pkg:/source/navigation/NavigationEvents.bs"
 import "pkg:/source/navigation/AppRoutes.bs"
 import "pkg:/source/rokuCore/LocalizationProvider.bs"
 
+function createFont(uri as string, size as integer) as object
+    font = CreateObject("roSGNode", "Font")
+    font.uri = uri
+    font.size = size
+    return font
+end function
+
 sub init()
     m.image = m.top.findNode("mediaImage")
     m.video = m.top.findNode("featureVideo")
@@ -18,17 +25,54 @@ sub init()
         m.top.findNode("featureDescription2")
         m.top.findNode("featureDescription3")
     ]
+    m.featureIcons = [
+        m.top.findNode("featureIcon1")
+        m.top.findNode("featureIcon2")
+        m.top.findNode("featureIcon3")
+    ]
+     m.featureRows = [
+        m.top.findNode("featureRow1")
+        m.top.findNode("featureRow2")
+        m.top.findNode("featureRow3")
+    ]
+    ' Fallback icons used when the config doesn't supply OB_ICON1..3
+    m.defaultIcons = [
+        RokuCore.GetAssetPath("images", "onboardIcon3")
+        RokuCore.GetAssetPath("images", "onboardIcon2")
+        RokuCore.GetAssetPath("images", "onboardIcon1")
+    ]
+    m.fonts = RokuCore.GetRuntimeConfiguration().theme.typography.fonts
+    applyFonts()
     m.completionTask = m.top.findNode("completionTask")
     m.slides = []
     m.media = { type: "image", uri: "", fallbackImage: "" }
     m.configId = ""
-    m.onboardingConfig = {}
+    m.firebaseTheme = {}
+    m.localizationStrings = {}
+    m.globalNode = m.global
+    if m.globalNode <> invalid then m.globalNode.observeField("localeCode", "onLocaleChanged")
     m.completionStarted = false
     m.getStartedButton.observeField("activated", "onGetStartedActivated")
     m.completionTask.observeField("requestState", "onCompletionStateChanged")
     m.video.observeField("state", "onVideoStateChanged")
     if m.top.navigationParams <> invalid then applyNavigationParams(m.top.navigationParams)
 end sub
+
+sub applyFonts()
+    m.title.font = createFont(onboardingFont("semibold", "medium"), 56)
+    m.subtitle.font = createFont(onboardingFont("medium", "regular"), 32)
+    for index = 0 to 2
+        m.featureTitles[index].font = createFont(onboardingFont("medium", "regular"), 36)
+        m.featureDescriptions[index].font = createFont(onboardingFont("medium", "regular"), 24)
+    end for
+end sub
+
+function onboardingFont(weight as string, fallbackWeight as string) as string
+    uri = ""
+    if m.fonts <> invalid then uri = stringValue(m.fonts[weight])
+    if uri = "" and m.fonts <> invalid then uri = stringValue(m.fonts[fallbackWeight])
+    return uri
+end function
 
 sub onNavigationParamsChanged(event as object)
     applyNavigationParams(event.getData())
@@ -42,27 +86,73 @@ sub applyNavigationParams(params as dynamic)
     if m.media = invalid then m.media = { type: "image", uri: "", fallbackImage: "" }
     m.configId = ""
     if params.configId <> invalid then m.configId = params.configId.ToStr()
-    m.onboardingConfig = params.onboardingConfig
-    if m.onboardingConfig = invalid then m.onboardingConfig = {}
+    m.firebaseTheme = params.firebaseTheme
+    if m.firebaseTheme = invalid then m.firebaseTheme = {}
+    m.localizationStrings = params.localizationStrings
+    if m.localizationStrings = invalid then m.localizationStrings = {}
+    m.getStartedButton.localizationStrings = m.localizationStrings
     m.completionStarted = false
     renderOnboarding()
     m.top.isReady = m.slides.Count() > 0 or stringValue(m.media.uri) <> ""
 end sub
 
 sub renderOnboarding()
-    m.title.text = "Your daily Entertainment"
-    m.subtitle.text = "Enjoy endless stories and exclusives."
-    for index = 0 to 2
+    strings = { strings: m.localizationStrings }
+    m.title.text = RokuCore.GetLocalizedString(strings, ["ONBOARDING_SCREEN", "OB_HEADERTITLE"], "")
+    m.subtitle.text = RokuCore.GetLocalizedString(strings, ["ONBOARDING_SCREEN", "OB_HEADERDESCRIPTION"], "")
+    m.getStartedButton.text = RokuCore.GetLocalizedString(strings, ["ONBOARDING_SCREEN", "BUTTONS", "GET_STARTED_BUTTON"], "")
+        for index = 0 to 2
         suffix = (index + 1).ToStr()
-        title = stringValue(m.onboardingConfig["OB_TITLE" + suffix])
-        description = stringValue(m.onboardingConfig["OB_DESCRIPTION" + suffix])
+        title = RokuCore.GetLocalizedString(strings, ["ONBOARDING_SCREEN", "OB_TITLE" + suffix], "")
+        description = RokuCore.GetLocalizedString(strings, ["ONBOARDING_SCREEN", "OB_DESCRIPTION" + suffix], "")
+
+        ' Resolve each fallback icon from this build's market asset map.
+        iconUri = stringValue(m.defaultIcons[index])
+        m.featureIcons[index].uri = iconUri
+        m.featureIcons[index].blendColor = &hFFFFFFFF
+        m.featureIcons[index].visible = (iconUri <> "")
+
         m.featureTitles[index].text = title
-        m.featureTitles[index].visible = title <> ""
+        m.featureTitles[index].visible = (title <> "")
         m.featureDescriptions[index].text = description
-        m.featureDescriptions[index].visible = description <> ""
+        m.featureDescriptions[index].visible = (description <> "")
+
+        ' A row with no text disappears and the rows below move up
+        m.featureRows[index].visible = (title <> "" or description <> "")
     end for
-    m.getStartedButton.text = RokuCore.GetLocalizedString(GetGlobalAA(), ["ONBOARDING_SCREEN", "BUTTONS", "GET_STARTED_BUTTON"], "Get Started")
+    applyFirebaseButtonColors()
     renderMedia()
+end sub
+
+sub onLocaleChanged(event as object)
+    m.localizationStrings = GetGlobalAA().strings
+    if m.localizationStrings = invalid then m.localizationStrings = {}
+    m.getStartedButton.localizationStrings = m.localizationStrings
+    renderOnboarding()
+end sub
+
+sub applyFirebaseButtonColors()
+    ' Clear any previous remote override so a later config can use the build preset.
+    m.getStartedButton.gradientColors = invalid
+    m.getStartedButton.gradientStops = invalid
+    m.getStartedButton.gradientStyle = "none"
+    m.getStartedButton.gradientAngle = 0
+
+    gradients = m.firebaseTheme.gradients
+    if gradients <> invalid
+        primaryGradient = gradients.primary
+        if primaryGradient <> invalid and primaryGradient.colors <> invalid
+            if primaryGradient.colors.count() >= 2
+                m.getStartedButton.gradientColors = primaryGradient.colors
+                if primaryGradient.style <> invalid then m.getStartedButton.gradientStyle = primaryGradient.style
+                if primaryGradient.angle <> invalid then m.getStartedButton.gradientAngle = primaryGradient.angle
+                if primaryGradient.stops <> invalid then m.getStartedButton.gradientStops = primaryGradient.stops
+                return
+            end if
+        end if
+    end if
+
+    ' No Firebase gradient was supplied; AppButton now resolves the build preset.
 end sub
 
 sub renderMedia()
@@ -148,6 +238,7 @@ end function
 sub onCleanupRequested(event as object)
     if not event.getData() then return
     m.getStartedButton.unobserveField("activated")
+    if m.globalNode <> invalid then m.globalNode.unobserveField("localeCode")
     m.completionTask.unobserveField("requestState")
     m.video.unobserveField("state")
     m.video.control = "stop"

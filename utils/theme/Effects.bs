@@ -1,55 +1,58 @@
-function ApplyNodeEffect(target as object, radius as float, borderWidth as float, borderColor as integer, gradientColors as object, gradientStops as object, gradientStyle as string, gradientAngle as float) as boolean
+function ApplyNodeEffect(target as object, radius as float, borderWidth as float, borderColor as integer, gradientColors as dynamic, gradientStops as dynamic, gradientStyle as string, gradientAngle as float) as boolean
     if target = invalid then return false
     if not target.hasField("effect") then return false
 
-    ' Effect nodes were added in Roku OS 16. Check the OS before attempting
-    ' to construct one, then verify platform support on the node itself.
-    deviceInfo = CreateObject("roDeviceInfo")
-    osVersion = deviceInfo.GetOSVersion()
-    if osVersion = invalid
-        target.effect = invalid
-        return false
-    end if
-    if osVersion.major = invalid
-        target.effect = invalid
-        return false
-    end if
-    if Val(osVersion.major) < 16
+    ' Effect nodes exist from Roku OS 16; check once per component
+    if m.effectPlatformOk = invalid then m.effectPlatformOk = CheckEffectPlatform()
+    if not m.effectPlatformOk
         target.effect = invalid
         return false
     end if
 
+    effect = target.effect
     effectNodeName = "Effect"
-    effect = CreateObject("roSGNode", effectNodeName)
+    isNew = false
     if effect = invalid
-        target.effect = invalid
-        return false
+        effect = CreateObject("roSGNode", effectNodeName)
+        if effect = invalid then return false
+        if not effect.supported
+            m.effectPlatformOk = false
+            return false
+        end if
+        isNew = true
     end if
-    if not effect.supported
-        target.effect = invalid
-        return false
-    end if
+
     effect.borderRadius = [radius]
     effect.borderWidth = borderWidth
     effect.borderColor = borderColor
     effect.borderPadding = 0
-    hasGradient = gradientColors <> invalid
-    if hasGradient then hasGradient = gradientColors.count() >= 2
-    if hasGradient
-        if gradientStyle <> "none"
-            effect.gradientColors = ToEffectColors(gradientColors)
-            effect.gradientStyle = gradientStyle
-            effect.gradientAngle = gradientAngle
-            effect.gradientFillContent = true
-            effect.gradientFillBorder = false
-            if gradientStops <> invalid
-                if gradientStops.count() = gradientColors.count()
-                    effect.gradientStops = gradientStops
-                end if
-            end if
-        end if
+
+    hasGradient = false
+    if gradientColors <> invalid
+        if gradientColors.count() >= 2 then hasGradient = true
     end if
-    target.effect = effect
+    if hasGradient
+        if gradientStyle = "none" then hasGradient = false
+    end if
+
+    if hasGradient
+        effect.gradientColors = ToEffectColors(gradientColors)
+        effect.gradientStyle = gradientStyle
+        effect.gradientAngle = gradientAngle
+        effect.gradientFillContent = true
+        effect.gradientFillBorder = false
+        stops = []
+        if gradientStops <> invalid
+            if gradientStops.count() = gradientColors.count() then stops = gradientStops
+        end if
+        effect.gradientStops = stops
+    else
+        effect.gradientStyle = "none"
+        effect.gradientColors = []
+        effect.gradientStops = []
+    end if
+
+    if isNew then target.effect = effect
     return true
 end function
 
@@ -63,4 +66,11 @@ function ToEffectColors(values as object) as object
         end if
     end for
     return result
+end function
+
+function CheckEffectPlatform() as boolean
+    osVersion = CreateObject("roDeviceInfo").GetOSVersion()
+    if osVersion = invalid then return false
+    if osVersion.major = invalid then return false
+    return Val(osVersion.major) >= 16
 end function

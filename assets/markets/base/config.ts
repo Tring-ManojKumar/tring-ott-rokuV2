@@ -18,9 +18,10 @@ export const baseConfig: Config = {
 
         typography: {
             fonts: {
-                regular: "pkg:/assets/base/fonts/Regular.otf",
-                medium: "pkg:/assets/base/fonts/Medium.otf",
-                bold: "pkg:/assets/base/fonts/Bold.otf"
+                regular: "fonts/Urbanist-Regular.ttf",
+                medium: "fonts/Urbanist-Medium.ttf",
+                bold: "fonts/Urbanist-Bold.ttf",
+                semibold: "fonts/Urbanist-SemiBold.ttf"
             },
 
             sizes: {
@@ -37,7 +38,8 @@ export const baseConfig: Config = {
         radii: { none: 0, sm: 6, md: 12, lg: 20, pill: 999 },
         borders: { none: 0, thin: 2, thick: 4 },
         gradients: {
-            accent: { colors: ["#FFFFFF", "#B3B3B3"], style: "linear", angle: 90 }
+            accent: { colors: ["#FFFFFF", "#B3B3B3"], style: "linear", angle: 90 },
+            primary: { colors: ["#FFFFFF", "#B3B3B3"], style: "linear", angle: 90 }
         },
         components: {
             buttons: {
@@ -70,8 +72,8 @@ export const baseConfig: Config = {
         }
     },
     assets: {
-        fonts: { regular: "fonts/Regular.otf", medium: "fonts/Medium.otf", bold: "fonts/Bold.otf" },
+        fonts: { regular: "fonts/Urbanist-Regular.ttf", medium: "fonts/Urbanist-Medium.ttf", bold: "fonts/Urbanist-Bold.ttf", semibold: "fonts/Urbanist-SemiBold.ttf" },
         icons: { location: "icons/locationIcon.png" },
-        images: { logo: "images/Roku.png", poster: "images/movie.png" }
+        images: { logo: "images/Roku.png", poster: "images/movie.png", onboardIcon1: "images/Onboard_Icon1.png", onboardIcon2: "images/Onboard_Icon2.png", onboardIcon3: "images/Onboard_Icon3.png" }
     }
 };

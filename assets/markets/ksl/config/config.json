@@ -10,7 +10,7 @@
         "APP_ID": "1:828065653841:web:a03c9a9391c21cd4090470",
         "KEY": "AIzaSyDBrcY7DIN4-LOuIBneC29cbc08trHtPxo"
     },
-    "GOOGLE_ANALYTICS": {
+          "GOOGLE_ANALYTICS": {
         "PRODUCTION": {
             "MEASUREMENT_ID": "G-KR29TET7P7"
         },

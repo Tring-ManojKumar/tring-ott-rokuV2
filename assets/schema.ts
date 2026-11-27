@@ -56,6 +56,7 @@ interface Fonts {
     regular: string;
     medium: string;
     bold: string;
+    semibold?: string;
 }
 
 interface Sizes {

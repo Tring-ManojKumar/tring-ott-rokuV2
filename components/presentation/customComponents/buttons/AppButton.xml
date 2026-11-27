@@ -2,6 +2,7 @@
 <component name="AppButton" extends="Group">
     <interface>
         <field id="text" type="string" value="" onChange="updateButton" />
+        <field id="localizationStrings" type="assocarray" onChange="updateButton" />
         <field id="mediaType" type="string" value="" onChange="updateButton" />
         <field id="contentType" type="string" value="" onChange="updateButton" />
         <field id="width" type="float" value="260" onChange="updateButton" />
@@ -21,20 +22,41 @@
         <field id="textColor" type="integer" value="-1" onChange="updateButton" />
         <field id="fontSize" type="integer" value="0" onChange="updateButton" />
         <field id="activated" type="assocarray" alwaysNotify="true" />
+
+        <!-- icon -->
+<field id="iconUri" type="string" value="" onChange="updateButton" />
+<field id="iconWidth" type="float" value="0" onChange="updateButton" />
+<field id="iconHeight" type="float" value="0" onChange="updateButton" />
+<field id="iconGap" type="float" value="12" onChange="updateButton" />
+<field id="iconPosition" type="string" value="left" onChange="updateButton" /> <!-- left | right -->
+<field id="tintIcon" type="boolean" value="true" onChange="updateButton" />
+
+<!-- focus overrides (-1 / empty = use the normal value) -->
+<field id="focusedCornerRadius" type="float" value="-1" onChange="updateButton" />
+<field id="focusedBackgroundColor" type="integer" value="-1" onChange="updateButton" />
+<field id="focusedTextColor" type="integer" value="-1" onChange="updateButton" />
+<field id="focusedBorderColor" type="integer" value="-1" onChange="updateButton" />
+<field id="focusedBorderWidth" type="float" value="-1" onChange="updateButton" />
+<field id="focusedGradientColors" type="array" onChange="updateButton" />
         <function name="onKeyEvent" />
         <function name="updateFocus" />
     </interface>
     <children>
-        <MaskGroup id="backgroundMask" width="0" height="0" maskUri="pkg:/assets/images/button-mask.png">
-            <Poster id="background" width="0" height="0" uri="pkg:/assets/images/button-mask.png" loadDisplayMode="scaleToFill" />
-            <Rectangle id="borderTop" width="0" height="0" color="0x00000000" />
-            <Rectangle id="borderBottom" width="0" height="0" color="0x00000000" />
-            <Rectangle id="borderLeft" width="0" height="0" color="0x00000000" />
-            <Rectangle id="borderRight" width="0" height="0" color="0x00000000" />
-        </MaskGroup>
-        <Label id="buttonLabel" width="0" height="0" text="Watch Now" horizAlign="center" vertAlign="center" visible="true" />
-    </children>
+    <!-- Fallback for OS < 16 -->
+    <MaskGroup id="backgroundMask" width="0" height="0" maskUri="pkg:/assets/images/button-mask.png">
+        <Poster id="background" width="0" height="0" uri="pkg:/assets/images/button-mask.png" loadDisplayMode="scaleToFill" />
+        <Rectangle id="borderTop" width="0" height="0" color="0x00000000" />
+        <Rectangle id="borderBottom" width="0" height="0" color="0x00000000" />
+        <Rectangle id="borderLeft" width="0" height="0" color="0x00000000" />
+        <Rectangle id="borderRight" width="0" height="0" color="0x00000000" />
+    </MaskGroup>
+    <!-- OS 16+: radius, border and gradient come from the Effect node -->
+    <Rectangle id="effectBackground" width="0" height="0" color="0xFFFFFFFF" visible="false" />
+    <Poster id="icon" width="0" height="0" visible="false" loadDisplayMode="scaleToFit" />
+    <Label id="buttonLabel" width="0" height="0" text="" horizAlign="left" vertAlign="center" />
+</children>
     <script type="text/brightscript" uri="pkg:/source/rokuCore/theme/ThemeProvider.bs" />
+    <script type="text/brightscript" uri="pkg:/source/rokuCore/LocalizationProvider.bs" />
     <script type="text/brightscript" uri="pkg:/utils/theme/GeneratedTheme.bs" />
     <script type="text/brightscript" uri="pkg:/utils/theme/Theme.bs" />
     <script type="text/brightscript" uri="pkg:/utils/theme/Typography.bs" />
